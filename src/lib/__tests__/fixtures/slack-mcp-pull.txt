@@ -1,0 +1,120 @@
+# Search Results for: combined Cursor Slack pull
+
+## Messages (20 results)
+### Result 1 of 20
+Channel: DM (ID: D0AQAG7UPD1)
+From: Uttam Katiyar <uttamk@playsimple.in> (ID: U08TT62MAD8) 
+Time: 2026-07-08 15:21:21 IST
+Message_ts: 1783504281.329369
+Permalink: [link](https://mtg.enterprise.slack.com/archives/D0AQAG7UPD1/p1783504281329369)
+Text: 
+bhai ek pspn ko krna regarding ios catch up
+
+---
+
+### Result 2 of 20
+Channel: DM (ID: D0AQAG7UPD1)
+From: Uttam Katiyar <uttamk@playsimple.in> (ID: U08TT62MAD8) 
+Time: 2026-07-08 15:21:26 IST
+Message_ts: 1783504286.234229
+Permalink: [link](https://mtg.enterprise.slack.com/archives/D0AQAG7UPD1/p1783504286234229)
+Text: 
+localization wala
+
+---
+
+### Result 3 of 20
+Channel: #cryptogram-pspn (ID: C08TU6NS9TL)
+From: Ishita Karale <ishitakarale@playsimple.in> (ID: U08TT652M5Y) 
+Time: 2026-07-07 09:31:55 IST
+Message_ts: 1783396915.234609
+Permalink: [link](https://mtg.enterprise.slack.com/archives/C08TU6NS9TL/p1783396915234609)
+Text: 
+Hey <@U0AMXP1Q4RE|Pranav Rishi>
+Please let us know an ETA for the updated mocks.
+cc: <@U08TC3QEFB9|Nalini S> <@U08TT5Z4WEN|Mansij> <@U08TT63DBGA|Santhiyaa K>
+
+---
+
+### Result 4 of 20
+Channel: #cryptogram-pspn (ID: C08TU6NS9TL)
+From: Ishita Karale <ishitakarale@playsimple.in> (ID: U08TT652M5Y) 
+Time: 2026-06-23 09:21:29 IST
+Message_ts: 1782186689.578639
+Permalink: [link](https://mtg.enterprise.slack.com/archives/C08TU6NS9TL/p1782186689578639)
+Text: 
+Hey <@U0AMXP1Q4RE|Pranav Rishi>
+A gentle reminder on the above.
+Can you please share an ETA for the same. We are currently blocked on MR sharing and so can plan accordingly.
+
+---
+
+### Result 5 of 20
+Channel: #cryptogram-pspn (ID: C08TU6NS9TL)
+From: Nalini S <Nalinis@playsimple.in> (ID: U08TC3QEFB9) 
+Time: 2026-07-07 09:54:06 IST
+Message_ts: 1783398246.498399
+Permalink: [link](https://mtg.enterprise.slack.com/archives/C08TU6NS9TL/p1783398246498399)
+Text: 
+<@U08TT652M5Y|Ishita Karale> I'm waiting on Mangesh to review the mocks, so I will have to hold it till then
+cc; <@U0AMXP1Q4RE|Pranav Rishi>
+
+---
+
+### Result 6 of 20
+Channel: #cryptogram-pspn (ID: C08TU6NS9TL)
+From: Atharva R Sholapurkar <atharvars@playsimple.in> (ID: U0A098ES0QM) 
+Time: 2026-07-08 15:40:36 IST
+Message_ts: 1783505436.364989
+Permalink: [link](https://mtg.enterprise.slack.com/archives/C08TU6NS9TL/p1783505436364989)
+Text: 
+Hi <@U0AMXP1Q4RE|Pranav Rishi>, we'll confirm on the MR sharing date shortly.
+Going forward, please ensure that ad hoc requests are shared at least two weeks in advance.
+
+---
+
+### Result 7 of 20
+Channel: #cryptogram-pspn (ID: C08TU6NS9TL)
+From: Ishita Karale <ishitakarale@playsimple.in> (ID: U08TT652M5Y) 
+Time: 2026-06-26 08:54:15 IST
+Message_ts: 1782464055.767029
+Permalink: [link](https://mtg.enterprise.slack.com/archives/C08TU6NS9TL/p1782464055767029)
+Text: 
+Ishita: gentle reminder — share timelines so PSPN can plan
+
+---
+
+### Result 8 of 20
+Channel: #productionteam (ID: G08TTSZ0FEE)
+From: Riftha Shia <rifthashia@playsimple.in> (ID: U08TT64JC90) 
+Time: 2026-07-01 12:22:10 IST
+Message_ts: 1782888730.706769
+Permalink: [link](https://mtg.enterprise.slack.com/archives/G08TTSZ0FEE/p1782888730706769)
+Text: 
+<@U0AMXP1Q4RE|Pranav Rishi> reminder for above please close this by today
+
+---
+
+### Result 9 of 20
+Channel: #cryptogram-sprint-items (ID: C0B3J1J1001)
+From: Pranav Rishi <pranavrishi@playsimple.in> (ID: U0AMXP1Q4RE) 
+Time: 2026-07-08 14:45:20 IST
+Message_ts: 1783502120.976419
+Permalink: [link](https://mtg.enterprise.slack.com/archives/C0B3J1J1001/p1783502120976419)
+Text: 
+Hi <@U08TT64PSP4|Vrushali Patil>,
+Devs require the mocks attached in spec to start the development.
+Can you please share it?
+
+---
+
+### Result 10 of 20
+Channel: DM (ID: D0AMFB9KD4L)
+From: Ayush Upadhyay (ID: U0A4E3EQW9Z) 
+Time: 2026-07-07 04:41:35 IST
+Message_ts: 1783399295.534379
+Permalink: [link](https://mtg.enterprise.slack.com/archives/D0AMFB9KD4L/p1783399295534379)
+Text: 
+yogit ko 1 year hogya daaldo bhai
+
+---

@@ -1,0 +1,39 @@
+---
+description: Never invent data — ask for details first; missing fields become Tasks tab todos
+alwaysApply: true
+---
+
+# No dummy data — ask first, todo what’s missing
+
+For **any** Helpit data change (releases, tasks, outings, mail, slack items, dashboard seeds, `store.json`, `db.ts`, etc.):
+
+1. **Never invent placeholder values** — no fake dates, effort, names, statuses, copy, or example content.
+2. **Ask first** — if the user didn’t provide a field, batch the missing questions in one message before editing data.
+3. **Todo fallback** — if you must proceed without an answer (user said “add it anyway”, partial request, or they’ll fill in later), **do not guess**. Instead add a **todo** on the **Tasks tab**:
+   - `source: "manual"`, `status: "todo"`, `priority: "medium"`
+   - Title: what info is needed (e.g. `Fill effort for Android 1.182 — Devs, QA`)
+   - `description`: context (entity, field, link to release/item name)
+   - `tags`: relevant area (`release`, `planning`, `outing`, etc.)
+   - Leave optional fields unset — don’t backfill with defaults unless the user gave them.
+
+## Releases (when asked)
+
+Ask for: platform + build, planned date, scope/items, status, spec %, effort per function (Product, UX, GD, Art, Tech Art, Devs, QA), blockers, actual date if shipped. Missing pieces → todos, not guesses.
+
+## Other entities
+
+- **Tasks** — title required; ask for due date, owner, priority if relevant.
+- **Outings / events** — ask date, attendees, location, notes.
+- **Imports (Slack, mail)** — only real extracted content; don’t fabricate messages or follow-ups.
+- **Any new list/card/seed** — empty state or real user data only.
+
+## Workflow
+
+```
+User asks to add something
+  → Have all required details? → Add with real data only
+  → Missing details?           → Ask user in one message
+  → User won’t / can’t answer? → Add skeleton + Tasks tab todos per missing field
+```
+
+Never silently default to 100% spec, sample effort tables, or lorem-style text.

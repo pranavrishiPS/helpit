@@ -1,0 +1,46 @@
+---
+description: Minutes of Meeting — ask for all template fields before drafting
+alwaysApply: true
+---
+
+# Minutes of Meeting (MoM)
+
+When the user asks for **any MoM**, minutes, meeting notes, or to draft a meeting recap:
+
+1. **Ask first** — batch every missing field in one message. Do not invent people, times, agenda, or action items.
+2. **Use only what they give.** If they skip a field, leave it blank (or TBD only if they say so).
+3. After details are in, output in this exact structure. No Topic. No Notes.
+
+## Required details to ask
+
+- **Agenda** — meeting title / subject (one line)
+- **Date and Time** — date + start–end (e.g. `8 Sep 2026, 10:15 am – 11:00 am`)
+- **Participants** — Slack @handles / names, space-separated
+- **Action items** — each: `@Owner — task` (due date in the line if they have it)
+- **CC** — who to copy, Slack @handles
+
+Also ask **channel** if unclear (Slack vs email vs Helpit).
+
+## Output template
+
+```
+Minutes of Meeting
+
+Agenda - 
+Date and Time - 
+Participants - 
+
+Action items
+• @Owner — task
+• @Owner — task
+
+CC:@Person @Person
+```
+
+## Format rules
+
+- Participants: `@handles` / names on one line, spaces between
+- Action items: `•` bullets, `@Owner — task` (em dash). Multiple owners comma-separated
+- CC: `CC:` then @handles on the same line, no space after the colon unless they prefer otherwise
+- Keep tone professional but friendly
+- Do not add a Notes or Topic section
