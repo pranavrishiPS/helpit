@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ListTodo,
+  ClipboardCheck,
   MessageSquare,
   Mail,
   CalendarRange,
@@ -27,6 +28,7 @@ import { TaskReminderProvider } from "./TaskReminderProvider";
 const ICONS = {
   home: LayoutDashboard,
   tasks: ListTodo,
+  scrum: ClipboardCheck,
   slack: MessageSquare,
   mail: Mail,
   planning: CalendarRange,

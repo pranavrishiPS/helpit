@@ -8,6 +8,8 @@ const PUBLIC_API_PATHS = [
   "/api/gmail/callback",
   "/api/slack/auth",
   "/api/gmail/auth",
+  "/api/scrum-attendance/sheet/callback",
+  "/api/scrum-attendance/sheet/auth",
 ];
 
 export function isApiAuthEnabled(): boolean {

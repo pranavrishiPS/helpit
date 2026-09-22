@@ -22,7 +22,8 @@ export async function readSlackTokens(): Promise<SlackTokens | null> {
       const parsed = JSON.parse(raw) as Partial<SlackTokens>;
       if (!parsed.accessToken || !parsed.userId) return null;
       return parsed as SlackTokens;
-    } catch {
+    } catch (err) {
+      console.error("[slack-store] failed to read/parse slack.json:", err);
       return null;
     }
   });

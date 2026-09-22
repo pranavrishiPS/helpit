@@ -175,6 +175,26 @@ export interface MailItem {
   gmailId?: string;
 }
 
+export type ScrumStatus = "on_time" | "late" | "leave" | "other";
+
+export interface ScrumAttendanceEntry {
+  id: string;
+  /** Scrum date (YYYY-MM-DD) */
+  date: string;
+  member: string;
+  status: ScrumStatus;
+  /** Free-form comment, mainly used to explain an "other" status (e.g. "Workshop"). */
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScrumHoliday {
+  /** Holiday date (YYYY-MM-DD) — applies to everyone, not a specific member. */
+  date: string;
+  label?: string;
+}
+
 export type SprintApprovalParty = "gm" | "dev" | "qa";
 
 export interface SprintApproval {
@@ -218,6 +238,15 @@ export interface GmailIntegration {
   lastSyncError?: string;
 }
 
+export interface ScrumSheetIntegration {
+  connected: boolean;
+  email?: string;
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+  lastSyncedAt?: string;
+  lastSyncError?: string;
+}
+
 export interface UserProfile {
   name: string;
   role: string;
@@ -235,9 +264,13 @@ export interface DashboardStore {
   projectResources: ProjectResource[];
   plotBacklog: PlotBacklogItem[];
   features: Feature[];
+  scrumMembers: string[];
+  scrumAttendance: ScrumAttendanceEntry[];
+  scrumHolidays: ScrumHoliday[];
   integrations?: {
     gmail?: GmailIntegration;
     slack?: SlackIntegration;
+    scrumSheet?: ScrumSheetIntegration;
   };
   lastUpdated: string;
 }
@@ -245,6 +278,7 @@ export interface DashboardStore {
 export type ModuleId =
   | "home"
   | "tasks"
+  | "scrum"
   | "slack"
   | "mail"
   | "planning"

@@ -238,6 +238,55 @@ export const deleteOutingExpenseSchema = z.object({
   id: z.string().min(1),
 });
 
+export const scrumStatusSchema = z.enum(["on_time", "late", "leave", "other"]);
+
+export const scrumDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+export const upsertScrumAttendanceSchema = z.object({
+  date: scrumDateSchema,
+  entries: z
+    .array(
+      z.object({
+        member: z.string().min(1).max(100),
+        status: scrumStatusSchema,
+        note: z.string().max(500).optional(),
+      })
+    )
+    .min(1)
+    .max(50),
+});
+
+export const updateScrumAttendanceEntrySchema = z.object({
+  id: z.string().min(1),
+  status: scrumStatusSchema,
+  note: z.string().max(500).nullable().optional(),
+});
+
+export const deleteScrumAttendanceEntrySchema = z.object({
+  id: z.string().min(1),
+});
+
+export const connectScrumSheetSchema = z.object({
+  url: z.string().min(1).max(500),
+});
+
+export const addScrumMemberSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
+export const removeScrumMemberSchema = z.object({
+  name: z.string().min(1),
+});
+
+export const addScrumHolidaySchema = z.object({
+  date: scrumDateSchema,
+  label: z.string().max(200).optional(),
+});
+
+export const removeScrumHolidaySchema = z.object({
+  date: scrumDateSchema,
+});
+
 export const updateSprintApprovalSchema = z.object({
   id: z.string().min(1),
   party: sprintApprovalPartySchema.optional(),

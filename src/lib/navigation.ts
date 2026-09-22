@@ -14,6 +14,12 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Todos, deadlines, and follow-ups",
   },
   {
+    id: "scrum",
+    label: "Scrum attendance",
+    href: "/scrum",
+    description: "Daily standup attendance and individual insights",
+  },
+  {
     id: "slack",
     label: "Slack",
     href: "/slack",

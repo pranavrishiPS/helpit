@@ -5,6 +5,9 @@ import type {
   ProjectResourceType,
   ReleasePhase,
   ReleaseStatus,
+  ScrumAttendanceEntry,
+  ScrumHoliday,
+  ScrumStatus,
   SprintApprovalParty,
   Task,
 } from "@/lib/types";
@@ -313,7 +316,7 @@ export async function createOutingExpense(outingId: string, input: OutingExpense
 export async function updateOutingExpense(
   outingId: string,
   id: string,
-  input: Partial<OutingExpenseInput> & {
+  input: Partial<Omit<OutingExpenseInput, "date" | "notes" | "attendeeCount">> & {
     date?: string | null;
     notes?: string | null;
     attendeeCount?: number | null;
@@ -334,6 +337,105 @@ export async function deleteOutingExpense(outingId: string, id: string): Promise
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Failed to delete expense");
+}
+
+export async function upsertScrumAttendance(
+  date: string,
+  entries: { member: string; status: ScrumStatus; note?: string }[]
+): Promise<ScrumAttendanceEntry[]> {
+  const res = await apiFetch("/api/scrum-attendance", {
+    method: "POST",
+    body: JSON.stringify({ date, entries }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to save scrum attendance");
+  return data;
+}
+
+export async function updateScrumAttendanceEntry(
+  id: string,
+  status: ScrumStatus
+): Promise<void> {
+  const res = await apiFetch("/api/scrum-attendance", {
+    method: "PATCH",
+    body: JSON.stringify({ id, status }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to update entry");
+}
+
+export async function deleteScrumAttendanceEntry(id: string): Promise<void> {
+  const res = await apiFetch(`/api/scrum-attendance?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to delete entry");
+}
+
+export async function addScrumMember(name: string): Promise<string[]> {
+  const res = await apiFetch("/api/scrum-attendance/members", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to add member");
+  return data;
+}
+
+export async function fetchScrumSheetStatus() {
+  const res = await apiFetch("/api/scrum-attendance/sheet/status");
+  if (!res.ok) throw new Error("Failed to load Google Sheet status");
+  return res.json();
+}
+
+export async function connectScrumSheet(url: string): Promise<{ spreadsheetId: string }> {
+  const res = await apiFetch("/api/scrum-attendance/sheet/connect", {
+    method: "POST",
+    body: JSON.stringify({ url }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to connect spreadsheet");
+  return data;
+}
+
+export async function syncScrumSheet(): Promise<{ ok: boolean; error?: string }> {
+  const res = await apiFetch("/api/scrum-attendance/sheet/sync", { method: "POST" });
+  const data = await res.json();
+  if (!res.ok) return { ok: false, error: data.error ?? "Sync failed" };
+  return { ok: true };
+}
+
+export async function disconnectScrumSheet(): Promise<void> {
+  const res = await apiFetch("/api/scrum-attendance/sheet/disconnect", { method: "POST" });
+  if (!res.ok) throw new Error("Failed to disconnect Google Sheet");
+}
+
+export async function removeScrumMember(name: string): Promise<void> {
+  const res = await apiFetch(
+    `/api/scrum-attendance/members?name=${encodeURIComponent(name)}`,
+    { method: "DELETE" }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to remove member");
+}
+
+export async function addScrumHoliday(date: string, label?: string): Promise<ScrumHoliday[]> {
+  const res = await apiFetch("/api/scrum-attendance/holidays", {
+    method: "POST",
+    body: JSON.stringify({ date, label }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to add holiday");
+  return data;
+}
+
+export async function removeScrumHoliday(date: string): Promise<void> {
+  const res = await apiFetch(
+    `/api/scrum-attendance/holidays?date=${encodeURIComponent(date)}`,
+    { method: "DELETE" }
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to remove holiday");
 }
 
 export async function updateProfile(profile: {

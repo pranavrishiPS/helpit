@@ -221,6 +221,9 @@ const defaultStore: DashboardStore = {
   projectResources: [],
   plotBacklog: [],
   features: [],
+  scrumMembers: [],
+  scrumAttendance: [],
+  scrumHolidays: [],
   integrations: {
     gmail: { connected: false },
   },
@@ -351,6 +354,20 @@ function migrateReleaseIds(store: DashboardStore): DashboardStore {
   return { ...store, releases, sprintApprovals };
 }
 
+/** "workshop" was renamed to the generic "other" status (with a free-text note). */
+function migrateLegacyScrumStatus(store: DashboardStore): DashboardStore {
+  const entries = store.scrumAttendance ?? [];
+  let changed = false;
+  const migrated = entries.map((entry) => {
+    if ((entry.status as string) !== "workshop") return entry;
+    changed = true;
+    return { ...entry, status: "other" as const, note: entry.note ?? "Workshop" };
+  });
+
+  if (!changed) return store;
+  return { ...store, scrumAttendance: migrated };
+}
+
 async function writeStoreUnlocked(store: DashboardStore): Promise<DashboardStore> {
   const updated = { ...store, lastUpdated: new Date().toISOString() };
   await writeJsonText(STORE_FILE, JSON.stringify(updated, null, 2));
@@ -368,8 +385,15 @@ async function readStoreUnlocked(): Promise<DashboardStore> {
   try {
     if (!raw?.trim()) throw new Error("empty");
     parsed = JSON.parse(raw) as LegacyStore;
-  } catch {
-    await backupJson(STORE_FILE, `store.corrupt-${Date.now()}.bak`).catch(() => undefined);
+  } catch (err) {
+    console.error(
+      "[db] store.json is corrupt or unreadable — backing up and resetting to defaults:",
+      err
+    );
+    const backupName = `store.corrupt-${Date.now()}.bak`;
+    await backupJson(STORE_FILE, backupName).catch((backupErr) => {
+      console.error(`[db] failed to back up corrupt store.json to ${backupName}:`, backupErr);
+    });
     await writeJsonText(STORE_FILE, JSON.stringify(defaultStore, null, 2));
     parsed = structuredClone(defaultStore) as LegacyStore;
   }
@@ -382,21 +406,29 @@ async function readStoreUnlocked(): Promise<DashboardStore> {
     projectResources: withReleaseIds.projectResources ?? [],
     plotBacklog: withReleaseIds.plotBacklog ?? [],
     features: withReleaseIds.features ?? [],
+    scrumMembers: withReleaseIds.scrumMembers ?? [],
+    scrumAttendance: withReleaseIds.scrumAttendance ?? [],
+    scrumHolidays: withReleaseIds.scrumHolidays ?? [],
   });
+  const withScrumStatusFixed = migrateLegacyScrumStatus(withApprovals);
 
   const shouldPersist =
     (parsed.reminders?.length ?? 0) > 0 ||
     migrated.projectResources == null ||
     migrated.plotBacklog == null ||
     migrated.features == null ||
+    migrated.scrumMembers == null ||
+    migrated.scrumAttendance == null ||
+    migrated.scrumHolidays == null ||
+    withScrumStatusFixed !== withApprovals ||
     JSON.stringify(parsed.releases) !== JSON.stringify(withReleaseIds.releases) ||
     JSON.stringify(parsed.sprintApprovals ?? []) !==
       JSON.stringify(withApprovals.sprintApprovals ?? []);
 
   if (shouldPersist) {
     const updated = {
-      ...withApprovals,
-      outings: withApprovals.outings.map(normalizeOuting),
+      ...withScrumStatusFixed,
+      outings: withScrumStatusFixed.outings.map(normalizeOuting),
       lastUpdated: new Date().toISOString(),
     };
     await writeStoreUnlocked(updated);

@@ -23,7 +23,8 @@ export async function readGmailTokens(): Promise<GmailTokens | null> {
       const parsed = JSON.parse(raw) as Partial<GmailTokens>;
       if (!parsed.accessToken || !parsed.refreshToken || !parsed.email) return null;
       return parsed as GmailTokens;
-    } catch {
+    } catch (err) {
+      console.error("[gmail-store] failed to read/parse gmail.json:", err);
       return null;
     }
   });
