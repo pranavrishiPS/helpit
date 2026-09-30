@@ -11,15 +11,21 @@ export function usesBlobStore(): boolean {
 }
 
 async function readBlobText(pathname: string): Promise<string | null> {
-  const { get } = await import("@vercel/blob");
+  const { get, BlobNotFoundError } = await import("@vercel/blob");
+  let result;
   try {
-    const result = await get(pathname, { access: "private", useCache: false });
-    if (!result?.stream) return null;
-    const text = await new Response(result.stream).text();
-    return text.trim() ? text : null;
-  } catch {
-    return null;
+    result = await get(pathname, { access: "private", useCache: false });
+  } catch (err) {
+    // Only a definite "not found" means the file is missing. Any other failure
+    // must surface: callers treat null as "create defaults", which would
+    // overwrite real data after a transient read error.
+    if (err instanceof BlobNotFoundError) return null;
+    throw err;
   }
+  if (result == null) return null;
+  if (!result.stream) throw new Error(`[json-persist] Blob ${pathname} returned no body`);
+  const text = await new Response(result.stream).text();
+  return text.trim() ? text : null;
 }
 
 async function writeBlobText(pathname: string, content: string): Promise<void> {
@@ -61,6 +67,26 @@ export async function readJsonText(filename: string): Promise<string | null> {
     return raw.trim() ? raw : null;
   } catch {
     return null;
+  }
+}
+
+/** True if the file exists at all (even empty). Throws if existence can't be determined. */
+export async function jsonExists(filename: string): Promise<boolean> {
+  if (usesBlobStore()) {
+    const { head, BlobNotFoundError } = await import("@vercel/blob");
+    try {
+      await head(filename);
+      return true;
+    } catch (err) {
+      if (err instanceof BlobNotFoundError) return false;
+      throw err;
+    }
+  }
+  try {
+    await fs.access(path.join(DATA_DIR, filename));
+    return true;
+  } catch {
+    return false;
   }
 }
 

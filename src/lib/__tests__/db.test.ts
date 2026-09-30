@@ -16,6 +16,8 @@ vi.mock("@/lib/json-persist", () => ({
   deleteJson: vi.fn(async (filename: string) => {
     mockFiles.delete(filename);
   }),
+  usesBlobStore: vi.fn(() => false),
+  jsonExists: vi.fn(async (filename: string) => mockFiles.has(filename)),
 }));
 
 import * as jsonPersist from "@/lib/json-persist";
@@ -51,6 +53,16 @@ describe("db", () => {
     expect(store.profile.name).toBe("Pranav");
     expect(store.tasks.length).toBeGreaterThan(0);
     expect(mockFiles.has("store.json")).toBe(true);
+  });
+
+  it("refuses to seed defaults over a Blob store that exists but reads as empty", async () => {
+    mockFiles.set("store.json", "");
+    vi.mocked(jsonPersist.usesBlobStore).mockReturnValueOnce(true);
+    // Real readJsonText reports an empty file as null
+    vi.mocked(jsonPersist.readJsonText).mockResolvedValueOnce(null);
+
+    await expect(readStore()).rejects.toThrow(/refusing to overwrite/);
+    expect(mockFiles.get("store.json")).toBe("");
   });
 
   it("migrates legacy reminders into tasks and drops the reminders array", async () => {

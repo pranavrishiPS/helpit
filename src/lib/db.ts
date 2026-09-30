@@ -4,7 +4,9 @@ import { syncSprintApprovalsFromReleases } from "./sprint-approvals";
 import { normalizeRelease } from "./release-utils";
 import {
   backupJson,
+  jsonExists,
   readJsonText,
+  usesBlobStore,
   withJsonLock,
   writeJsonText,
 } from "./json-persist";
@@ -232,9 +234,13 @@ const defaultStore: DashboardStore = {
 
 async function ensureStore(): Promise<void> {
   const existing = await readJsonText(STORE_FILE);
-  if (existing == null) {
-    await writeJsonText(STORE_FILE, JSON.stringify(defaultStore, null, 2));
+  if (existing != null) return;
+  // Never seed over a file that exists — an empty or unreadable store must not
+  // silently become the default data.
+  if (usesBlobStore() && (await jsonExists(STORE_FILE))) {
+    throw new Error("[db] store.json exists but could not be read; refusing to overwrite it");
   }
+  await writeJsonText(STORE_FILE, JSON.stringify(defaultStore, null, 2));
 }
 
 async function withStoreLock<T>(fn: () => Promise<T>): Promise<T> {
