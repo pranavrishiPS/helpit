@@ -87,6 +87,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [navOpen]);
 
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
+  async function handleSignOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  }
+
   const currentPage = NAV_ITEMS.find((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
   );
@@ -113,6 +122,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="border-t border-white/10 px-4 py-4">
           <p className="text-xs text-slate-500">PlaySimple Games</p>
           <p className="text-xs text-slate-400">v0.1 — building daily</p>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="mt-2 text-xs text-slate-400 hover:text-white hover:underline"
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -147,6 +163,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarNav onNavigate={() => setNavOpen(false)} />
             <div className="border-t border-white/10 px-4 py-4">
               <p className="text-xs text-slate-500">PlaySimple Games</p>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="mt-2 text-xs text-slate-400 hover:text-white hover:underline"
+              >
+                Sign out
+              </button>
             </div>
           </aside>
         </>
