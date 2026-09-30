@@ -52,45 +52,45 @@ describe("site-auth", () => {
   });
 
   describe("createSessionToken / verifySessionToken", () => {
-    it("round-trips a valid token back to the same email", () => {
-      const token = createSessionToken("pranavrishi@playsimple.in");
-      expect(verifySessionToken(token)).toBe("pranavrishi@playsimple.in");
+    it("round-trips a valid token back to the same email", async () => {
+      const token = await createSessionToken("pranavrishi@playsimple.in");
+      expect(await verifySessionToken(token)).toBe("pranavrishi@playsimple.in");
     });
 
-    it("rejects a tampered signature", () => {
-      const token = createSessionToken("pranavrishi@playsimple.in");
+    it("rejects a tampered signature", async () => {
+      const token = await createSessionToken("pranavrishi@playsimple.in");
       const [payload] = token.split(".");
       const tampered = `${payload}.deadbeef`;
-      expect(verifySessionToken(tampered)).toBeNull();
+      expect(await verifySessionToken(tampered)).toBeNull();
     });
 
-    it("rejects a token whose payload was swapped to an allowed-looking email", () => {
-      const token = createSessionToken("pranavrishi@playsimple.in");
+    it("rejects a token whose payload was swapped to an allowed-looking email", async () => {
+      const token = await createSessionToken("pranavrishi@playsimple.in");
       const [, signature] = token.split(".");
       const forgedPayload = Buffer.from(`attacker@evil.com|${Date.now() + 100000}`).toString(
         "base64url"
       );
-      expect(verifySessionToken(`${forgedPayload}.${signature}`)).toBeNull();
+      expect(await verifySessionToken(`${forgedPayload}.${signature}`)).toBeNull();
     });
 
-    it("rejects an expired token", () => {
+    it("rejects an expired token", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-      const token = createSessionToken("pranavrishi@playsimple.in");
+      const token = await createSessionToken("pranavrishi@playsimple.in");
       vi.setSystemTime(new Date("2026-02-01T00:00:00.000Z"));
-      expect(verifySessionToken(token)).toBeNull();
+      expect(await verifySessionToken(token)).toBeNull();
     });
 
-    it("rejects a well-formed token for an email no longer on the allow-list", () => {
-      const token = createSessionToken("pranavrishi@playsimple.in");
+    it("rejects a well-formed token for an email no longer on the allow-list", async () => {
+      const token = await createSessionToken("pranavrishi@playsimple.in");
       process.env.SITE_AUTH_ALLOWED_EMAILS = "someone.else@playsimple.in";
-      expect(verifySessionToken(token)).toBeNull();
+      expect(await verifySessionToken(token)).toBeNull();
     });
 
-    it("rejects garbage input", () => {
-      expect(verifySessionToken(undefined)).toBeNull();
-      expect(verifySessionToken("")).toBeNull();
-      expect(verifySessionToken("not-a-real-token")).toBeNull();
+    it("rejects garbage input", async () => {
+      expect(await verifySessionToken(undefined)).toBeNull();
+      expect(await verifySessionToken("")).toBeNull();
+      expect(await verifySessionToken("not-a-real-token")).toBeNull();
     });
   });
 });

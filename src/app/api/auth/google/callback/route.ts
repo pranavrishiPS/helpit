@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     const res = NextResponse.redirect(`${base}/`);
-    res.cookies.set(SITE_AUTH_COOKIE_NAME, createSessionToken(email), {
+    res.cookies.set(SITE_AUTH_COOKIE_NAME, await createSessionToken(email), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
