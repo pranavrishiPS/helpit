@@ -18,15 +18,26 @@ function resolveOutingBudget(
   let perPerson = budgetPerPerson ?? undefined;
 
   if (perPerson != null && rosterSize > 0) {
-    if (totalBudget == null) {
-      totalBudget = Math.round(perPerson * rosterSize);
-    }
+    // Pool is funded for the whole team, including members who don't go
+    totalBudget = Math.round(perPerson * rosterSize);
   } else if (totalBudget != null && perPerson == null && rosterSize > 0) {
     perPerson = Math.round(totalBudget / rosterSize);
   }
 
   if (totalBudget == null) return null;
   return { totalBudget, perPerson };
+}
+
+function normalizeAttendees(attendees: OutingAttendee[]): OutingAttendee[] {
+  const seen = new Set<string>();
+  return attendees
+    .map((a) => ({ name: a.name.trim(), confirmed: a.confirmed }))
+    .filter((a) => {
+      const key = a.name.toLowerCase();
+      if (!a.name || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function mergeAttendees(
@@ -53,18 +64,15 @@ export async function POST(request: NextRequest) {
   }
 
   const { title, destination, date, budget, budgetPerPerson, members, notes } = parsed.data;
-  const roster = members ?? [];
+  const attendees = normalizeAttendees(
+    parsed.data.attendees ?? (members ?? []).map((name) => ({ name, confirmed: true }))
+  );
   const now = new Date().toISOString();
 
-  const resolved = resolveOutingBudget(budget, budgetPerPerson, roster.length);
+  const resolved = resolveOutingBudget(budget, budgetPerPerson, attendees.length);
   if (!resolved) {
     return NextResponse.json({ error: "Could not determine outing budget" }, { status: 400 });
   }
-
-  const attendees: OutingAttendee[] = roster.map((name) => ({
-    name: name.trim(),
-    confirmed: true,
-  }));
 
   const outing: Outing = {
     id: `out-${uuidv4()}`,
@@ -107,14 +115,25 @@ export async function PATCH(request: NextRequest) {
         if (outing.id !== id) return outing;
         found = true;
 
-        const roster = members ?? outing.attendees.map((a) => a.name);
-        const budgetInput = budget ?? outing.budget;
+        const attendees = parsed.data.attendees
+          ? normalizeAttendees(parsed.data.attendees)
+          : members != null
+            ? mergeAttendees(members, outing.attendees)
+            : outing.attendees;
         const perPersonInput =
           budgetPerPerson === null
             ? undefined
             : budgetPerPerson ?? outing.budgetPerPerson;
+        const poolInputsChanged =
+          parsed.data.attendees != null ||
+          members != null ||
+          budgetPerPerson !== undefined ||
+          budget != null;
 
-        const resolved = resolveOutingBudget(budgetInput, perPersonInput, roster.length);
+        // Only recalculate the pool when the team or budget was edited
+        const resolved = poolInputsChanged
+          ? resolveOutingBudget(budget ?? outing.budget, perPersonInput, attendees.length)
+          : { totalBudget: outing.budget, perPerson: outing.budgetPerPerson };
         if (!resolved) {
           throw new Error("INVALID_BUDGET");
         }
@@ -127,7 +146,7 @@ export async function PATCH(request: NextRequest) {
           date: date === null ? undefined : date ?? outing.date,
           budget: resolved.totalBudget,
           budgetPerPerson: resolved.perPerson,
-          attendees: members != null ? mergeAttendees(roster, outing.attendees) : outing.attendees,
+          attendees,
           notes: notes === null ? undefined : notes?.trim() ?? outing.notes,
           updatedAt: new Date().toISOString(),
         };

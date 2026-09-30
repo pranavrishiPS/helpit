@@ -13,6 +13,7 @@ import {
   formatCurrency,
   getUpcomingOutings,
   getOutingSummaryLine,
+  getOutingPoolBreakdown,
   getTasksTabTasks,
   getMailTabTasks,
   getReleasePlatform,
@@ -48,6 +49,7 @@ export function HomeDashboard() {
   const openMailReminders = mailReminders.filter((t) => t.status !== "done").slice(0, 4);
   const upcomingCount = getUpcomingTasks(appTasks).length;
   const nextOuting = getUpcomingOutings(store.outings)[0];
+  const nextPool = nextOuting ? getOutingPoolBreakdown(nextOuting) : null;
   const inFlightReleases = sortUpcomingReleases(
     store.releases.filter((r) => r.status !== "live")
   );
@@ -217,7 +219,7 @@ export function HomeDashboard() {
               <h2 className="font-medium">{nextOuting.title}</h2>
               <p className="mt-1 text-sm text-muted">
                 {getOutingSummaryLine(nextOuting, false) ||
-                  `${nextOuting.budgetPerPerson != null ? `${formatCurrency(nextOuting.budgetPerPerson)}/person · ` : ""}${nextOuting.attendees.length} members`}
+                  `${formatCurrency(nextOuting.budget)} team pool · ${nextPool?.going} of ${nextPool?.teamSize} going`}
               </p>
             </div>
             <Link href="/outings">

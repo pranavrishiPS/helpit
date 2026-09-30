@@ -165,6 +165,10 @@ export const reorderPlotBacklogSchema = z.object({
   ids: z.array(z.string().min(1)).min(1),
 });
 
+const outingAttendeesSchema = z
+  .array(z.object({ name: z.string().trim().min(1).max(100), confirmed: z.boolean() }))
+  .max(100);
+
 export const createOutingSchema = z
   .object({
     title: z.string().min(1).max(200),
@@ -176,12 +180,14 @@ export const createOutingSchema = z
     budget: z.number().positive().optional(),
     budgetPerPerson: z.number().positive().optional(),
     members: z.array(z.string().min(1).max(100)).max(100).optional(),
+    attendees: outingAttendeesSchema.optional(),
     notes: z.string().max(2000).optional(),
   })
   .refine(
     (data) =>
       data.budget != null ||
-      (data.budgetPerPerson != null && (data.members?.length ?? 0) > 0),
+      (data.budgetPerPerson != null &&
+        (data.attendees?.length ?? data.members?.length ?? 0) > 0),
     { message: "Provide total budget or budget per person with at least one member" }
   );
 
@@ -198,6 +204,7 @@ export const updateOutingSchema = z
     budget: z.number().positive().optional(),
     budgetPerPerson: z.number().positive().nullable().optional(),
     members: z.array(z.string().min(1).max(100)).max(100).optional(),
+    attendees: outingAttendeesSchema.optional(),
     notes: z.string().max(2000).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 1, {

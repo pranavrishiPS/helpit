@@ -264,6 +264,8 @@ export interface CreateOutingInput {
   budget?: number;
   budgetPerPerson?: number;
   members?: string[];
+  /** Full team roster with attendance; takes precedence over `members` */
+  attendees?: { name: string; confirmed: boolean }[];
   notes?: string;
 }
 

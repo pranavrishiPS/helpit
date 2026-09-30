@@ -9,9 +9,8 @@ import {
   getOutingExpensesByType,
   getOutingRemaining,
   isOutingPast,
-  getOutingConfirmedAttendees,
-  getFollowUpAttendeeCount,
-  getFollowUpBudgetPerPerson,
+  getOutingPoolBreakdown,
+  getOutingMemberSuggestions,
 } from "@/lib/utils";
 import { cn } from "@/lib/cn";
 import {
@@ -28,12 +27,18 @@ import {
 } from "lucide-react";
 import { useDashboard } from "@/lib/use-dashboard";
 import { parseISO } from "date-fns";
-import { NewOutingDialog, EditOutingDialog } from "@/components/outings/NewOutingDialog";
+import {
+  NewOutingDialog,
+  EditOutingDialog,
+} from "@/components/outings/NewOutingDialog";
 import { ExpenseDialog } from "@/components/outings/ExpenseDialog";
 import { deleteOutingExpense } from "@/lib/api-client";
 import { notifyStoreUpdated } from "@/lib/store-events";
 
-function sortOutings(outings: Outing[]): { upcoming: Outing[]; past: Outing[] } {
+function sortOutings(outings: Outing[]): {
+  upcoming: Outing[];
+  past: Outing[];
+} {
   const upcoming: Outing[] = [];
   const past: Outing[] = [];
 
@@ -60,74 +65,61 @@ function sortOutings(outings: Outing[]): { upcoming: Outing[]; past: Outing[] } 
 
 function formatOutingDate(date?: string): string {
   if (!date) return "Date TBD";
-  return new Date(date).toLocaleDateString("en-IN", {
-    weekday: "short",
+  const d = new Date(date);
+  const dayMonth = d.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
-    year: "numeric",
   });
+  const year = d.toLocaleDateString("en-IN", { year: "2-digit" });
+  return `${dayMonth}, ${year}`;
 }
 
-function BudgetStrip({ outing }: { outing: Outing }) {
+function BudgetStrip({ outing, past }: { outing: Outing; past: boolean }) {
   const totalSpent = getOutingSpent(outing);
   const outingSpent = getOutingExpensesByType(outing, "outing");
   const followUpSpent = getOutingExpensesByType(outing, "follow_up");
   const remaining = getOutingRemaining(outing);
   const usedPct = outing.budget > 0 ? (totalSpent / outing.budget) * 100 : 0;
-  const outingMembers = getOutingConfirmedAttendees(outing).length;
-  const snackMembers = getFollowUpAttendeeCount(outing);
-  const snackPerPerson = getFollowUpBudgetPerPerson(outing);
+  const pool = getOutingPoolBreakdown(outing);
+  const goingLabel = past ? "attended" : "going";
 
   return (
     <div className="rounded-lg bg-slate-50 px-4 py-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm">
-          <Wallet className="h-4 w-4 text-muted" />
-          <span className="font-medium">Budget</span>
-          {outing.budgetPerPerson != null && (
-            <span className="text-muted">
-              · {formatCurrency(outing.budgetPerPerson)}/person
-              {outingMembers > 0 && ` · ${outingMembers} outing`}
-            </span>
-          )}
-        </div>
-        <div className="text-right text-sm">
-          <span className="font-semibold">{formatCurrency(outing.budget)}</span>
-          <span className="text-muted"> total</span>
-        </div>
+      <div className="flex items-center gap-2 text-sm">
+        <Wallet className="h-4 w-4 text-muted" />
+        <span className="font-medium">Team pool</span>
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         <div className="rounded-md border border-border bg-white px-3 py-2">
           <p className="text-xs text-muted">Outing spend</p>
           <p className="text-sm font-medium">{formatCurrency(outingSpent)}</p>
-          {outingMembers > 0 && (
-            <p className="mt-0.5 text-xs text-muted">{outingMembers} members</p>
+          {pool.going > 0 && (
+            <p className="mt-0.5 text-xs text-muted">
+              {pool.going} {goingLabel}
+            </p>
           )}
         </div>
         <div className="rounded-md border border-border bg-white px-3 py-2">
-          <p className="text-xs text-muted">Follow-up (snacks etc.)</p>
+          <p className="text-xs text-muted">Other spend</p>
           <p className="text-sm font-medium">{formatCurrency(followUpSpent)}</p>
-          {snackMembers > 0 ? (
-            <p className="mt-0.5 text-xs text-muted">
-              {snackMembers} members
-              {snackPerPerson != null && ` · ${formatCurrency(snackPerPerson)}/person left`}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-xs text-muted">Set after outing</p>
-          )}
         </div>
         <div className="rounded-md border border-accent/20 bg-accent/10 px-3 py-2">
-          <p className="text-xs text-accent">Remaining pool</p>
+          <p className="text-xs text-accent">Remaining</p>
           <p className="text-sm font-medium text-accent">
             {formatCurrency(remaining)}
           </p>
+          {remaining > 0 && (
+            <p className="mt-0.5 text-xs text-accent/80">
+              Usable later this quarter
+            </p>
+          )}
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap justify-between gap-1 text-xs text-muted">
         <span>{formatCurrency(totalSpent)} spent total</span>
-        <span>{usedPct.toFixed(0)}% of budget used</span>
+        <span>{usedPct.toFixed(0)}% of team pool used</span>
       </div>
       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
         <div
@@ -181,7 +173,8 @@ function ExpenseList({
 
       {expenses.length === 0 ? (
         <p className="text-xs text-muted">
-          No expenses logged yet. Add outing spend or follow-up snack orders here.
+          No expenses logged yet. Add outing spend or other spend (snacks etc.)
+          here.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -200,7 +193,7 @@ function ExpenseList({
                         : "border-warning/30 bg-warning/10 text-warning"
                     }
                   >
-                    {exp.type === "follow_up" ? "Follow-up" : "Outing"}
+                    {exp.type === "follow_up" ? "Other" : "Outing"}
                   </Badge>
                   {exp.date && <span>{formatOutingDate(exp.date)}</span>}
                   {exp.type === "follow_up" && exp.attendeeCount != null && (
@@ -210,7 +203,9 @@ function ExpenseList({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <span className="mr-1 font-medium">{formatCurrency(exp.amount)}</span>
+                <span className="mr-1 font-medium">
+                  {formatCurrency(exp.amount)}
+                </span>
                 <button
                   type="button"
                   onClick={() => setEditing(exp)}
@@ -262,7 +257,7 @@ function ExpenseList({
 
 const CHIP_STYLES = {
   attended: "border-accent/30 bg-accent/10 text-accent",
-  absent: "border-slate-200 bg-white text-slate-500",
+  absent: "border-rose-200 bg-rose-50 text-rose-600",
   confirmed: "border-accent/30 bg-accent/10 text-accent",
   pending: "border-warning/30 bg-warning/10 text-warning",
 } as const;
@@ -299,7 +294,7 @@ function MemberChips({
             key={attendee.name}
             className={cn(
               "rounded-full border px-2.5 py-0.5 text-xs font-medium",
-              CHIP_STYLES[variant]
+              CHIP_STYLES[variant],
             )}
           >
             {attendee.name}
@@ -326,14 +321,19 @@ function CollapsibleSection({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border", className)}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border border-border",
+        className,
+      )}
+    >
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         className={cn(
           "flex w-full items-center justify-between px-3 py-2 text-sm transition-colors hover:bg-slate-50",
-          open && "border-b border-border"
+          open && "border-b border-border",
         )}
       >
         <span className="flex items-center gap-2 font-medium text-foreground">
@@ -355,10 +355,12 @@ function OutingCard({
   outing,
   past,
   onChanged,
+  memberSuggestions,
 }: {
   outing: Outing;
   past: boolean;
   onChanged: () => void;
+  memberSuggestions: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -366,11 +368,11 @@ function OutingCard({
   const [expensesOpen, setExpensesOpen] = useState(false);
 
   const attended = outing.attendees.filter((a) => a.confirmed);
-  const absent = outing.attendees.filter((a) => !a.confirmed);
   const expenses = outing.expenses ?? [];
+  const pool = getOutingPoolBreakdown(outing);
 
-  const yesLabel = past ? "Attended" : "Members";
-  const noLabel = past ? "Not attended" : "Pending";
+  const yesLabel = past ? "Attended" : "Going";
+  const noLabel = past ? "Didn't go" : "Not confirmed";
 
   return (
     <Card className={cn(past && "border-slate-200/80 bg-slate-50/40")}>
@@ -383,6 +385,18 @@ function OutingCard({
         >
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-medium">{outing.title}</h2>
+            {pool.teamSize > 0 && (
+              <Badge className="gap-1 border-slate-200 bg-white text-slate-600">
+                <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">Team members: </span>
+                {pool.teamSize}
+              </Badge>
+            )}
+            <Badge className="gap-1 border-slate-200 bg-white text-slate-600">
+              <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="sr-only">Team pool: </span>
+              {formatCurrency(outing.budget)}
+            </Badge>
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
             <span className="flex items-center gap-1.5">
@@ -392,14 +406,6 @@ function OutingCard({
             <span className="flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               {outing.destination ?? "Venue TBD"}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Wallet className="h-3.5 w-3.5 shrink-0" />
-              {formatCurrency(outing.budget)}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 shrink-0" />
-              {outing.attendees.length} members
             </span>
           </div>
         </button>
@@ -431,7 +437,7 @@ function OutingCard({
       {expanded && (
         <>
           <div className="mt-4">
-            <BudgetStrip outing={outing} />
+            <BudgetStrip outing={outing} past={past} />
           </div>
 
           <CollapsibleSection
@@ -441,7 +447,11 @@ function OutingCard({
             icon={<Receipt className="h-4 w-4 text-muted" />}
             title={`Expenses (${expenses.length})`}
           >
-            <ExpenseList outing={outing} expenses={expenses} onChanged={onChanged} />
+            <ExpenseList
+              outing={outing}
+              expenses={expenses}
+              onChanged={onChanged}
+            />
           </CollapsibleSection>
 
           <CollapsibleSection
@@ -451,7 +461,7 @@ function OutingCard({
             title={
               <>
                 {yesLabel} ({attended.length})
-                {absent.length > 0 && ` · ${noLabel} (${absent.length})`}
+                {pool.notGoing > 0 && ` · ${noLabel} (${pool.notGoing})`}
               </>
             }
           >
@@ -468,6 +478,7 @@ function OutingCard({
           notifyStoreUpdated();
         }}
         outing={outing}
+        memberSuggestions={memberSuggestions}
       />
     </Card>
   );
@@ -478,7 +489,11 @@ export default function OutingsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { upcoming, past } = useMemo(
     () => sortOutings(store?.outings ?? []),
-    [store?.outings]
+    [store?.outings],
+  );
+  const memberSuggestions = useMemo(
+    () => getOutingMemberSuggestions(store?.outings ?? []),
+    [store?.outings],
   );
 
   if (loading) {
@@ -486,14 +501,18 @@ export default function OutingsPage() {
   }
 
   if (error || !store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load outings"}</div>;
+    return (
+      <div className="text-sm text-warning">
+        {error ?? "Failed to load outings"}
+      </div>
+    );
   }
 
   return (
     <div>
       <PageHeader
         title="Team Outings"
-        description="Track budget, attendance, and follow-up snack spend"
+        description="Track budget, attendance, and other spend"
         action={
           <Button size="sm" onClick={() => setDialogOpen(true)}>
             <Plus className="mr-1.5 h-4 w-4" />
@@ -509,6 +528,7 @@ export default function OutingsPage() {
           await reload();
           notifyStoreUpdated();
         }}
+        memberSuggestions={memberSuggestions}
       />
 
       {upcoming.length > 0 && (
@@ -518,7 +538,13 @@ export default function OutingsPage() {
           </h2>
           <div className="space-y-4">
             {upcoming.map((outing) => (
-              <OutingCard key={outing.id} outing={outing} past={false} onChanged={reload} />
+              <OutingCard
+                key={outing.id}
+                outing={outing}
+                past={false}
+                onChanged={reload}
+                memberSuggestions={memberSuggestions}
+              />
             ))}
           </div>
         </section>
@@ -531,7 +557,13 @@ export default function OutingsPage() {
           </h2>
           <div className="space-y-4">
             {past.map((outing) => (
-              <OutingCard key={outing.id} outing={outing} past={true} onChanged={reload} />
+              <OutingCard
+                key={outing.id}
+                outing={outing}
+                past={true}
+                onChanged={reload}
+                memberSuggestions={memberSuggestions}
+              />
             ))}
           </div>
         </section>

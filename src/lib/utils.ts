@@ -295,6 +295,37 @@ export function getOutingConfirmedAttendees(outing: Outing) {
   return outing.attendees.filter((a) => a.confirmed);
 }
 
+/** Company allowance per team member, per quarterly outing */
+export const OUTING_BUDGET_PER_PERSON = 2500;
+
+/** Everyone who has been on a previous outing's team, for quick-add in the outing dialog */
+export function getOutingMemberSuggestions(outings: Outing[]): string[] {
+  const byKey = new Map<string, string>();
+  for (const outing of outings) {
+    for (const a of outing.attendees) {
+      const key = a.name.trim().toLowerCase();
+      if (key && !byKey.has(key)) byKey.set(key, a.name.trim());
+    }
+  }
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * The pool is funded for the whole team (team size × per-person), whether or not
+ * everyone goes — unused money stays in the pool for later in the quarter.
+ */
+export function getOutingPoolBreakdown(outing: Outing) {
+  const teamSize = outing.attendees.length;
+  const going = getOutingConfirmedAttendees(outing).length;
+  const perPerson = outing.budgetPerPerson;
+  return {
+    teamSize,
+    going,
+    notGoing: teamSize - going,
+    perPerson,
+  };
+}
+
 export function getFollowUpAttendees(outing: Outing) {
   if (outing.followUpAttendees?.length) {
     return outing.followUpAttendees.filter((a) => a.confirmed);

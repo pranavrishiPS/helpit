@@ -195,7 +195,7 @@ export function ExpenseDialog({
               {(
                 [
                   { value: "outing", label: "Outing" },
-                  { value: "follow_up", label: "Follow-up" },
+                  { value: "follow_up", label: "Other" },
                 ] as const
               ).map((option) => (
                 <button
