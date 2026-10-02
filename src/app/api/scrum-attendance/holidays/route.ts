@@ -19,7 +19,12 @@ export async function POST(request: NextRequest) {
 
   const updated = await updateStore((s) => {
     const existing = (s.scrumHolidays ?? []).filter((h) => h.date !== date);
-    return { ...s, scrumHolidays: [...existing, { date, label: label?.trim() || undefined }] };
+    return {
+      ...s,
+      scrumHolidays: [...existing, { date, label: label?.trim() || undefined }],
+      // A holiday has no attendance, so anything already logged for that date is removed.
+      scrumAttendance: (s.scrumAttendance ?? []).filter((e) => e.date !== date),
+    };
   });
 
   return NextResponse.json(updated.scrumHolidays, { status: 201 });

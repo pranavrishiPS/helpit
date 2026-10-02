@@ -5,6 +5,7 @@ import {
   parseBody,
   updateOutingExpenseSchema,
   updateTaskSchema,
+  upsertScrumAttendanceSchema,
 } from "@/lib/validation";
 
 describe("createTaskSchema", () => {
@@ -75,5 +76,24 @@ describe("updateOutingExpenseSchema", () => {
       id: "exp-1",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("upsertScrumAttendanceSchema", () => {
+  const body = (date: string, status: string) => ({ date, entries: [{ member: "Pranav", status }] });
+
+  it("rejects '1st half off' before 2026-10-01", () => {
+    const result = parseBody(upsertScrumAttendanceSchema, body("2026-09-30", "first_half_off"));
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts '1st half off' from 2026-10-01", () => {
+    const result = parseBody(upsertScrumAttendanceSchema, body("2026-10-01", "first_half_off"));
+    expect(result.success).toBe(true);
+  });
+
+  it("still accepts other statuses before 2026-10-01", () => {
+    const result = parseBody(upsertScrumAttendanceSchema, body("2026-09-30", "late"));
+    expect(result.success).toBe(true);
   });
 });

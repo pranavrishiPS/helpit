@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  FIRST_HALF_OFF_START_DATE,
+  SCRUM_STATUS_LABELS,
+  isStatusAllowedOnDate,
+} from "./scrum-attendance";
 
 export const taskStatusSchema = z.enum(["todo", "in_progress", "done", "blocked"]);
 export const taskPrioritySchema = z.enum(["low", "medium", "high", "urgent"]);
@@ -261,6 +266,16 @@ export const upsertScrumAttendanceSchema = z.object({
     )
     .min(1)
     .max(50),
+}).superRefine((value, ctx) => {
+  value.entries.forEach((entry, index) => {
+    if (!isStatusAllowedOnDate(entry.status, value.date)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["entries", index, "status"],
+        message: `"${SCRUM_STATUS_LABELS[entry.status]}" isn't available before ${FIRST_HALF_OFF_START_DATE}`,
+      });
+    }
+  });
 });
 
 export const updateScrumAttendanceEntrySchema = z.object({

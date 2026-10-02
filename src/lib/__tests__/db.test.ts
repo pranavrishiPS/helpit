@@ -89,6 +89,32 @@ describe("db", () => {
     expect(persisted.reminders).toBeUndefined();
   });
 
+  it("removes attendance entries that sit on a holiday date, and persists the cleanup", async () => {
+    const entry = (member: string, date: string) => ({
+      id: `${member}-${date}`,
+      date,
+      member,
+      status: "on_time",
+      createdAt: "2026-10-01T00:00:00.000Z",
+      updatedAt: "2026-10-01T00:00:00.000Z",
+    });
+    seedStore({
+      scrumMembers: ["Pranav", "Vrushali"],
+      scrumHolidays: [{ date: "2026-10-02", label: "Holiday" }],
+      scrumAttendance: [
+        entry("Pranav", "2026-10-02"),
+        entry("Vrushali", "2026-10-02"),
+        entry("Pranav", "2026-10-01"),
+      ],
+    });
+
+    const store = await readStore();
+    expect(store.scrumAttendance.map((e) => `${e.member}@${e.date}`)).toEqual(["Pranav@2026-10-01"]);
+
+    const persisted = JSON.parse(mockFiles.get("store.json")!);
+    expect(persisted.scrumAttendance).toHaveLength(1);
+  });
+
   it("normalizes legacy numeric release ids and remaps linked sprint approvals", async () => {
     seedStore({
       releases: [

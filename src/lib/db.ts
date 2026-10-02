@@ -374,6 +374,17 @@ function migrateLegacyScrumStatus(store: DashboardStore): DashboardStore {
   return { ...store, scrumAttendance: migrated };
 }
 
+/** Holidays carry no attendance — drop any entry that sits on a holiday date (e.g. logged before the date was marked). */
+export function dropAttendanceOnHolidays(store: DashboardStore): DashboardStore {
+  const holidayDates = new Set((store.scrumHolidays ?? []).map((h) => h.date));
+  const entries = store.scrumAttendance ?? [];
+  if (holidayDates.size === 0) return store;
+
+  const kept = entries.filter((e) => !holidayDates.has(e.date));
+  if (kept.length === entries.length) return store;
+  return { ...store, scrumAttendance: kept };
+}
+
 async function writeStoreUnlocked(store: DashboardStore): Promise<DashboardStore> {
   const updated = { ...store, lastUpdated: new Date().toISOString() };
   await writeJsonText(STORE_FILE, JSON.stringify(updated, null, 2));
@@ -416,7 +427,7 @@ async function readStoreUnlocked(): Promise<DashboardStore> {
     scrumAttendance: withReleaseIds.scrumAttendance ?? [],
     scrumHolidays: withReleaseIds.scrumHolidays ?? [],
   });
-  const withScrumStatusFixed = migrateLegacyScrumStatus(withApprovals);
+  const withScrumStatusFixed = dropAttendanceOnHolidays(migrateLegacyScrumStatus(withApprovals));
 
   const shouldPersist =
     (parsed.reminders?.length ?? 0) > 0 ||

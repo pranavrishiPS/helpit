@@ -5,7 +5,13 @@ import {
   writeScrumSheetTokens,
   type ScrumSheetTokens,
 } from "@/lib/scrum-sheet-store";
-import { buildSheetRows, mergeScrumWithSheet, parseSheetRows } from "@/lib/scrum-sheet-sync";
+import {
+  buildSheetRows,
+  mergeScrumWithSheet,
+  parseSheetRows,
+  removeDisallowedCells,
+  removeHolidayCells,
+} from "@/lib/scrum-sheet-sync";
 
 const SHEET_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
@@ -188,16 +194,19 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
     );
   }
 
+  // Holidays carry no attendance: ignore sheet statuses on those dates and drop any app entries there.
+  const holidayDates = new Set((store.scrumHolidays ?? []).map((h) => h.date));
   const merged = mergeScrumWithSheet(
     store.scrumMembers ?? [],
-    store.scrumAttendance ?? [],
-    parsedSheet
+    (store.scrumAttendance ?? []).filter((e) => !holidayDates.has(e.date)),
+    removeDisallowedCells(removeHolidayCells(parsedSheet, holidayDates))
   );
 
   const outputRows = buildSheetRows(
     merged.members,
     [...new Set([...parsedSheet.dates, ...merged.entries.map((e) => e.date)])],
-    merged.entries
+    merged.entries,
+    holidayDates
   );
 
   await sheets.spreadsheets.values.update({

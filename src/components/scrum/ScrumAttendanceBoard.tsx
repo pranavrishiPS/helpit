@@ -48,7 +48,8 @@ const CALENDAR_STATUS_CLASSES: Record<ScrumStatus, string> = {
 };
 
 function todayIso(): string {
-  return new Date().toISOString().split("T")[0];
+  // Local calendar date — toISOString() is UTC and lags a day for IST mornings.
+  return format(new Date(), "yyyy-MM-dd");
 }
 
 function StatusPills({
@@ -263,7 +264,7 @@ export function ScrumAttendanceBoard({
               </button>
             )}
           </div>
-          <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
+          <Button size="sm" onClick={handleSave} disabled={saving || !dirty || !!todaysHoliday}>
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
@@ -291,7 +292,7 @@ export function ScrumAttendanceBoard({
         {todaysHoliday ? (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
             <span>
-              {todaysHoliday.label || "Holiday"} — no attendance expected on this date.
+              {todaysHoliday.label || "Holiday"} — no attendance is tracked on this date.
             </span>
             <button
               type="button"
@@ -334,11 +335,11 @@ export function ScrumAttendanceBoard({
             }}
             className="mb-3 text-xs font-medium text-muted hover:text-accent"
           >
-            + Mark this date as a holiday
+            + Mark this date as a holiday (clears any attendance logged for it)
           </button>
         )}
 
-        {members.length === 0 ? (
+        {todaysHoliday ? null : members.length === 0 ? (
           <EmptyState
             title="No teammates yet"
             description="Add teammates below to start logging daily scrum attendance."

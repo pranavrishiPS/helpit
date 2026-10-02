@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { updateStore } from "@/lib/db";
 import type { ScrumAttendanceEntry } from "@/lib/types";
+import { isStatusAllowedOnDate } from "@/lib/scrum-attendance";
 import {
   deleteScrumAttendanceEntrySchema,
   parseBody,
@@ -22,7 +23,12 @@ export async function POST(request: NextRequest) {
   const { date, entries } = parsed.data;
   const now = new Date().toISOString();
 
+  let isHoliday = false;
   const updated = await updateStore((s) => {
+    if ((s.scrumHolidays ?? []).some((h) => h.date === date)) {
+      isHoliday = true;
+      return s;
+    }
     const existing = s.scrumAttendance ?? [];
     const byMember = new Map(
       existing.filter((e) => e.date === date).map((e) => [e.member, e])
@@ -52,6 +58,13 @@ export async function POST(request: NextRequest) {
     return { ...s, scrumAttendance: [...untouched, ...upserted] };
   });
 
+  if (isHoliday) {
+    return NextResponse.json(
+      { error: "That date is marked as a holiday — no attendance can be logged." },
+      { status: 409 }
+    );
+  }
+
   return NextResponse.json(
     updated.scrumAttendance.filter((e) => e.date === date),
     { status: 201 }
@@ -68,12 +81,17 @@ export async function PATCH(request: NextRequest) {
 
   const { id, status, note } = parsed.data;
   let found = false;
+  let notAllowed = false;
 
   await updateStore((s) => ({
     ...s,
     scrumAttendance: (s.scrumAttendance ?? []).map((entry) => {
       if (entry.id !== id) return entry;
       found = true;
+      if (!isStatusAllowedOnDate(status, entry.date)) {
+        notAllowed = true;
+        return entry;
+      }
       return {
         ...entry,
         status,
@@ -85,6 +103,12 @@ export async function PATCH(request: NextRequest) {
 
   if (!found) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+  }
+  if (notAllowed) {
+    return NextResponse.json(
+      { error: "That status isn't available for this entry's date." },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true });

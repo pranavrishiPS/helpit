@@ -6,6 +6,8 @@ import {
   parseSheetDate,
   parseSheetRows,
   parseStatusLabel,
+  removeDisallowedCells,
+  removeHolidayCells,
 } from "@/lib/scrum-sheet-sync";
 import type { ScrumAttendanceEntry } from "@/lib/types";
 
@@ -126,6 +128,45 @@ describe("buildSheetRows", () => {
     expect(rows[1]).toEqual(["Pranav", "On time", "Late"]);
     expect(rows[2]).toEqual(["Vrushali", "", ""]);
   });
+
+  it("writes 'Holiday' for every member on a holiday date, even if an entry exists", () => {
+    const entries = [
+      entry({ member: "Pranav", date: "2026-07-30", status: "on_time" }),
+      entry({ member: "Pranav", date: "2026-07-31", status: "late" }),
+    ];
+    const rows = buildSheetRows(
+      ["Pranav", "Vrushali"],
+      ["2026-07-30", "2026-07-31"],
+      entries,
+      new Set(["2026-07-30"])
+    );
+    expect(rows[1]).toEqual(["Pranav", "Holiday", "Late"]);
+    expect(rows[2]).toEqual(["Vrushali", "Holiday", ""]);
+  });
+
+  it("does not read the 'Holiday' cell text back as a status", () => {
+    const parsed = parseSheetRows([
+      ["Member", "30-Jul-26"],
+      ["Pranav", "Holiday"],
+    ]);
+    expect(parsed.cells).toEqual([]);
+  });
+});
+
+describe("removeHolidayCells", () => {
+  it("drops sheet cells on holiday dates and keeps the rest", () => {
+    const sheet = {
+      members: ["Pranav"],
+      dates: ["2026-07-30", "2026-07-31"],
+      cells: [
+        { member: "Pranav", date: "2026-07-30", status: "on_time" as const },
+        { member: "Pranav", date: "2026-07-31", status: "late" as const },
+      ],
+    };
+    const result = removeHolidayCells(sheet, new Set(["2026-07-30"]));
+    expect(result.cells).toEqual([{ member: "Pranav", date: "2026-07-31", status: "late" }]);
+    expect(result.dates).toEqual(sheet.dates);
+  });
 });
 
 describe("mergeScrumWithSheet", () => {
@@ -182,5 +223,23 @@ describe("mergeScrumWithSheet", () => {
     const result = mergeScrumWithSheet(["Pranav"], appEntries, sheet);
     expect(result.changed).toBe(false);
     expect(result.entries[0]).toBe(appEntries[0]);
+  });
+});
+
+describe("removeDisallowedCells", () => {
+  it("drops '1st half off' cells before 2026-10-01 and keeps everything else", () => {
+    const sheet = {
+      members: ["Pranav"],
+      dates: ["2026-09-30", "2026-10-01"],
+      cells: [
+        { member: "Pranav", date: "2026-09-30", status: "first_half_off" as const },
+        { member: "Pranav", date: "2026-09-30", status: "late" as const },
+        { member: "Pranav", date: "2026-10-01", status: "first_half_off" as const },
+      ],
+    };
+    expect(removeDisallowedCells(sheet).cells).toEqual([
+      { member: "Pranav", date: "2026-09-30", status: "late" },
+      { member: "Pranav", date: "2026-10-01", status: "first_half_off" },
+    ]);
   });
 });

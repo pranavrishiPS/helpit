@@ -20,9 +20,13 @@ export const FIRST_HALF_OFF_START_DATE = "2026-10-01";
  */
 export function statusesForDate(date: string, current?: ScrumStatus): ScrumStatus[] {
   return SCRUM_STATUSES.filter(
-    (status) =>
-      status !== "first_half_off" || date >= FIRST_HALF_OFF_START_DATE || current === status
+    (status) => isStatusAllowedOnDate(status, date) || current === status
   );
+}
+
+/** Whether a status may be newly recorded for a scrum date ("1st half off" only from FIRST_HALF_OFF_START_DATE). */
+export function isStatusAllowedOnDate(status: ScrumStatus, date: string): boolean {
+  return status !== "first_half_off" || date >= FIRST_HALF_OFF_START_DATE;
 }
 
 export interface ScrumMemberInsight {
