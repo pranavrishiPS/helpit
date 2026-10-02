@@ -6,15 +6,25 @@ on:
   pull_request:
     branches: [main, master]
 
+# CI only reads the repo; deploys are done by the Vercel Git integration.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same branch/PR.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       - run: npm ci
@@ -23,4 +33,5 @@ jobs:
 
       - run: npm test
 
+      # No BLOB_READ_WRITE_TOKEN here, so the build uses local files and never touches production data.
       - run: npm run build

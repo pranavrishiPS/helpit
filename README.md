@@ -54,6 +54,12 @@ OAuth flows use CSRF `state` cookies. Callback routes stay public.
 - `data/store.json` — dashboard state (gitignored)
 - `data/slack.json`, `data/gmail.json` — OAuth tokens (gitignored)
 
+**Local and production data are separate.** Local dev and `next build` read/write `data/store.json`. Production reads/writes the private Vercel Blob store. The storage layer switches to Blob whenever `BLOB_READ_WRITE_TOKEN` is set (or `VERCEL=1`), so:
+
+- Never put the production Blob token in `.env.local` under the name `BLOB_READ_WRITE_TOKEN`. Keep it under another name (e.g. `HELPIT_PROD_BLOB_TOKEN`) so a local run can't touch live data.
+- After `vercel env pull`, remove/rename `BLOB_READ_WRITE_TOKEN` again.
+- A failed or empty read of the production store is treated as an error, never as "missing" — the app will not re-seed defaults over live data.
+
 ## Integrations
 
 - **Gmail** — Connect in Settings, sync from Mail
@@ -71,3 +77,13 @@ After deploy:
 1. Set `NEXT_PUBLIC_APP_URL` (and Gmail/Slack redirect URIs) to the production URL.
 2. Add the same callback URLs in Google Cloud and the Slack app.
 3. Set `HELPIT_API_KEY` and `NEXT_PUBLIC_HELPIT_API_KEY` so APIs are not public.
+
+### Deploy flow
+
+Local → GitHub → Vercel is automatic:
+
+1. Work on `master` locally; run `npm run lint`, `npm test` and `npm run build` (all use local data).
+2. `git push origin master` — GitHub Actions (`.github/workflows/ci.yml`) runs lint, tests and build, and the Vercel Git integration deploys to production.
+3. Check the **Vercel** status on the commit (or the Vercel dashboard) shows *Ready* before testing the live app. Hard-refresh (Ctrl+Shift+R) to pick up the new client bundle.
+
+Data migrations in `src/lib/db.ts` run on the first store read after a deploy and are written back to the production store.
