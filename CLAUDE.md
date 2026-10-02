@@ -4,6 +4,18 @@ Daily command center for game producers at PlaySimple Games — tasks, Slack fol
 
 See [README.md](README.md) for setup, modules, and hosting. See [TEAM.md](TEAM.md) for the Cryptogram team roster (roles, Slack IDs, mention defaults) — always use it for MoMs, Slack @mentions, owners, and CC; never mix in people from other PlaySimple games.
 
+## Team agents — use them automatically
+
+Project agents live in `.claude/agents/`. Use them without being asked:
+
+- **New feature / sizable change** → `designer` (spec in `docs/specs/`) → `ux` → `ui` → `dev` → `qa`.
+- **Bug fix or small code change** → `dev`, then `qa` to verify.
+- **Visual/layout tweak** → `ui` (and `qa` if behavior could change).
+- **Flow or usability review** → `ux`.
+- **"Test this" / before pushing to prod** → `qa`.
+
+Skip agents for questions, data entry (tasks, releases, MoMs), and one-line edits. Keep the user's reply short: say which agents ran and the outcome, not their full reports.
+
 ## No dummy data — ask first, todo what's missing
 
 For **any** Helpit data change (releases, tasks, outings, mail, slack items, dashboard seeds, `store.json`, `db.ts`, etc.):
