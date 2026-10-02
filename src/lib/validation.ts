@@ -245,7 +245,7 @@ export const deleteOutingExpenseSchema = z.object({
   id: z.string().min(1),
 });
 
-export const scrumStatusSchema = z.enum(["on_time", "late", "leave", "other"]);
+export const scrumStatusSchema = z.enum(["on_time", "late", "leave", "first_half_off", "other"]);
 
 export const scrumDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 

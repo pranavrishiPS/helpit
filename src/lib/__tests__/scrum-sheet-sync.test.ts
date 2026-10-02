@@ -27,6 +27,13 @@ describe("parseStatusLabel", () => {
     expect(parseStatusLabel("Other")).toBe("other");
   });
 
+  it("parses the '1st half off' label and its aliases", () => {
+    expect(parseStatusLabel("1st half off")).toBe("first_half_off");
+    expect(parseStatusLabel("1st Half Off")).toBe("first_half_off");
+    expect(parseStatusLabel("First half off")).toBe("first_half_off");
+    expect(parseStatusLabel("Half day")).toBe("first_half_off");
+  });
+
   it("maps the legacy SIT label to other", () => {
     expect(parseStatusLabel("SIT")).toBe("other");
   });

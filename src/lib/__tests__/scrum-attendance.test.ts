@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  SCRUM_STATUSES,
   computeScrumInsights,
+  statusesForDate,
   entriesByDateForMember,
   entriesForDate,
   entriesForMonth,
@@ -19,6 +21,20 @@ function entry(overrides: Partial<ScrumAttendanceEntry> & { date: string; member
     ...overrides,
   };
 }
+
+describe("statusesForDate", () => {
+  it("hides '1st half off' before 1 Oct 2026", () => {
+    expect(statusesForDate("2026-09-30")).not.toContain("first_half_off");
+  });
+
+  it("offers '1st half off' from 1 Oct 2026", () => {
+    expect(statusesForDate("2026-10-01")).toEqual(SCRUM_STATUSES);
+  });
+
+  it("keeps '1st half off' on an earlier date if an entry already uses it", () => {
+    expect(statusesForDate("2026-09-30", "first_half_off")).toContain("first_half_off");
+  });
+});
 
 describe("computeScrumInsights", () => {
   it("computes per-member counts and on-time rate", () => {
@@ -61,6 +77,17 @@ describe("computeScrumInsights", () => {
     expect(insights[0].onTimeRate).toBe(100);
   });
 
+  it("counts '1st half off' in total days but excludes it from the on-time rate", () => {
+    const entries = [
+      entry({ member: "Pranav", date: "2026-10-01", status: "on_time" }),
+      entry({ member: "Pranav", date: "2026-10-02", status: "first_half_off" }),
+    ];
+    const [pranav] = computeScrumInsights(["Pranav"], entries);
+    expect(pranav.firstHalfOff).toBe(1);
+    expect(pranav.totalDays).toBe(2);
+    expect(pranav.onTimeRate).toBe(100);
+  });
+
   it("includes roster members with zero logged days", () => {
     const insights = computeScrumInsights(["Aryan"], []);
     expect(insights).toEqual([
@@ -69,6 +96,7 @@ describe("computeScrumInsights", () => {
         onTime: 0,
         late: 0,
         leave: 0,
+        firstHalfOff: 0,
         totalDays: 0,
         onTimeRate: 0,
       },

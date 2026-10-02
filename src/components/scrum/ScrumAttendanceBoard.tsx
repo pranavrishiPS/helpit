@@ -16,6 +16,7 @@ import {
   holidayForDate,
   listAttendanceMonths,
   listScrumDates,
+  statusesForDate,
 } from "@/lib/scrum-attendance";
 import {
   buildWorkWeeks,
@@ -34,6 +35,7 @@ const STATUS_PILL_CLASSES: Record<ScrumStatus, string> = {
   on_time: "border-accent bg-accent/10 text-accent",
   late: "border-warning bg-warning/10 text-warning",
   leave: "border-accent-secondary bg-accent-secondary/10 text-accent-secondary",
+  first_half_off: "border-sky-300 bg-sky-50 text-sky-700",
   other: "border-slate-300 bg-slate-100 text-slate-700",
 };
 
@@ -41,6 +43,7 @@ const CALENDAR_STATUS_CLASSES: Record<ScrumStatus, string> = {
   on_time: "bg-accent/15 text-accent",
   late: "bg-warning/15 text-warning",
   leave: "bg-accent-secondary/15 text-accent-secondary",
+  first_half_off: "bg-sky-100 text-sky-700",
   other: "bg-slate-200/80 text-slate-700",
 };
 
@@ -50,14 +53,16 @@ function todayIso(): string {
 
 function StatusPills({
   value,
+  date,
   onChange,
 }: {
   value: ScrumStatus | undefined;
+  date: string;
   onChange: (status: ScrumStatus) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-1">
-      {SCRUM_STATUSES.map((status) => (
+      {statusesForDate(date, value).map((status) => (
         <button
           key={status}
           type="button"
@@ -347,6 +352,7 @@ export function ScrumAttendanceBoard({
                 </span>
                 <StatusPills
                   value={draft[member]}
+                  date={selectedDate}
                   onChange={(status) => setDraft((prev) => ({ ...prev, [member]: status }))}
                 />
                 {draft[member] === "other" && (
@@ -399,13 +405,14 @@ export function ScrumAttendanceBoard({
           <p className="text-sm text-muted">No attendance logged this month.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[360px] text-left text-xs">
+            <table className="w-full min-w-[420px] text-left text-xs">
               <thead>
                 <tr className="text-muted">
                   <th className="pb-1 pr-2 font-medium">Member</th>
                   <th className="pb-1 px-2 font-medium">On time</th>
                   <th className="pb-1 px-2 font-medium">Late</th>
-                  <th className="pb-1 pl-2 font-medium">Leave</th>
+                  <th className="pb-1 px-2 font-medium">Leave</th>
+                  <th className="pb-1 pl-2 font-medium">1st half off</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -425,8 +432,11 @@ export function ScrumAttendanceBoard({
                     <td className="px-2 py-1 tabular-nums text-muted">
                       {row.late}/{row.totalDays}
                     </td>
-                    <td className="py-1 pl-2 tabular-nums text-muted">
+                    <td className="px-2 py-1 tabular-nums text-muted">
                       {row.leave}/{row.totalDays}
+                    </td>
+                    <td className="py-1 pl-2 tabular-nums text-muted">
+                      {row.firstHalfOff}/{row.totalDays}
                     </td>
                   </tr>
                 ))}

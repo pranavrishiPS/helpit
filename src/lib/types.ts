@@ -175,7 +175,7 @@ export interface MailItem {
   gmailId?: string;
 }
 
-export type ScrumStatus = "on_time" | "late" | "leave" | "other";
+export type ScrumStatus = "on_time" | "late" | "leave" | "first_half_off" | "other";
 
 export interface ScrumAttendanceEntry {
   id: string;

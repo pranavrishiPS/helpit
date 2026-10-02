@@ -1,22 +1,39 @@
 import type { ScrumAttendanceEntry, ScrumHoliday, ScrumStatus } from "./types";
 
-export const SCRUM_STATUSES: ScrumStatus[] = ["on_time", "late", "leave", "other"];
+export const SCRUM_STATUSES: ScrumStatus[] = ["on_time", "late", "leave", "first_half_off", "other"];
 
 export const SCRUM_STATUS_LABELS: Record<ScrumStatus, string> = {
   on_time: "On time",
   late: "Late",
   leave: "Leave",
+  first_half_off: "1st half off",
   other: "Other",
 };
+
+/** First scrum date on which "1st half off" is offered as a status. */
+export const FIRST_HALF_OFF_START_DATE = "2026-10-01";
+
+/**
+ * Statuses offered for a scrum date. "1st half off" only exists from
+ * FIRST_HALF_OFF_START_DATE onward, but is kept visible on an earlier date
+ * if an entry already uses it (e.g. synced from the sheet).
+ */
+export function statusesForDate(date: string, current?: ScrumStatus): ScrumStatus[] {
+  return SCRUM_STATUSES.filter(
+    (status) =>
+      status !== "first_half_off" || date >= FIRST_HALF_OFF_START_DATE || current === status
+  );
+}
 
 export interface ScrumMemberInsight {
   member: string;
   onTime: number;
   late: number;
   leave: number;
-  /** on_time + late + leave — the total tracked days this insight is out of. "Other" is excluded. */
+  firstHalfOff: number;
+  /** on_time + late + leave + first_half_off — the total tracked days this insight is out of. "Other" is excluded. */
   totalDays: number;
-  /** Percentage of on_time/late days the member was on time, 0-100. "Leave" and "other" days are excluded. */
+  /** Percentage of on_time/late days the member was on time, 0-100. "Leave", "1st half off" and "other" days are excluded. */
   onTimeRate: number;
 }
 
@@ -32,6 +49,7 @@ export function computeScrumInsights(
     const onTime = memberEntries.filter((e) => e.status === "on_time").length;
     const late = memberEntries.filter((e) => e.status === "late").length;
     const leave = memberEntries.filter((e) => e.status === "leave").length;
+    const firstHalfOff = memberEntries.filter((e) => e.status === "first_half_off").length;
     const attendedDays = onTime + late;
 
     return {
@@ -39,7 +57,8 @@ export function computeScrumInsights(
       onTime,
       late,
       leave,
-      totalDays: onTime + late + leave,
+      firstHalfOff,
+      totalDays: onTime + late + leave + firstHalfOff,
       onTimeRate: attendedDays > 0 ? Math.round((onTime / attendedDays) * 100) : 0,
     };
   });
