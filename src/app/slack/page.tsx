@@ -3,7 +3,19 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { SlackItem } from "@/lib/types";
-import { PageHeader, Card, Badge, Button, ErrorBanner } from "@/components/ui";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  EmptyState,
+  ErrorBanner,
+  ModuleChip,
+  PageSkeleton,
+  SectionTitle,
+  buttonClasses,
+} from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { formatDueDate, priorityColor } from "@/lib/utils";
 import { Check, MessageSquare, RefreshCw, ExternalLink, Timer } from "lucide-react";
 import { useDashboard } from "@/lib/use-dashboard";
@@ -90,11 +102,11 @@ export default function SlackPage() {
   }
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading Slack...</div>;
+    return <PageSkeleton label="Loading Slack..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load Slack"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load Slack"} />;
   }
 
   const items: SlackItem[] = store.slackItems;
@@ -107,6 +119,7 @@ export default function SlackPage() {
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Slack"
+        module="slack"
         description={
           status?.autoSyncAvailable === false
             ? "Track Slack follow-ups manually — auto-sync is unavailable with current workspace permissions"
@@ -115,13 +128,22 @@ export default function SlackPage() {
       />
 
       {status && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
+        <Card
+          className={cn(
+            "mb-6 flex flex-wrap items-center justify-between gap-3 py-3 sm:py-3.5",
+            status.connected
+              ? "shadow-[inset_3px_0_0_var(--success),var(--shadow-card)]"
+              : "shadow-[inset_3px_0_0_var(--subtle),var(--shadow-card)]"
+          )}
+        >
           <div className="text-sm">
             {status.connected ? (
               <div>
                 <span>
-                  {status.autoSyncAvailable === false ? "Connected" : "Synced"}
-                  {status.teamName ? ` · ${status.teamName}` : ""}
+                  <span className="font-semibold">
+                    {status.autoSyncAvailable === false ? "Connected" : "Synced"}
+                    {status.teamName ? ` · ${status.teamName}` : ""}
+                  </span>
                   {status.autoSyncAvailable !== false && status.lastSyncedAt && (
                     <span className="text-muted">
                       {" "}
@@ -164,56 +186,58 @@ export default function SlackPage() {
               </div>
             )}
             {status.lastSyncError && (
-              <p className="mt-1 text-xs text-warning">{status.lastSyncError}</p>
+              <p className="mt-1 text-xs font-medium text-danger">{status.lastSyncError}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
             {!status.connected && (
-              <Link href="/settings">
-                <Button variant="secondary" size="sm">
-                  Settings
-                </Button>
+              <Link href="/settings" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                Settings
               </Link>
             )}
             {status.connected && status.autoSyncAvailable !== false && (
               <Button variant="secondary" size="sm" onClick={syncNow} disabled={syncing}>
-                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+                <RefreshCw className={syncing ? "animate-spin" : ""} />
                 Sync now
               </Button>
             )}
           </div>
-        </div>
+        </Card>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted">{openCount} open items</p>
-        <Button variant="ghost" size="sm" onClick={() => setShowDone(!showDone)}>
-          {showDone ? "Hide done" : "Show done"}
-        </Button>
-      </div>
+      <SectionTitle
+        count={openCount}
+        action={
+          <Button variant="ghost" size="sm" onClick={() => setShowDone(!showDone)}>
+            {showDone ? "Hide done" : "Show done"}
+          </Button>
+        }
+      >
+        Open items
+      </SectionTitle>
+
+      {visible.length === 0 && (
+        <Card>
+          <EmptyState icon={MessageSquare} title="No open Slack follow-ups right now." />
+        </Card>
+      )}
 
       <div className="space-y-3">
         {visible.map((item) => (
-          <Card key={item.id} className={item.completed ? "opacity-50" : ""}>
+          <Card key={item.id} tone={item.completed ? "muted" : "default"}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-                  <MessageSquare className="h-4 w-4 text-accent" />
-                </div>
+                <ModuleChip module="slack" variant="soft" size="md" />
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-accent">{item.channel}</span>
-                    <Badge className={priorityColor(item.priority)}>{item.priority}</Badge>
-                    <Badge className="border-slate-200 bg-slate-50 text-slate-600">
-                      {item.action.replace("_", " ")}
-                    </Badge>
-                    {item.source === "slack" && (
-                      <Badge className="border-accent-secondary/30 bg-accent-secondary/10 text-accent-secondary">
-                        synced
-                      </Badge>
-                    )}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="mr-0.5 text-sm font-semibold text-foreground">{item.channel}</span>
+                    <Badge className={cn("capitalize", priorityColor(item.priority))}>{item.priority}</Badge>
+                    <Badge tone="neutral">{item.action.replace("_", " ")}</Badge>
+                    {item.source === "slack" && <Badge tone="info">synced</Badge>}
                   </div>
-                  <p className="mt-1 text-sm">{item.summary}</p>
+                  <p className={cn("mt-1 break-words text-sm", item.completed && "text-muted line-through")}>
+                    {item.summary}
+                  </p>
                   {item.dueDate && (
                     <p className="mt-1 text-xs text-muted">Due {formatDueDate(item.dueDate)}</p>
                   )}
@@ -222,7 +246,7 @@ export default function SlackPage() {
                       href={item.threadUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-1 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                      className="-ml-1.5 mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       Open in Slack
                       <ExternalLink className="h-3 w-3" />
@@ -231,8 +255,8 @@ export default function SlackPage() {
                 </div>
               </div>
               {!item.completed && (
-                <Button variant="secondary" size="sm" onClick={() => markDone(item.id)}>
-                  <Check className="mr-1 h-3.5 w-3.5" />
+                <Button variant="secondary" size="sm" onClick={() => markDone(item.id)} className="self-start">
+                  <Check />
                   Done
                 </Button>
               )}

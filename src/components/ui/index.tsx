@@ -1,38 +1,117 @@
+import Link from "next/link";
+import { AlertCircle, ArrowRight, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { MODULE_ICONS, MODULE_STYLES, type ModuleId } from "@/lib/modules";
+
+// Shared UI primitives for the "Arcade Night" look (docs/specs/visual-redesign.md §4).
+// No hooks here so server components can render these too.
+
+const TRANSITION =
+  "transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-soft";
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card";
+
+/* ------------------------------------------------------------------ */
+/* Module chip                                                         */
+/* ------------------------------------------------------------------ */
+
+export function ModuleChip({
+  module,
+  icon,
+  size = "sm",
+  variant = "solid",
+  className,
+}: {
+  module: ModuleId;
+  icon?: LucideIcon;
+  size?: "sm" | "md" | "lg";
+  variant?: "solid" | "soft";
+  className?: string;
+}) {
+  const Icon = icon ?? MODULE_ICONS[module];
+  const styles = MODULE_STYLES[module];
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "grid shrink-0 place-items-center",
+        size === "sm" && "h-7 w-7 rounded-lg",
+        size === "md" && "h-9 w-9 rounded-xl",
+        size === "lg" && "h-10 w-10 rounded-xl",
+        variant === "solid"
+          ? cn(styles.solid, "text-white shadow-chip")
+          : cn(styles.soft, styles.text),
+        className
+      )}
+    >
+      <Icon
+        className={cn(
+          size === "sm" && "h-4 w-4",
+          size === "md" && "h-[18px] w-[18px]",
+          size === "lg" && "h-5 w-5"
+        )}
+      />
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Page header                                                         */
+/* ------------------------------------------------------------------ */
 
 export function PageHeader({
   title,
   description,
   action,
+  module,
+  icon,
 }: {
   title: string;
   description?: string;
   action?: React.ReactNode;
+  module?: ModuleId;
+  icon?: LucideIcon;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-brand sm:text-2xl">{title}</h1>
-        {description && (
-          <p className="mt-1 text-sm text-muted">{description}</p>
-        )}
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        {module && <ModuleChip module={module} icon={icon} size="lg" />}
+        <div className="min-w-0">
+          <h1 className="text-balance font-display text-2xl font-bold tracking-[-0.02em] text-foreground sm:text-[28px] sm:leading-[34px]">
+            {title}
+          </h1>
+          {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
+        </div>
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Card                                                                */
+/* ------------------------------------------------------------------ */
+
 export function Card({
   children,
   className,
-}: {
-  children: React.ReactNode;
-  className?: string;
+  interactive,
+  tone = "default",
+  ...rest
+}: React.HTMLAttributes<HTMLDivElement> & {
+  interactive?: boolean;
+  tone?: "default" | "muted";
 }) {
   return (
     <div
+      {...rest}
       className={cn(
-        "rounded-xl border border-border bg-card p-4 sm:p-5",
+        "rounded-card border border-border bg-card p-4 shadow-card sm:p-5",
+        TRANSITION,
+        "duration-[180ms]",
+        tone === "muted" && "bg-surface-2/60 shadow-none",
+        interactive &&
+          "cursor-pointer hover:-translate-y-0.5 hover:border-border-strong hover:shadow-raised",
         className
       )}
     >
@@ -41,60 +120,343 @@ export function Card({
   );
 }
 
-export function Badge({
+export function CardLink({
+  href,
   children,
   className,
 }: {
+  href: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <span
+    <Link
+      href={href}
       className={cn(
-        "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
+        "group inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-accent hover:bg-accent-soft",
+        TRANSITION,
+        FOCUS_RING,
         className
       )}
     >
       {children}
+      <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+    </Link>
+  );
+}
+
+export function CardHeader({
+  title,
+  icon,
+  module,
+  action,
+  className,
+}: {
+  title: React.ReactNode;
+  icon?: LucideIcon;
+  module?: ModuleId;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("mb-4 flex items-center justify-between gap-3", className)}>
+      <div className="flex min-w-0 items-center gap-2.5">
+        {module && <ModuleChip module={module} icon={icon} size="sm" />}
+        <h2 className="truncate font-display text-base font-semibold leading-[22px] text-foreground">
+          {title}
+        </h2>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Section title (eyebrow + count + right slot)                        */
+/* ------------------------------------------------------------------ */
+
+export function SectionTitle({
+  children,
+  count,
+  action,
+  as: Tag = "h2",
+  className,
+}: {
+  children: React.ReactNode;
+  count?: number;
+  action?: React.ReactNode;
+  as?: "h2" | "h3" | "p";
+  className?: string;
+}) {
+  return (
+    <div className={cn("mb-3 flex items-center justify-between gap-3", className)}>
+      <Tag className="flex items-center gap-2 font-sans text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-muted">
+        {children}
+        {count !== undefined && (
+          <span className="rounded-full bg-surface-3 px-1.5 py-px tabular-nums text-foreground">
+            {count}
+          </span>
+        )}
+      </Tag>
+      {action}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Badge                                                               */
+/* ------------------------------------------------------------------ */
+
+export type BadgeTone =
+  | "neutral"
+  | "accent"
+  | "success"
+  | "caution"
+  | "danger"
+  | "info"
+  | "pop"
+  | "android"
+  | "ios";
+
+const BADGE_SOFT: Record<BadgeTone, string> = {
+  neutral: "bg-surface-2 text-muted border-border",
+  accent: "bg-accent-soft text-accent",
+  success: "bg-success-soft text-success",
+  caution: "bg-caution-soft text-caution",
+  danger: "bg-danger-soft text-danger",
+  info: "bg-info-soft text-info",
+  pop: "bg-pop-soft text-pop-ink",
+  android: "bg-android-soft text-android-ink",
+  ios: "bg-ios-soft text-ios-ink",
+};
+
+const BADGE_SOLID: Record<BadgeTone, string> = {
+  neutral: "bg-foreground text-white",
+  accent: "bg-accent text-white",
+  success: "bg-success text-white",
+  caution: "bg-caution text-white",
+  danger: "bg-danger text-white",
+  info: "bg-info text-white",
+  pop: "bg-pop text-foreground",
+  android: "bg-android text-white",
+  ios: "bg-ios text-white",
+};
+
+export function badgeClasses({
+  tone,
+  solid,
+}: { tone?: BadgeTone; solid?: boolean } = {}): string {
+  return cn(
+    "inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-transparent px-2 py-0.5 text-[11px] font-semibold leading-4",
+    tone && (solid ? BADGE_SOLID[tone] : BADGE_SOFT[tone])
+  );
+}
+
+export function Badge({
+  children,
+  className,
+  tone,
+  solid,
+  dot,
+  title,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  tone?: BadgeTone;
+  solid?: boolean;
+  dot?: boolean;
+  title?: string;
+}) {
+  return (
+    <span title={title} className={cn(badgeClasses({ tone, solid }), className)}>
+      {dot && <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />}
+      {children}
     </span>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Stat tile                                                           */
+/* ------------------------------------------------------------------ */
 
 export function StatCard({
   label,
   value,
   hint,
   accent,
+  tone,
+  icon: Icon,
+  module,
+  href,
+  className,
 }: {
   label: string;
   value: number | string;
   hint?: string;
+  /** Alias for tone="attention". */
   accent?: boolean;
+  tone?: "default" | "attention";
+  icon?: LucideIcon;
+  module?: ModuleId;
+  href?: string;
+  className?: string;
 }) {
-  return (
-    <Card className={accent ? "border-accent/30 bg-accent/5" : ""}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-        {label}
-      </p>
-      <p className={cn("mt-1 text-2xl font-semibold sm:text-3xl", accent && "text-accent")}>
+  const attention = tone === "attention" || accent;
+  const styles = module ? MODULE_STYLES[module] : null;
+  const isZero = value === 0 || value === "0";
+
+  const tile = (
+    <Card
+      interactive={Boolean(href)}
+      className={cn(
+        "relative h-full overflow-hidden p-4 sm:p-4",
+        attention &&
+          "border-accent/30 bg-[linear-gradient(180deg,var(--accent-soft)_0%,var(--card)_70%)]",
+        !href && className
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-muted">
+          {attention && (
+            <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />
+          )}
+          <span className="truncate">{label}</span>
+        </p>
+        {Icon && (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "grid h-7 w-7 shrink-0 place-items-center rounded-lg",
+              styles ? cn(styles.soft, styles.text) : "bg-accent-soft text-accent"
+            )}
+          >
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
+      </div>
+      <p
+        className={cn(
+          "mt-2 font-display text-[30px] font-bold leading-none tabular-nums text-foreground sm:text-[34px]",
+          isZero && "text-muted",
+          attention && !isZero && "text-accent"
+        )}
+      >
         {value}
       </p>
-      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
     </Card>
   );
+
+  if (!href) return tile;
+  return (
+    <Link href={href} className={cn("block rounded-card", FOCUS_RING, className)}>
+      {tile}
+    </Link>
+  );
 }
+
+/* ------------------------------------------------------------------ */
+/* Empty state                                                         */
+/* ------------------------------------------------------------------ */
 
 export function EmptyState({
   title,
   description,
+  icon: Icon,
+  action,
+  compact,
+  className,
 }: {
   title: string;
-  description: string;
+  description?: string;
+  icon?: LucideIcon;
+  action?: React.ReactNode;
+  compact?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <p className="text-sm font-medium text-foreground">{title}</p>
-      <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center text-center",
+        compact ? "py-6" : "py-10",
+        className
+      )}
+    >
+      {Icon && (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "grid place-items-center rounded-2xl bg-[linear-gradient(135deg,var(--accent-soft),var(--pop-soft))] text-accent ring-1 ring-inset ring-accent/10",
+            compact ? "h-9 w-9" : "h-12 w-12"
+          )}
+        >
+          <Icon className={compact ? "h-[18px] w-[18px]" : "h-[22px] w-[22px]"} />
+        </span>
+      )}
+      <p className={cn("text-sm font-semibold text-foreground", Icon && "mt-3")}>{title}</p>
+      {description && (
+        <p className="mt-1 max-w-sm text-[13px] text-muted">{description}</p>
+      )}
+      {action && <div className="mt-4">{action}</div>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Alert / ErrorBanner                                                 */
+/* ------------------------------------------------------------------ */
+
+export type AlertTone = "danger" | "caution" | "info" | "success" | "pop";
+
+const ALERT_TONES: Record<AlertTone, string> = {
+  danger: "border-danger/25 bg-danger-soft text-danger",
+  caution: "border-caution/25 bg-caution-soft text-caution",
+  info: "border-info/25 bg-info-soft text-info",
+  success: "border-success/25 bg-success-soft text-success",
+  pop: "border-pop/30 bg-pop-soft text-pop-ink",
+};
+
+export function Alert({
+  tone = "info",
+  children,
+  icon: Icon = AlertCircle,
+  action,
+  onDismiss,
+  role,
+  className,
+}: {
+  tone?: AlertTone;
+  children: React.ReactNode;
+  icon?: LucideIcon | null;
+  action?: React.ReactNode;
+  onDismiss?: () => void;
+  role?: "alert" | "status";
+  className?: string;
+}) {
+  return (
+    <div
+      role={role}
+      className={cn(
+        "flex items-start gap-2.5 rounded-control border px-4 py-2.5 text-sm",
+        ALERT_TONES[tone],
+        className
+      )}
+    >
+      {Icon && <Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />}
+      <div className="min-w-0 flex-1">{children}</div>
+      {action}
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className={cn(
+            buttonClasses({ variant: "ghost", size: "sm" }),
+            "-my-1 h-7 shrink-0 px-2 text-current hover:bg-current/10 hover:text-current"
+          )}
+        >
+          Dismiss
+        </button>
+      )}
     </div>
   );
 }
@@ -110,24 +472,36 @@ export function ErrorBanner({
   className?: string;
 }) {
   return (
-    <div
-      role="alert"
-      className={cn(
-        "mb-4 flex items-start justify-between gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning",
-        className
-      )}
-    >
-      <span className="min-w-0">{message}</span>
-      {onDismiss && (
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="shrink-0 text-xs font-medium hover:underline"
-        >
-          Dismiss
-        </button>
-      )}
-    </div>
+    <Alert tone="danger" role="alert" onDismiss={onDismiss} className={cn("mb-4", className)}>
+      {message}
+    </Alert>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Button                                                              */
+/* ------------------------------------------------------------------ */
+
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonSize = "sm" | "md" | "icon";
+
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+}: { variant?: ButtonVariant; size?: ButtonSize } = {}): string {
+  return cn(
+    "inline-flex select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-control font-semibold active:translate-y-px disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none aria-disabled:pointer-events-none aria-disabled:opacity-50",
+    TRANSITION,
+    FOCUS_RING,
+    size === "sm" && "h-8 px-3 text-xs [&_svg]:h-3.5 [&_svg]:w-3.5",
+    size === "md" && "h-10 px-4 text-sm [&_svg]:h-4 [&_svg]:w-4",
+    size === "icon" && "h-8 w-8 p-0 text-sm [&_svg]:h-4 [&_svg]:w-4",
+    variant === "primary" &&
+      "bg-accent text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-glow)] hover:bg-accent-hover",
+    variant === "secondary" &&
+      "border border-border-strong bg-card text-foreground shadow-card hover:border-input/60 hover:bg-surface-2",
+    variant === "ghost" && "text-muted hover:bg-surface-2 hover:text-foreground",
+    variant === "danger" && "bg-danger-soft text-danger hover:bg-danger hover:text-white"
   );
 }
 
@@ -139,26 +513,289 @@ export function Button({
   className,
   ...rest
 }: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type"> & {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
-  size?: "sm" | "md";
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   type?: "button" | "submit";
 }) {
   return (
-    <button
-      {...rest}
-      type={type}
-      className={cn(
-        "inline-flex cursor-pointer items-center justify-center rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-        size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm",
-        variant === "primary" && "bg-brand text-white hover:bg-brand-hover",
-        variant === "secondary" &&
-          "border border-border bg-card text-foreground hover:bg-slate-50",
-        variant === "ghost" && "text-muted hover:bg-slate-100",
-        variant === "danger" && "bg-warning/10 text-warning hover:bg-warning/20",
-        className
-      )}
-    >
+    <button {...rest} type={type} className={cn(buttonClasses({ variant, size }), className)}>
       {children}
     </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Form fields                                                         */
+/* ------------------------------------------------------------------ */
+
+export function fieldClasses({
+  size = "md",
+  kind = "input",
+}: { size?: "sm" | "md"; kind?: "input" | "select" | "textarea" } = {}): string {
+  return cn(
+    "w-full rounded-control border border-input bg-card px-3 text-sm text-foreground shadow-[inset_0_1px_1px_rgb(31_22_64/0.04)] outline-none transition placeholder:text-subtle",
+    "hover:border-foreground/40 focus:border-accent focus:ring-4 focus:ring-accent/15",
+    "aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/15",
+    "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted",
+    kind === "textarea"
+      ? "min-h-[4.5rem] resize-y py-2"
+      : size === "sm"
+        ? "h-8 px-2.5 text-xs"
+        : "h-10",
+    kind === "select" && "cursor-pointer pr-8"
+  );
+}
+
+type FieldSize = { size?: "sm" | "md" };
+
+export function Input({
+  size,
+  className,
+  ...rest
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> &
+  FieldSize & { ref?: React.Ref<HTMLInputElement> }) {
+  return <input {...rest} className={cn(fieldClasses({ size }), className)} />;
+}
+
+export function Select({
+  size,
+  className,
+  children,
+  ...rest
+}: Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> & FieldSize) {
+  return (
+    <select {...rest} className={cn(fieldClasses({ size, kind: "select" }), className)}>
+      {children}
+    </select>
+  );
+}
+
+export function Textarea({
+  className,
+  ...rest
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea {...rest} className={cn(fieldClasses({ kind: "textarea" }), className)} />;
+}
+
+export function Label({
+  children,
+  hint,
+  className,
+  ...rest
+}: React.LabelHTMLAttributes<HTMLLabelElement> & { hint?: React.ReactNode }) {
+  return (
+    <label {...rest} className={cn("mb-1.5 block text-xs font-semibold text-foreground", className)}>
+      {children}
+      {hint && <span className="ml-1 text-[11px] font-normal text-muted">{hint}</span>}
+    </label>
+  );
+}
+
+export function FieldError({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p role="alert" className={cn("mt-1.5 text-xs font-medium text-danger", className)}>
+      {children}
+    </p>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tabs / segmented filter                                             */
+/* ------------------------------------------------------------------ */
+
+export function Tabs<T extends string>({
+  value,
+  onChange,
+  items,
+  className,
+  "aria-label": ariaLabel,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  items: { id: T; label: React.ReactNode; count?: number }[];
+  className?: string;
+  "aria-label"?: string;
+}) {
+  return (
+    <div className={cn("no-scrollbar max-w-full overflow-x-auto", className)}>
+      <div
+        role="group"
+        aria-label={ariaLabel}
+        className="inline-flex gap-1 rounded-control bg-surface-2 p-1 ring-1 ring-inset ring-border"
+      >
+        {items.map((item) => {
+          const active = item.id === value;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(item.id)}
+              className={cn(
+                "inline-flex h-8 shrink-0 items-center rounded-lg px-3 text-xs font-semibold",
+                TRANSITION,
+                FOCUS_RING,
+                active ? "bg-card text-foreground shadow-card" : "text-muted hover:text-foreground"
+              )}
+            >
+              {item.label}
+              {item.count !== undefined && (
+                <span
+                  className={cn(
+                    "ml-1.5 rounded-full px-1.5 text-[11px] tabular-nums",
+                    active ? "bg-accent-soft text-accent" : "bg-surface-3"
+                  )}
+                >
+                  {item.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Table styles                                                        */
+/* ------------------------------------------------------------------ */
+
+export const tableClasses = {
+  wrapper: "overflow-x-auto rounded-card border border-border bg-card shadow-card scroll-fade-x",
+  headRow:
+    "bg-surface-2 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted",
+  cell: "px-3 py-2.5",
+  row: "border-t border-border transition-colors hover:bg-surface-2/60",
+  selectedRow: "bg-accent-soft shadow-[inset_3px_0_0_var(--accent)] hover:bg-accent-soft",
+  successRow: "bg-success-soft/60 hover:bg-success-soft/80",
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Modal                                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Presentational modal shell (centered on sm+, bottom sheet on phones).
+ * Dialogs keep their own Escape/reset/submit logic. Pass `onSubmit` to wrap
+ * body + footer in a <form>.
+ */
+export function Modal({
+  open = true,
+  onClose,
+  title,
+  titleId,
+  icon,
+  module,
+  footer,
+  children,
+  onSubmit,
+  className,
+}: {
+  open?: boolean;
+  onClose: () => void;
+  title: React.ReactNode;
+  titleId?: string;
+  icon?: LucideIcon;
+  module?: ModuleId;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+  onSubmit?: (e: React.FormEvent<HTMLFormElement>) => void;
+  className?: string;
+}) {
+  if (!open) return null;
+
+  const body = (
+    <>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-4 sm:px-6">{children}</div>
+      {footer && (
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-surface-2/70 px-5 py-3.5 max-sm:[&>*]:flex-1 sm:px-6">
+          {footer}
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+      <button
+        type="button"
+        tabIndex={-1}
+        className="absolute inset-0 animate-fade-in cursor-default bg-overlay backdrop-blur-[2px]"
+        aria-label="Close dialog"
+        onClick={onClose}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-label={titleId ? undefined : typeof title === "string" ? title : undefined}
+        className={cn(
+          "relative z-10 flex max-h-[92dvh] w-full max-w-lg animate-sheet-up flex-col overflow-hidden rounded-t-modal bg-card shadow-overlay sm:max-h-[90dvh] sm:animate-scale-in sm:rounded-modal",
+          className
+        )}
+      >
+        <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-surface-3 sm:hidden" />
+        <div className="flex shrink-0 items-start gap-3 px-5 pb-4 pt-5 sm:px-6">
+          {module && <ModuleChip module={module} icon={icon} size="md" />}
+          <h2
+            id={titleId}
+            className="min-w-0 flex-1 self-center font-display text-lg font-semibold leading-6 text-foreground"
+          >
+            {title}
+          </h2>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+            <X />
+          </Button>
+        </div>
+        {onSubmit ? (
+          <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+            {body}
+          </form>
+        ) : (
+          body
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Skeleton                                                            */
+/* ------------------------------------------------------------------ */
+
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden="true" className={cn("animate-pulse rounded-lg bg-surface-3", className)} />;
+}
+
+/** Page-level loading placeholder; keeps the old "Loading X..." text for screen readers. */
+export function PageSkeleton({ label }: { label: string }) {
+  return (
+    <div role="status" className="space-y-6">
+      <span className="sr-only">{label}</span>
+      <Skeleton className="h-8 w-48" />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Skeleton className="h-28 rounded-card" />
+        <Skeleton className="h-28 rounded-card" />
+        <Skeleton className="h-28 rounded-card" />
+      </div>
+      <Skeleton className="h-64 rounded-card" />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Checkbox (task / todo complete)                                     */
+/* ------------------------------------------------------------------ */
+
+export function checkboxClasses({ done, round }: { done: boolean; round?: boolean }): string {
+  return cn(
+    "grid shrink-0 place-items-center border-2",
+    TRANSITION,
+    FOCUS_RING,
+    round ? "h-[22px] w-[22px] rounded-full" : "h-5 w-5 rounded-md",
+    done
+      ? "border-success bg-success text-white"
+      : "border-input bg-card text-transparent hover:border-accent hover:bg-accent-soft"
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, Card, ErrorBanner } from "@/components/ui";
+import { PageHeader, Card, ErrorBanner, PageSkeleton, Tabs } from "@/components/ui";
 import { TaskList, AddTaskForm } from "@/components/tasks/TaskList";
 import { useDashboard } from "@/lib/use-dashboard";
 import { getTasksTabTasks } from "@/lib/utils";
@@ -11,11 +11,11 @@ export default function TasksPage() {
   const [filter, setFilter] = useState<"all" | "open" | "done">("open");
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading tasks...</div>;
+    return <PageSkeleton label="Loading tasks..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load tasks"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load tasks"} />;
   }
 
   const tasks = getTasksTabTasks(store.tasks);
@@ -36,25 +36,20 @@ export default function TasksPage() {
       {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Tasks"
+        module="tasks"
         description="Todos, deadlines, and follow-ups across all modules"
-        action={<AddTaskForm onAdd={addTask} />}
+        action={<AddTaskForm onAdd={addTask} prominent />}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-              filter === tab.id ? "bg-brand text-white" : "text-muted hover:bg-slate-100"
-            }`}
-          >
-            {tab.label} ({tab.count})
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="mb-4"
+        aria-label="Filter tasks"
+        value={filter}
+        onChange={setFilter}
+        items={tabs}
+      />
 
-      <Card>
+      <Card className="max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         <TaskList
           tasks={filtered.sort((a, b) => {
             const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };

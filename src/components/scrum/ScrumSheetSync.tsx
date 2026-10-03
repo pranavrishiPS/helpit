@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FileSpreadsheet, Link2, RefreshCw } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Alert, Badge, Button, Card, Input, ModuleChip, buttonClasses } from "@/components/ui";
 import {
   connectScrumSheet,
   disconnectScrumSheet,
@@ -104,13 +104,23 @@ function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-            <FileSpreadsheet className="h-4 w-4 text-accent" />
-          </div>
-          <div>
+          <ModuleChip module="scrum" icon={FileSpreadsheet} variant="soft" size="md" />
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-foreground">Google Sheet</span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-muted">
+              <span className="text-sm font-semibold text-foreground">Google Sheet</span>
+              <Badge
+                dot
+                tone={
+                  !status.configured
+                    ? "caution"
+                    : status.connected && status.spreadsheetId
+                      ? "success"
+                      : status.connected
+                        ? "info"
+                        : "neutral"
+                }
+                className="max-w-full whitespace-normal"
+              >
                 {!status.configured
                   ? "Needs setup"
                   : status.connected && status.spreadsheetId
@@ -118,7 +128,7 @@ function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
                     : status.connected
                       ? "Connected — link a sheet"
                       : "Not connected"}
-              </span>
+              </Badge>
             </div>
             <p className="mt-1 text-sm text-muted">
               Sync scrum attendance with a shared spreadsheet. The sheet wins on conflicts.
@@ -127,16 +137,17 @@ function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
         </div>
 
         {status.configured && !status.connected && (
-          <a href="/api/scrum-attendance/sheet/auth">
-            <Button variant="secondary" size="sm">
-              <Link2 className="mr-1.5 h-3.5 w-3.5" />
-              Connect
-            </Button>
+          <a
+            href="/api/scrum-attendance/sheet/auth"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
+          >
+            <Link2 />
+            Connect
           </a>
         )}
 
         {status.connected && status.spreadsheetId && (
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-start gap-2 sm:items-end">
             {status.lastSyncedAt && (
               <span className="text-xs text-muted">
                 Last sync {new Date(status.lastSyncedAt).toLocaleString()}
@@ -144,7 +155,7 @@ function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
             )}
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={handleSync} disabled={syncing}>
-                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+                <RefreshCw className={syncing ? "animate-spin" : ""} />
                 Sync now
               </Button>
               <Button
@@ -161,21 +172,24 @@ function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
       </div>
 
       {status.connected && !status.spreadsheetId && (
-        <form onSubmit={handleLinkSheet} className="mt-3 flex gap-2 border-t border-border pt-3">
-          <input
+        <form onSubmit={handleLinkSheet} className="mt-4 flex gap-2 border-t border-border pt-4">
+          <Input
             value={sheetUrl}
             onChange={(e) => setSheetUrl(e.target.value)}
             placeholder="Paste the Google Sheet URL"
-            className="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-1.5 text-sm outline-none focus:border-accent"
+            aria-label="Google Sheet URL"
+            className="min-w-0 flex-1"
           />
-          <Button type="submit" size="sm" disabled={linking || !sheetUrl.trim()}>
+          <Button type="submit" disabled={linking || !sheetUrl.trim()}>
             {linking ? "Linking…" : "Link sheet"}
           </Button>
         </form>
       )}
 
       {(message || status.lastSyncError) && (
-        <p className="mt-2 text-sm text-muted">{message ?? status.lastSyncError}</p>
+        <Alert tone={message ? "info" : "danger"} role="status" className="mt-3">
+          {message ?? status.lastSyncError}
+        </Alert>
       )}
     </Card>
   );

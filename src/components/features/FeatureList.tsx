@@ -2,9 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Layers, Pencil, Plus, Timer, Trash2 } from "lucide-react";
 import type { Feature } from "@/lib/types";
-import { Badge, Button, Card, EmptyState } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  FieldError,
+  Input,
+  Label,
+  Modal,
+  fieldClasses,
+} from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { DateCommitInput } from "@/components/ui/DateCommitInput";
 import {
   createFeature,
@@ -15,9 +26,6 @@ import { notifyStoreUpdated } from "@/lib/store-events";
 import { formatFeatureDate } from "@/lib/feature-utils";
 import { FunctionEffortGrid } from "@/components/features/FunctionEffortGrid";
 import { sumEffortDays } from "@/lib/effort-utils";
-
-const inputClass =
-  "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent";
 
 function FeatureDialog({
   open,
@@ -110,35 +118,23 @@ function FeatureDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/40"
-        aria-label="Close dialog"
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="feature-dialog-title"
-        className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl"
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 id="feature-dialog-title" className="text-lg font-semibold text-foreground">
-            {isEdit ? "Edit feature" : "Track feature"}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-muted hover:bg-slate-100 hover:text-foreground"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
-          <div className="space-y-4 overflow-y-auto px-5 py-4">
+    <Modal
+      onClose={onClose}
+      title={isEdit ? "Edit feature" : "Track feature"}
+      titleId="feature-dialog-title"
+      module="features"
+      onSubmit={handleSubmit}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting || !title.trim()}>
+            {submitting ? "Saving…" : isEdit ? "Save changes" : "Track feature"}
+          </Button>
+        </>
+      }
+    >
             {!isEdit && (
               <p className="text-sm text-muted">
                 Set milestone dates as you track the feature through scope, pre-production, and
@@ -147,12 +143,9 @@ function FeatureDialog({
             )}
 
             <div>
-              <label htmlFor="feature-title" className="mb-1 block text-sm font-medium">
-                Feature name
-              </label>
-              <input
+              <Label htmlFor="feature-title">Feature name</Label>
+              <Input
                 id="feature-title"
-                className={inputClass}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Bubble Pop v2"
@@ -162,26 +155,20 @@ function FeatureDialog({
             </div>
 
             <div>
-              <label htmlFor="start-date" className="mb-1 block text-sm font-medium">
-                Start date
-              </label>
-              <input
+              <Label htmlFor="start-date">Start date</Label>
+              <Input
                 id="start-date"
                 type="date"
-                className={inputClass}
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </div>
 
             <div>
-              <label htmlFor="scope-closure" className="mb-1 block text-sm font-medium">
-                Scope closure date
-              </label>
-              <input
+              <Label htmlFor="scope-closure">Scope closure date</Label>
+              <Input
                 id="scope-closure"
                 type="date"
-                className={inputClass}
                 value={scopeClosureDate}
                 onChange={(e) => setScopeClosureDate(e.target.value)}
                 min={startDate || undefined}
@@ -189,13 +176,10 @@ function FeatureDialog({
             </div>
 
             <div>
-              <label htmlFor="pre-prod-closure" className="mb-1 block text-sm font-medium">
-                Pre-production closure date
-              </label>
-              <input
+              <Label htmlFor="pre-prod-closure">Pre-production closure date</Label>
+              <Input
                 id="pre-prod-closure"
                 type="date"
-                className={inputClass}
                 value={preProductionClosureDate}
                 onChange={(e) => setPreProductionClosureDate(e.target.value)}
                 min={scopeClosureDate || startDate || undefined}
@@ -203,55 +187,53 @@ function FeatureDialog({
             </div>
 
             <div>
-              <label htmlFor="release-date" className="mb-1 block text-sm font-medium">
-                Release date
-              </label>
-              <input
+              <Label htmlFor="release-date">Release date</Label>
+              <Input
                 id="release-date"
                 type="date"
-                className={inputClass}
                 value={releaseDate}
                 onChange={(e) => setReleaseDate(e.target.value)}
                 min={preProductionClosureDate || scopeClosureDate || startDate || undefined}
               />
             </div>
 
-            {error && <p className="text-sm text-warning">{error}</p>}
-          </div>
-
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-            <Button variant="secondary" onClick={onClose} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting || !title.trim()}>
-              {submitting ? "Saving…" : isEdit ? "Save changes" : "Track feature"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+            {error && <FieldError>{error}</FieldError>}
+    </Modal>
   );
 }
+
+// Sequence colors so the milestone order reads at a glance.
+const MILESTONE_BARS = {
+  start: "shadow-[inset_2px_0_0_var(--info)]",
+  scope: "shadow-[inset_2px_0_0_var(--accent)]",
+  preprod: "shadow-[inset_2px_0_0_var(--caution)]",
+  release: "shadow-[inset_2px_0_0_var(--success)]",
+} as const;
 
 function MilestonePill({
   label,
   date,
   editable,
   onDateChange,
+  bar,
 }: {
   label: string;
   date?: string;
   editable?: boolean;
   onDateChange?: (value: string) => void | Promise<void>;
+  bar: keyof typeof MILESTONE_BARS;
 }) {
   return (
-    <div className="min-w-0 flex-1 rounded-lg border border-border bg-slate-50 px-2 py-1.5">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+    <div className={cn("min-w-0 flex-1 rounded-lg bg-surface-2 px-2.5 py-2", MILESTONE_BARS[bar])}>
+      <p className="break-words text-[11px] font-semibold uppercase leading-[14px] tracking-[0.04em] text-muted">{label}</p>
       {editable && onDateChange ? (
         <DateCommitInput
           value={date ?? ""}
           onCommit={onDateChange}
-          className="mt-0.5 w-full rounded border border-border bg-white px-1 py-0.5 text-xs font-semibold outline-none focus:border-accent"
+          className={cn(
+            fieldClasses({ size: "sm" }),
+            "-mx-1 mt-0.5 w-[calc(100%+0.5rem)] border-transparent bg-transparent px-1 font-semibold shadow-none hover:border-input focus:bg-card"
+          )}
           aria-label={label}
         />
       ) : (
@@ -325,72 +307,79 @@ function FeatureCard({
 
   return (
     <>
-      <Card className="overflow-hidden p-0">
-        <div className="px-3 py-2.5">
+      <Card className="overflow-hidden p-0 sm:p-0">
+        <div className="px-4 py-3">
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="flex w-full items-start justify-between gap-2 text-left"
+            aria-expanded={expanded}
+            className="group flex w-full items-start justify-between gap-2 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <h3 className="text-sm font-semibold text-foreground">{feature.title}</h3>
+                <h3 className="break-words font-display text-[15px] font-semibold text-foreground">
+                  {feature.title}
+                </h3>
                 {hasEffort && (
-                  <Badge className="border-slate-200 bg-slate-50 text-muted">
+                  <Badge tone="neutral">
+                    <Timer className="h-3 w-3" />
                     Est {totalEst}d
                   </Badge>
                 )}
               </div>
             </div>
-            {expanded ? (
-              <ChevronUp className="mt-1 h-5 w-5 shrink-0 text-muted" />
-            ) : (
-              <ChevronDown className="mt-1 h-5 w-5 shrink-0 text-muted" />
-            )}
+            <span className="-mr-1 -mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted transition-colors group-hover:bg-surface-2 group-hover:text-foreground">
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </span>
           </button>
 
-          <div className="mt-2 flex items-start gap-1.5">
+          <div className="mt-2.5 flex items-start gap-1.5">
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-1.5 sm:grid-cols-4">
               <MilestonePill
+                bar="start"
                 label="Start"
                 date={feature.startDate}
                 editable
                 onDateChange={(value) => handleDateChange("startDate", value)}
               />
               <MilestonePill
+                bar="scope"
                 label="Scope closure"
                 date={feature.scopeClosureDate}
                 editable
                 onDateChange={(value) => handleDateChange("scopeClosureDate", value)}
               />
               <MilestonePill
+                bar="preprod"
                 label="Pre-prod closure"
                 date={feature.preProductionClosureDate}
                 editable
                 onDateChange={(value) => handleDateChange("preProductionClosureDate", value)}
               />
               <MilestonePill
+                bar="release"
                 label="Release date"
                 date={feature.releaseDate}
                 editable
                 onDateChange={(value) => handleDateChange("releaseDate", value)}
               />
             </div>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setEditOpen(true)}
-              className="shrink-0 rounded-md p-1 text-muted hover:bg-slate-100 hover:text-foreground"
+              className="shrink-0"
               aria-label="Edit feature dates"
             >
-              <Pencil className="h-4 w-4" />
-            </button>
+              <Pencil />
+            </Button>
           </div>
-          {error && <p className="mt-2 text-xs text-warning">{error}</p>}
+          {error && <FieldError className="mt-2">{error}</FieldError>}
         </div>
 
         {expanded && (
-          <div className="border-t border-border px-3 pb-3 pt-2.5">
-            <div className="mb-2.5 rounded-lg border border-border/80 bg-slate-50/40 p-2">
+          <div className="border-t border-border px-4 pb-4 pt-3">
+            <div className="mb-3 rounded-xl bg-surface-2/70 p-3">
               <FunctionEffortGrid
                 idPrefix={`feature-${feature.id}`}
                 functionCosts={feature.functionCosts}
@@ -400,7 +389,7 @@ function FeatureCard({
 
             <div className="flex justify-end">
               <Button size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
-                <Trash2 className="mr-1.5 h-4 w-4" />
+                <Trash2 />
                 Delete
               </Button>
             </div>
@@ -429,6 +418,7 @@ export function FeatureList({
     return (
       <Card>
         <EmptyState
+          icon={Layers}
           title="No features in progress"
           description="Start a feature to set milestone dates and add function effort."
         />
@@ -459,8 +449,8 @@ export function NewFeatureDialog({
 
 export function AddFeatureButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button size="sm" onClick={onClick}>
-      <Plus className="mr-1.5 h-4 w-4" />
+    <Button onClick={onClick} className="w-full sm:w-auto">
+      <Plus />
       Track feature
     </Button>
   );

@@ -17,9 +17,10 @@ import {
   sanitizeEffortDrafts,
 } from "@/lib/effort-utils";
 import { cn } from "@/lib/cn";
+import { Badge } from "@/components/ui";
 
 const effortInputClass =
-  "w-full rounded border border-border bg-white px-1 py-0.5 text-center text-[11px] font-semibold tabular-nums leading-tight outline-none focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+  "w-full rounded-md border border-transparent bg-surface-2 px-1 py-0.5 text-center text-[11px] font-semibold tabular-nums leading-tight outline-none transition-colors placeholder:text-subtle hover:border-input focus:border-accent focus:bg-card focus:ring-2 focus:ring-accent/15 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 interface FunctionEffortGridProps {
   functionCosts?: ReleaseFunctionCost[];
@@ -105,7 +106,7 @@ export function FunctionEffortGrid({
   return (
     <div>
       <div className="mb-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-        <p className="text-[11px] font-medium text-foreground">Function effort</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Function effort</p>
         {hasAnyEffort ? (
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
             {hasEstimated && (
@@ -114,27 +115,29 @@ export function FunctionEffortGrid({
                 <span className="font-semibold text-foreground">{totalEstimated}d</span>
               </span>
             )}
-            {hasEstimated && hasActual && <span className="text-muted/50">·</span>}
+            {hasEstimated && hasActual && <span aria-hidden="true" className="text-subtle">·</span>}
             {hasActual && (
               <span>
                 Act <span className="font-semibold text-foreground">{totalActual}d</span>
               </span>
             )}
             {hasEstimated && hasActual && (
-              <span
-                className={cn(
-                  "rounded px-1 py-px font-medium",
-                  totalActual > totalEstimated && "bg-amber-100 text-amber-800",
-                  totalActual < totalEstimated && "bg-emerald-100 text-emerald-800",
-                  totalActual === totalEstimated && "bg-slate-100 text-muted"
-                )}
+              <Badge
+                tone={
+                  totalActual > totalEstimated
+                    ? "caution"
+                    : totalActual < totalEstimated
+                      ? "success"
+                      : "neutral"
+                }
+                className="tabular-nums"
               >
                 {totalActual === totalEstimated
                   ? "On est"
                   : totalActual > totalEstimated
                     ? `+${totalActual - totalEstimated}d`
                     : `${totalActual - totalEstimated}d`}
-              </span>
+              </Badge>
             )}
           </div>
         ) : (
@@ -153,19 +156,19 @@ export function FunctionEffortGrid({
             <div
               key={row.role}
               className={cn(
-                "rounded-md border bg-white px-1.5 py-1",
-                hasData ? "border-border" : "border-border/60"
+                "rounded-lg border bg-card px-1.5 py-1.5",
+                hasData ? "border-border" : "border-dashed border-border-strong"
               )}
             >
               <p
-                className="truncate text-center text-[10px] font-medium uppercase tracking-wide text-muted"
+                className="truncate text-center text-[10px] font-semibold uppercase tracking-[0.06em] text-muted"
                 title={row.label}
               >
                 {row.shortLabel}
               </p>
               <div className="mt-1 grid grid-cols-2 gap-1 text-center">
                 <div>
-                  <p className="text-[9px] font-medium uppercase tracking-wide text-muted/80">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
                     Est
                   </p>
                   {editable ? (
@@ -186,14 +189,14 @@ export function FunctionEffortGrid({
                       id={`${idPrefix}-${row.role}-est`}
                       className={cn(
                         effortInputClass,
-                        hasEst ? "text-foreground" : "text-muted/40"
+                        hasEst ? "text-foreground" : "text-subtle"
                       )}
                     />
                   ) : (
                     <p
                       className={cn(
                         "text-[11px] font-semibold tabular-nums leading-tight",
-                        hasEst ? "text-foreground" : "text-muted/40"
+                        hasEst ? "text-foreground" : "text-subtle"
                       )}
                     >
                       {formatEffortDays(row.estimatedDays)}
@@ -201,7 +204,7 @@ export function FunctionEffortGrid({
                   )}
                 </div>
                 <div>
-                  <p className="text-[9px] font-medium uppercase tracking-wide text-muted/80">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
                     Act
                   </p>
                   {editable ? (
@@ -222,14 +225,14 @@ export function FunctionEffortGrid({
                       id={`${idPrefix}-${row.role}-act`}
                       className={cn(
                         effortInputClass,
-                        hasAct ? "text-accent" : "text-muted/40"
+                        hasAct ? "text-accent" : "text-subtle"
                       )}
                     />
                   ) : (
                     <p
                       className={cn(
                         "text-[11px] font-semibold tabular-nums leading-tight",
-                        hasAct ? "text-accent" : "text-muted/40"
+                        hasAct ? "text-accent" : "text-subtle"
                       )}
                     >
                       {formatEffortDays(row.actualDays)}
@@ -240,15 +243,15 @@ export function FunctionEffortGrid({
               {variance != null && variance !== 0 && (
                 <p
                   className={cn(
-                    "mt-0.5 text-center text-[9px] font-medium tabular-nums",
-                    variance > 0 ? "text-amber-700" : "text-emerald-700"
+                    "mt-0.5 text-center text-[10px] font-semibold tabular-nums",
+                    variance > 0 ? "text-caution" : "text-success"
                   )}
                 >
                   {variance > 0 ? `+${variance}d` : `${variance}d`}
                 </p>
               )}
               {variance === 0 && (
-                <p className="mt-0.5 text-center text-[9px] font-medium text-muted">On est</p>
+                <p className="mt-0.5 text-center text-[10px] font-medium text-muted">On est</p>
               )}
             </div>
           );

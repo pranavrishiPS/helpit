@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { MailItem } from "@/lib/types";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button, Card, EmptyState, buttonClasses, type BadgeTone } from "@/components/ui";
 import { Mail, RefreshCw } from "lucide-react";
 import { formatDueDate } from "@/lib/utils";
 
@@ -13,11 +13,11 @@ const STATUS_LABELS: Record<MailItem["status"], string> = {
   done: "Done",
 };
 
-const STATUS_COLORS: Record<MailItem["status"], string> = {
-  unread: "border-slate-200 bg-slate-50 text-slate-600",
-  needs_reply: "border-warning/30 bg-warning/10 text-warning",
-  drafted: "border-accent/30 bg-accent/5 text-accent",
-  done: "border-success/30 bg-success/10 text-success",
+const STATUS_TONES: Record<MailItem["status"], BadgeTone> = {
+  unread: "accent",
+  needs_reply: "caution",
+  drafted: "info",
+  done: "success",
 };
 
 interface MailInboxProps {
@@ -54,7 +54,7 @@ export function MailInbox({
           </p>
           {connected && onSync && (
             <Button variant="secondary" size="sm" onClick={onSync} disabled={syncing}>
-              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+              <RefreshCw className={syncing ? "animate-spin" : ""} />
               Sync Gmail
             </Button>
           )}
@@ -62,47 +62,41 @@ export function MailInbox({
       )}
 
       {showPlaceholder ? (
-        <Card className="py-10 text-center">
-          <Mail className="mx-auto mb-3 h-9 w-9 text-muted/40" />
-          <p className="text-sm font-medium text-foreground">Inbox summary will appear here</p>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-            {connected
-              ? "Sync Gmail to pull recent messages and surface what needs a reply or follow-up."
-              : "Connect Gmail in Settings to see a summary of messages that need your attention."}
-          </p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-            {connected && onSync ? (
-              <Button variant="secondary" size="sm" onClick={onSync} disabled={syncing}>
-                <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
-                Sync Gmail
-              </Button>
-            ) : (
-              <Link href="/settings">
-                <Button variant="secondary" size="sm">Connect Gmail</Button>
-              </Link>
-            )}
-          </div>
+        <Card>
+          <EmptyState
+            icon={Mail}
+            title="Inbox summary will appear here"
+            description={
+              connected
+                ? "Sync Gmail to pull recent messages and surface what needs a reply or follow-up."
+                : "Connect Gmail in Settings to see a summary of messages that need your attention."
+            }
+            action={
+              connected && onSync ? (
+                <Button variant="secondary" size="sm" onClick={onSync} disabled={syncing}>
+                  <RefreshCw className={syncing ? "animate-spin" : ""} />
+                  Sync Gmail
+                </Button>
+              ) : (
+                <Link href="/settings" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                  Connect Gmail
+                </Link>
+              )
+            }
+          />
         </Card>
       ) : (
         <div className="space-y-3">
           {items.map((item) => (
-            <Card key={item.id} className={item.status === "done" ? "opacity-60" : ""}>
+            <Card key={item.id} tone={item.status === "done" ? "muted" : "default"}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className={STATUS_COLORS[item.status]}>
-                      {STATUS_LABELS[item.status]}
-                    </Badge>
-                    <Badge className="border-slate-200 bg-slate-50 text-slate-600">
-                      {item.category}
-                    </Badge>
-                    {item.source === "gmail" && (
-                      <Badge className="border-accent-secondary/30 bg-accent-secondary/10 text-accent-secondary">
-                        gmail
-                      </Badge>
-                    )}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge tone={STATUS_TONES[item.status]}>{STATUS_LABELS[item.status]}</Badge>
+                    <Badge tone="neutral">{item.category}</Badge>
+                    {item.source === "gmail" && <Badge tone="info">gmail</Badge>}
                   </div>
-                  <p className="mt-2 text-sm font-medium">{item.subject}</p>
+                  <p className="mt-2 break-words text-sm font-semibold">{item.subject}</p>
                   <p className="mt-1 text-xs text-muted">From {item.from}</p>
                   <p className="mt-2 text-sm text-muted">{item.summary}</p>
                   {item.followUpDate && (
@@ -112,7 +106,7 @@ export function MailInbox({
                   )}
                 </div>
                 {item.status !== "done" && (
-                  <div className="flex shrink-0 flex-row flex-wrap gap-1 sm:flex-col">
+                  <div className="flex shrink-0 flex-row gap-1.5 max-sm:[&>*]:flex-1 sm:flex-col">
                     {item.status === "unread" && (
                       <Button
                         variant="ghost"

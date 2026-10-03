@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
 import type { Outing, OutingExpense, OutingExpenseType } from "@/lib/types";
-import { Button } from "@/components/ui";
+import { Button, FieldError, Input, Label, Modal, Textarea } from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { createOutingExpense, updateOutingExpense } from "@/lib/api-client";
-
-const inputClass =
-  "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent";
 
 function parseAmount(value: string): number | undefined {
   const trimmed = value.trim().replace(/,/g, "");
@@ -126,83 +123,70 @@ export function ExpenseDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/40"
-        aria-label="Close dialog"
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="expense-dialog-title"
-        className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-xl"
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 id="expense-dialog-title" className="text-lg font-semibold text-foreground">
-            {isEdit ? "Edit expense" : "Add expense"}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-muted hover:bg-slate-100 hover:text-foreground"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3 p-5">
+    <Modal
+      onClose={onClose}
+      title={isEdit ? "Edit expense" : "Add expense"}
+      titleId="expense-dialog-title"
+      module="outings"
+      onSubmit={handleSubmit}
+      className="sm:max-w-md"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Saving…" : isEdit ? "Save changes" : "Add expense"}
+          </Button>
+        </>
+      }
+    >
           <div>
-            <label htmlFor="expense-title" className="mb-1 block text-xs font-medium text-muted">
+            <Label htmlFor="expense-title">
               Title
-            </label>
-            <input
+            </Label>
+            <Input
               id="expense-title"
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Team dinner, snacks…"
-              className={inputClass}
               required
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="expense-amount" className="mb-1 block text-xs font-medium text-muted">
+              <Label htmlFor="expense-amount">
                 Amount (₹)
-              </label>
-              <input
+              </Label>
+              <Input
                 id="expense-amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="22000"
                 inputMode="decimal"
-                className={inputClass}
                 required
               />
             </div>
             <div>
-              <label htmlFor="expense-date" className="mb-1 block text-xs font-medium text-muted">
+              <Label htmlFor="expense-date">
                 Date (optional)
-              </label>
-              <input
+              </Label>
+              <Input
                 id="expense-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className={inputClass}
               />
             </div>
           </div>
 
           <div>
-            <p id="expense-type-label" className="mb-1 block text-xs font-medium text-muted">
+            <p id="expense-type-label" className="mb-1.5 block text-xs font-semibold text-foreground">
               Type
             </p>
-            <div className="flex gap-2" role="group" aria-labelledby="expense-type-label">
+            <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="expense-type-label">
               {(
                 [
                   { value: "outing", label: "Outing" },
@@ -214,11 +198,12 @@ export function ExpenseDialog({
                   type="button"
                   onClick={() => setType(option.value)}
                   aria-pressed={type === option.value}
-                  className={
+                  className={cn(
+                    "h-10 rounded-control border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
                     type === option.value
-                      ? "rounded-lg border border-accent bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent"
-                      : "rounded-lg border border-border bg-white px-3 py-1.5 text-sm text-muted hover:bg-slate-50"
-                  }
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-border bg-card text-muted hover:bg-surface-2"
+                  )}
                 >
                   {option.label}
                 </button>
@@ -228,49 +213,33 @@ export function ExpenseDialog({
 
           {type === "follow_up" && (
             <div>
-              <label
-                htmlFor="expense-attendees"
-                className="mb-1 block text-xs font-medium text-muted"
-              >
+              <Label htmlFor="expense-attendees">
                 People covered (optional)
-              </label>
-              <input
+              </Label>
+              <Input
                 id="expense-attendees"
                 value={attendeeCount}
                 onChange={(e) => setAttendeeCount(e.target.value)}
                 placeholder="8"
                 inputMode="numeric"
-                className={inputClass}
               />
             </div>
           )}
 
           <div>
-            <label htmlFor="expense-notes" className="mb-1 block text-xs font-medium text-muted">
+            <Label htmlFor="expense-notes">
               Notes (optional)
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               id="expense-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Vendor, split, receipt…"
               rows={2}
-              className={inputClass}
             />
           </div>
 
-          {error && <p className="text-sm text-warning">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" disabled={submitting}>
-              {submitting ? "Saving…" : isEdit ? "Save changes" : "Add expense"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          {error && <FieldError>{error}</FieldError>}
+    </Modal>
   );
 }

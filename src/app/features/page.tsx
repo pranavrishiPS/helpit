@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, ErrorBanner } from "@/components/ui";
+import { PageHeader, ErrorBanner, PageSkeleton, SectionTitle } from "@/components/ui";
 import { useDashboard } from "@/lib/use-dashboard";
 import { sortFeatures } from "@/lib/feature-utils";
 import {
@@ -17,11 +17,11 @@ export default function FeaturesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading features...</div>;
+    return <PageSkeleton label="Loading features..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load features"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load features"} />;
   }
 
   const features = sortFeatures(store.features ?? []);
@@ -37,18 +37,19 @@ export default function FeaturesPage() {
       {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Feature tracker"
+        module="features"
         description="In-progress features, upcoming sprint queue, milestones, and function effort"
         action={<AddFeatureButton onClick={() => setDialogOpen(true)} />}
       />
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <section className="min-w-0 space-y-3">
-          <h2 className="text-sm font-medium text-muted">In progress</h2>
+        <section className="min-w-0">
+          <SectionTitle count={features.length}>In progress</SectionTitle>
           <FeatureList features={features} onChanged={reload} />
         </section>
 
         <section className="min-w-0 lg:sticky lg:top-6 lg:self-start">
-          <h2 className="mb-3 text-sm font-medium text-muted">Upcoming items</h2>
+          <SectionTitle count={plotBacklog.length}>Upcoming items</SectionTitle>
           <PlotBacklogPanel items={plotBacklog} onChange={handlePlotBacklogChange} />
         </section>
       </div>

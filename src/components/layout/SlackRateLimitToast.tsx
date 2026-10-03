@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { SLACK_RATE_LIMITED_EVENT } from "@/lib/slack-events";
+import { Button } from "@/components/ui";
 
 export function SlackRateLimitToast() {
   const [message, setMessage] = useState<string | null>(null);
@@ -27,21 +28,22 @@ export function SlackRateLimitToast() {
     <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
       <div
         role="alert"
-        className="pointer-events-auto flex max-w-md items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 shadow-lg"
+        className="pointer-events-auto flex max-w-md animate-scale-in items-start gap-3 rounded-card border border-caution/30 bg-card px-4 py-3 shadow-[inset_3px_0_0_var(--caution),var(--shadow-overlay)]"
       >
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-caution" />
         <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">Slack sync paused</p>
+          <p className="text-sm font-semibold text-foreground">Slack sync paused</p>
           <p className="mt-0.5 text-sm text-muted">{message}</p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setMessage(null)}
-          className="rounded-md p-1 text-warning hover:bg-warning/10"
+          className="-mr-1 -mt-1"
           aria-label="Dismiss"
         >
-          <X className="h-4 w-4" />
-        </button>
+          <X />
+        </Button>
       </div>
     </div>
   );

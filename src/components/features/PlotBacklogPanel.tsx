@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GripVertical, Plus, X } from "lucide-react";
+import { GripVertical, ListOrdered, Plus, X } from "lucide-react";
 import type { PlotBacklogItem } from "@/lib/types";
-import { Card, Button, Badge } from "@/components/ui";
+import { Card, Button, Badge, EmptyState, Input } from "@/components/ui";
 import {
   createPlotBacklogItem,
   deletePlotBacklogItem,
   reorderPlotBacklog,
 } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
-
-const inputClass =
-  "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent";
 
 interface PlotBacklogPanelProps {
   items: PlotBacklogItem[];
@@ -103,8 +100,9 @@ export function PlotBacklogPanel({ items, onChange }: PlotBacklogPanelProps) {
   return (
     <Card className="w-full min-w-0">
       <div className="flex gap-2">
-        <input
+        <Input
           type="text"
+          aria-label="Queue a feature"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
@@ -114,33 +112,32 @@ export function PlotBacklogPanel({ items, onChange }: PlotBacklogPanelProps) {
             }
           }}
           placeholder="Queue a feature for a future sprint…"
-          className={inputClass}
         />
         <Button
           type="button"
           variant="secondary"
-          size="sm"
           onClick={() => void handleAdd()}
           disabled={!draft.trim() || submitting}
           aria-label="Add to queue"
+          className="w-10 shrink-0 px-0"
         >
-          <Plus className="h-4 w-4" />
+          <Plus />
         </Button>
       </div>
 
       {orderedItems.length > 0 ? (
-        <ul className="mt-3 max-h-[min(24rem,50vh)] overflow-y-auto rounded-lg border border-border bg-white">
+        <ul className="mt-3 max-h-[min(24rem,50vh)] divide-y divide-border overflow-y-auto rounded-xl border border-border bg-card">
           {orderedItems.map((item, index) => (
             <li
               key={item.id}
               onDragOver={(e) => handleDragOver(e, item.id)}
               onDrop={() => handleDrop(item.id)}
               className={cn(
-                "group flex items-center gap-2 border-b border-border/70 px-3 py-2 text-sm last:border-b-0",
-                draggingId === item.id && "bg-slate-50 opacity-50",
+                "group flex items-center gap-2 px-2 py-1.5 text-sm transition-colors hover:bg-surface-2/60",
+                draggingId === item.id && "bg-surface-2 opacity-50",
                 dragOverId === item.id &&
                   draggingId !== item.id &&
-                  "border-t-2 border-t-violet-400 bg-violet-50/40"
+                  "border-t-2 border-t-accent bg-accent-soft/50"
               )}
             >
               <button
@@ -148,15 +145,15 @@ export function PlotBacklogPanel({ items, onChange }: PlotBacklogPanelProps) {
                 draggable
                 onDragStart={() => handleDragStart(item.id)}
                 onDragEnd={handleDragEnd}
-                className="shrink-0 cursor-grab touch-none rounded p-0.5 text-muted active:cursor-grabbing hover:text-foreground"
+                className="grid h-8 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-md text-subtle active:cursor-grabbing hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 aria-label={`Drag to reorder ${item.title}`}
               >
                 <GripVertical className="h-4 w-4" />
               </button>
               <span
                 className={cn(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold tabular-nums",
-                  "bg-violet-50 text-violet-700"
+                  "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold tabular-nums",
+                  "bg-accent-soft text-accent"
                 )}
               >
                 {index + 1}
@@ -166,10 +163,7 @@ export function PlotBacklogPanel({ items, onChange }: PlotBacklogPanelProps) {
                   {item.title}
                 </span>
                 {(item.tags ?? []).map((tag) => (
-                  <Badge
-                    key={tag}
-                    className="shrink-0 border-violet-200 bg-violet-50 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-violet-700"
-                  >
+                  <Badge key={tag} tone="accent" className="shrink-0 uppercase tracking-wide">
                     {tag}
                   </Badge>
                 ))}
@@ -178,21 +172,19 @@ export function PlotBacklogPanel({ items, onChange }: PlotBacklogPanelProps) {
                 type="button"
                 onClick={() => void handleRemove(item.id)}
                 className={cn(
-                  "shrink-0 rounded-md p-1 text-muted transition-colors",
-                  "hover:bg-slate-100 hover:text-foreground",
-                  "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                  "grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted transition-[opacity,background-color,color]",
+                  "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                 )}
                 aria-label={`Remove ${item.title}`}
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-4 w-4" />
               </button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 rounded-lg border border-dashed border-border/80 bg-white/60 px-3 py-5 text-center text-sm text-muted">
-          Nothing queued yet.
-        </p>
+        <EmptyState compact icon={ListOrdered} title="Nothing queued yet." />
       )}
     </Card>
   );

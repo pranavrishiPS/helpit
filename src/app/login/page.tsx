@@ -3,7 +3,8 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Alert, buttonClasses } from "@/components/ui";
+import { cn } from "@/lib/cn";
 
 const ERROR_MESSAGES: Record<string, string> = {
   denied: "Sign-in was cancelled.",
@@ -18,24 +19,29 @@ function LoginContent() {
   const error = searchParams.get("error");
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm text-center">
-        <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
-          <Sparkles className="h-5 w-5 text-white" />
+    <div className="flex min-h-[100dvh] items-center justify-center bg-hero p-4">
+      <div className="w-full max-w-sm animate-scale-in rounded-modal bg-card p-8 text-center shadow-overlay">
+        <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-brand-gradient shadow-chip">
+          <Sparkles className="h-6 w-6 text-white" />
         </div>
-        <h1 className="text-lg font-semibold text-foreground">Helpit</h1>
+        <h1 className="font-display text-[28px] font-bold leading-[34px] tracking-[-0.02em] text-foreground">
+          Helpit
+        </h1>
         <p className="mt-1 text-sm text-muted">Sign in to continue to your dashboard.</p>
 
         {error && (
-          <p className="mt-4 text-sm text-warning">
+          <Alert tone="danger" role="alert" className="mt-5 text-left">
             {ERROR_MESSAGES[error] ?? "Something went wrong. Please try again."}
-          </p>
+          </Alert>
         )}
 
-        <a href="/api/auth/google/login" className="mt-6 block">
-          <Button size="md">Sign in with Google</Button>
+        <a
+          href="/api/auth/google/login"
+          className={cn(buttonClasses({ size: "md" }), "mt-6 w-full")}
+        >
+          Sign in with Google
         </a>
-      </Card>
+      </div>
     </div>
   );
 }

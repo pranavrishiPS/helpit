@@ -2,7 +2,17 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import type { Outing, OutingAttendee, OutingExpense } from "@/lib/types";
-import { PageHeader, Card, Badge, Button, ErrorBanner } from "@/components/ui";
+import {
+  PageHeader,
+  Card,
+  Badge,
+  Button,
+  EmptyState,
+  ErrorBanner,
+  FieldError,
+  PageSkeleton,
+  SectionTitle,
+} from "@/components/ui";
 import {
   formatCurrency,
   getOutingSpent,
@@ -82,19 +92,19 @@ function BudgetStrip({ outing, past }: { outing: Outing; past: boolean }) {
   const goingLabel = past ? "attended" : "going";
 
   return (
-    <div className="rounded-lg bg-slate-50 px-3 py-2">
+    <div className="rounded-xl bg-surface-2 p-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm">
-        <span className="flex items-center gap-1.5 font-medium">
+        <span className="flex items-center gap-1.5 font-semibold">
           <Wallet className="h-4 w-4 text-muted" aria-hidden="true" />
           Team pool
         </span>
         <span>
           <span className="text-muted">Spent </span>
-          <span className="font-medium">{formatCurrency(totalSpent)}</span>
+          <span className="font-semibold tabular-nums">{formatCurrency(totalSpent)}</span>
         </span>
-        <span className={over ? "text-warning" : "text-accent"}>
+        <span className={over ? "text-danger" : "text-success"}>
           <span>{over ? "Over budget " : "Remaining "}</span>
-          <span className="font-medium">
+          <span className="font-semibold tabular-nums">
             {formatCurrency(over ? -remaining : remaining)}
           </span>
         </span>
@@ -103,24 +113,24 @@ function BudgetStrip({ outing, past }: { outing: Outing; past: boolean }) {
         )}
       </div>
 
-      <div className="mt-1.5 flex items-center gap-2">
+      <div className="mt-2 flex items-center gap-2">
         <div
           role="progressbar"
           aria-label="Team pool used"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.min(Math.round(usedPct), 100)}
-          className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200"
+          className="h-2 flex-1 overflow-hidden rounded-full bg-surface-3"
         >
           <div
             className={cn(
               "h-full rounded-full",
-              over ? "bg-warning" : "bg-accent"
+              over ? "bg-danger" : "bg-[linear-gradient(90deg,var(--accent),var(--pop))]"
             )}
             style={{ width: `${Math.min(usedPct, 100)}%` }}
           />
         </div>
-        <span className="shrink-0 text-xs text-muted">
+        <span className="shrink-0 text-xs tabular-nums text-muted">
           {usedPct.toFixed(0)}% used
           {pool.going > 0 && ` · ${pool.going} ${goingLabel}`}
         </span>
@@ -166,10 +176,10 @@ function ExpenseList({
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-xs text-warning">{error}</p>}
+      {error && <FieldError className="mt-0">{error}</FieldError>}
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setAdding(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
+          <Plus />
           Add expense
         </Button>
       </div>
@@ -184,18 +194,12 @@ function ExpenseList({
           {sorted.map((exp) => (
             <li
               key={exp.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-white px-3 py-2 text-sm"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm"
             >
               <div className="min-w-0">
-                <p className="font-medium">{exp.title}</p>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                  <Badge
-                    className={
-                      exp.type === "outing" || (exp.type as string) === "event"
-                        ? "border-blue-200 bg-blue-50 text-blue-700"
-                        : "border-warning/30 bg-warning/10 text-warning"
-                    }
-                  >
+                <p className="break-words font-medium">{exp.title}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                  <Badge tone={exp.type === "follow_up" ? "pop" : "info"}>
                     {exp.type === "follow_up" ? "Other" : "Outing"}
                   </Badge>
                   {exp.date && <span>{formatOutingDate(exp.date)}</span>}
@@ -205,27 +209,29 @@ function ExpenseList({
                   {exp.notes && <span>{exp.notes}</span>}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <span className="mr-1 font-medium">
+              <div className="flex shrink-0 items-center gap-0.5">
+                <span className="mr-1.5 font-semibold tabular-nums">
                   {formatCurrency(exp.amount)}
                 </span>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setEditing(exp)}
-                  className="rounded p-1.5 text-muted hover:bg-slate-100 hover:text-accent"
+                  className="hover:text-accent"
                   aria-label={`Edit ${exp.title}`}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
+                  <Pencil />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => handleDelete(exp)}
                   disabled={deletingId === exp.id}
-                  className="rounded p-1.5 text-muted hover:bg-slate-100 hover:text-warning"
+                  className="hover:bg-danger-soft hover:text-danger"
                   aria-label={`Delete ${exp.title}`}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                  <Trash2 />
+                </Button>
               </div>
             </li>
           ))}
@@ -258,11 +264,11 @@ function ExpenseList({
   );
 }
 
-const CHIP_STYLES = {
-  attended: "border-accent/30 bg-accent/10 text-accent",
-  absent: "border-rose-200 bg-rose-50 text-rose-600",
-  confirmed: "border-accent/30 bg-accent/10 text-accent",
-  pending: "border-warning/30 bg-warning/10 text-warning",
+const CHIP_TONES = {
+  attended: "success",
+  absent: "neutral",
+  confirmed: "success",
+  pending: "caution",
 } as const;
 
 function MemberChips({
@@ -293,15 +299,17 @@ function MemberChips({
             : "pending";
 
         return (
-          <span
+          <Badge
             key={attendee.name}
+            tone={CHIP_TONES[variant]}
+            dot={variant === "attended" || variant === "confirmed"}
             className={cn(
-              "rounded-full border px-2.5 py-0.5 text-xs font-medium",
-              CHIP_STYLES[variant],
+              "px-2.5 text-xs",
+              variant === "absent" && "line-through decoration-muted/50",
             )}
           >
             {attendee.name}
-          </span>
+          </Badge>
         );
       })}
     </div>
@@ -326,7 +334,7 @@ function CollapsibleSection({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border border-border",
+        "overflow-hidden rounded-xl border border-border",
         className,
       )}
     >
@@ -335,11 +343,11 @@ function CollapsibleSection({
         onClick={onToggle}
         aria-expanded={open}
         className={cn(
-          "flex w-full items-center justify-between px-3 py-2 text-sm transition-colors hover:bg-slate-50",
-          open && "border-b border-border",
+          "flex h-10 w-full items-center justify-between px-3 text-sm transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+          open && "border-b border-border bg-surface-2/60",
         )}
       >
-        <span className="flex items-center gap-2 font-medium text-foreground">
+        <span className="flex items-center gap-2 font-semibold text-foreground">
           {icon}
           {title}
         </span>
@@ -378,25 +386,28 @@ function OutingCard({
   const noLabel = past ? "Didn't go" : "Not confirmed";
 
   return (
-    <Card className={cn(past && "border-slate-200/80 bg-slate-50/40")}>
+    <Card
+      tone={past ? "muted" : "default"}
+      className={cn(!past && "shadow-[inset_0_3px_0_var(--mod-outings),var(--shadow-card)]")}
+    >
       <div className="flex items-start gap-2">
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
-          className="min-w-0 flex-1 text-left transition-colors hover:opacity-90"
+          className="min-w-0 flex-1 rounded-control text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           aria-expanded={expanded}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-medium">{outing.title}</h2>
+            <h2 className="break-words font-display text-lg font-semibold leading-6">{outing.title}</h2>
             {pool.teamSize > 0 && (
-              <Badge className="gap-1 border-slate-200 bg-white text-slate-600">
-                <Users className="h-3.5 w-3.5" aria-hidden="true" />
+              <Badge tone="neutral">
+                <Users className="h-3 w-3" aria-hidden="true" />
                 <span className="sr-only">Team members: </span>
                 {pool.teamSize}
               </Badge>
             )}
-            <Badge className="gap-1 border-slate-200 bg-white text-slate-600">
-              <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+            <Badge tone="neutral" className="tabular-nums">
+              <Wallet className="h-3 w-3" aria-hidden="true" />
               <span className="sr-only">Team pool: </span>
               {formatCurrency(outing.budget)}
             </Badge>
@@ -413,27 +424,24 @@ function OutingCard({
           </div>
         </button>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
+        <div className="-mr-1 -mt-1 flex shrink-0 items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setEditing(true)}
-            className="rounded p-1.5 text-muted hover:bg-slate-100 hover:text-accent"
+            className="hover:text-accent"
             aria-label={`Edit ${outing.title}`}
           >
-            <Pencil className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
+            <Pencil />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setExpanded((open) => !open)}
-            className="rounded p-1.5 text-muted hover:bg-slate-100"
             aria-label={expanded ? "Collapse outing" : "Expand outing"}
           >
-            {expanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
+            {expanded ? <ChevronUp /> : <ChevronDown />}
+          </Button>
         </div>
       </div>
 
@@ -500,15 +508,11 @@ export default function OutingsPage() {
   );
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading outings...</div>;
+    return <PageSkeleton label="Loading outings..." />;
   }
 
   if (!store) {
-    return (
-      <div className="text-sm text-warning">
-        {error ?? "Failed to load outings"}
-      </div>
-    );
+    return <ErrorBanner message={error ?? "Failed to load outings"} />;
   }
 
   return (
@@ -516,10 +520,11 @@ export default function OutingsPage() {
       {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Team Outings"
+        module="outings"
         description="Track budget, attendance, and other spend"
         action={
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
+            <Plus />
             New outing
           </Button>
         }
@@ -536,10 +541,8 @@ export default function OutingsPage() {
       />
 
       {upcoming.length > 0 && (
-        <section className="mb-10">
-          <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted">
-            Upcoming
-          </h2>
+        <section className="mb-8">
+          <SectionTitle count={upcoming.length}>Upcoming</SectionTitle>
           <div className="space-y-4">
             {upcoming.map((outing) => (
               <OutingCard
@@ -556,9 +559,7 @@ export default function OutingsPage() {
 
       {past.length > 0 && (
         <section>
-          <h2 className="mb-4 text-sm font-medium uppercase tracking-wide text-muted">
-            Past outings
-          </h2>
+          <SectionTitle count={past.length}>Past outings</SectionTitle>
           <div className="space-y-4">
             {past.map((outing) => (
               <OutingCard
@@ -574,8 +575,8 @@ export default function OutingsPage() {
       )}
 
       {store.outings.length === 0 && (
-        <Card className="py-12 text-center text-sm text-muted">
-          No outings yet. Create one to get started.
+        <Card>
+          <EmptyState icon={Users} title="No outings yet. Create one to get started." />
         </Card>
       )}
     </div>

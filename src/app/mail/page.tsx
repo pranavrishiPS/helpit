@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { PageHeader, ErrorBanner } from "@/components/ui";
+import { PageHeader, ErrorBanner, PageSkeleton, SectionTitle } from "@/components/ui";
 import { MailTodos } from "@/components/tasks/MailTodos";
 import { MailInbox } from "@/components/tasks/MailInbox";
 import { MailApprovals } from "@/components/tasks/MailApprovals";
@@ -102,11 +102,11 @@ export default function MailPage() {
   }
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading...</div>;
+    return <PageSkeleton label="Loading..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load mail"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load mail"} />;
   }
 
   const tasks = getMailTabTasks(store.tasks);
@@ -118,11 +118,12 @@ export default function MailPage() {
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Mail"
+        module="mail"
         description="Gmail inbox, sprint costing approvals, and personal reminders"
       />
 
-      <section className="mb-10">
-        <h2 className="mb-4 text-sm font-medium text-muted">Inbox</h2>
+      <section className="mb-8">
+        <SectionTitle>Inbox</SectionTitle>
         <MailInbox
           items={store.mailItems}
           onUpdateStatus={handleMailStatus}
@@ -134,7 +135,7 @@ export default function MailPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-2 text-sm font-medium text-muted">Sprint approvals</h2>
+        <SectionTitle>Sprint approvals</SectionTitle>
         <MailApprovals
           items={approvals}
           onToggle={handleApprovalToggle}
@@ -142,8 +143,8 @@ export default function MailPage() {
         />
       </section>
 
-      <section>
-        <h2 className="mb-4 text-sm font-medium text-muted">Reminders</h2>
+      <section className="mb-8">
+        <SectionTitle>Reminders</SectionTitle>
         <MailTodos
           tasks={tasks}
           onUpdate={updateTask}

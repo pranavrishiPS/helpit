@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, BellOff, Calendar, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button, Input } from "@/components/ui";
 import {
   formatReminderAt,
   fromDateTimeLocalValue,
@@ -97,15 +98,16 @@ export function ReminderPicker({
   const panel = open ? (
     <div
       ref={panelRef}
-      className="fixed z-50 w-64 rounded-xl border border-border bg-card p-2 shadow-lg"
+      className="fixed z-50 w-64 animate-scale-in rounded-card border border-border bg-card p-2 shadow-overlay"
       style={{ top: panelPosition.top, left: panelPosition.left }}
     >
       <div className="mb-1 flex items-center justify-between px-2 py-1">
-        <span className="text-xs font-medium text-foreground">Set reminder</span>
+        <span className="text-xs font-semibold text-foreground">Set reminder</span>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded p-0.5 text-muted hover:bg-slate-100"
+          aria-label="Close"
+          className="grid h-7 w-7 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -117,7 +119,7 @@ export function ReminderPicker({
             key={preset.id}
             type="button"
             onClick={() => selectPreset(preset.getValue())}
-            className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-foreground hover:bg-slate-50"
+            className="flex h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-xs text-foreground transition-colors hover:bg-surface-2"
           >
             <Calendar className="h-3.5 w-3.5 text-accent" />
             {preset.label}
@@ -126,36 +128,32 @@ export function ReminderPicker({
       </div>
 
       <div className="mt-2 border-t border-border pt-2">
-        <p className="mb-1.5 px-2 text-[10px] font-medium tracking-wide text-muted uppercase">
+        <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
           Pick date & time
         </p>
-        <input
+        <Input
           type="datetime-local"
+          size="sm"
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
-          className="w-full rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-accent"
+          aria-label="Reminder date and time"
         />
         <div className="mt-2 flex gap-1.5">
-          <button
-            type="button"
-            onClick={applyCustom}
-            disabled={!customValue}
-            className="flex-1 rounded-lg bg-accent px-2 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-40"
-          >
+          <Button size="sm" onClick={applyCustom} disabled={!customValue} className="flex-1">
             Set
-          </button>
+          </Button>
           {value && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 onChange(undefined);
                 setCustomValue("");
                 setOpen(false);
               }}
-              className="rounded-lg border border-border px-2 py-1.5 text-xs text-muted hover:bg-slate-50"
             >
               Clear
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -169,11 +167,11 @@ export function ReminderPicker({
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border transition-colors",
-          compact ? "px-2 py-1 text-[11px]" : "px-2.5 py-1 text-xs",
+          "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          compact ? "px-2 py-0.5 text-[11px] leading-4" : "px-2.5 py-1 text-xs",
           value
-            ? "border-accent/30 bg-accent/10 text-accent hover:bg-accent/15"
-            : "border-border bg-white text-muted hover:border-accent/30 hover:text-accent"
+            ? "border-transparent bg-accent-soft text-accent hover:border-accent/30"
+            : "border-border bg-card text-muted hover:border-accent/40 hover:text-accent"
         )}
       >
         {value ? <Bell className="h-3 w-3" /> : <BellOff className="h-3 w-3" />}

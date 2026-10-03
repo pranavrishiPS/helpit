@@ -57,14 +57,14 @@ export function compareBuildVersionTitlesDesc(a: string, b: string): number {
 }
 
 export function releasePlatformTitleClass(platform: ReleasePlatform | null): string {
-  if (platform === "android") return "text-emerald-700";
-  if (platform === "ios") return "text-blue-600";
+  if (platform === "android") return "text-android";
+  if (platform === "ios") return "text-ios";
   return "text-foreground";
 }
 
 export function releasePlatformCardClass(platform: ReleasePlatform | null): string {
-  if (platform === "android") return "border-l-4 border-l-emerald-500";
-  if (platform === "ios") return "border-l-4 border-l-blue-500";
+  if (platform === "android") return "border-l-4 border-l-android";
+  if (platform === "ios") return "border-l-4 border-l-ios";
   return "";
 }
 
@@ -72,12 +72,12 @@ export function releasePlatformDateClass(platform: ReleasePlatform | null): stri
   const base =
     "rounded-full border px-2.5 py-0.5 text-xs font-semibold tabular-nums";
   if (platform === "android") {
-    return `${base} border-emerald-300 bg-emerald-100 text-emerald-900`;
+    return `${base} border-android/30 bg-android-soft text-android-ink`;
   }
   if (platform === "ios") {
-    return `${base} border-blue-300 bg-blue-100 text-blue-900`;
+    return `${base} border-ios/30 bg-ios-soft text-ios-ink`;
   }
-  return `${base} border-border bg-slate-100 text-foreground`;
+  return `${base} border-border bg-surface-2 text-foreground`;
 }
 
 export function formatReleaseDate(dateStr?: string, compact = false): string {
@@ -103,13 +103,13 @@ export function isOverdue(dateStr?: string): boolean {
 export function priorityColor(priority: string): string {
   switch (priority) {
     case "urgent":
-      return "text-warning bg-warning/10 border-warning/30";
+      return "bg-danger text-white border-danger";
     case "high":
-      return "text-warning bg-warning/10 border-warning/20";
+      return "bg-pop-soft text-pop-ink border-pop/30";
     case "medium":
-      return "text-accent-secondary bg-accent-secondary/10 border-accent-secondary/20";
+      return "bg-info-soft text-info border-info/20";
     default:
-      return "text-muted bg-background border-border";
+      return "bg-surface-2 text-muted border-border";
   }
 }
 
@@ -118,15 +118,15 @@ export function statusColor(status: string): string {
     case "done":
     case "live":
     case "completed":
-      return "text-accent bg-accent/10";
+      return "text-success bg-success-soft";
     case "in_progress":
     case "in_dev":
     case "qa":
-      return "text-accent-secondary bg-accent-secondary/10";
+      return "text-info bg-info-soft";
     case "blocked":
-      return "text-warning bg-warning/10";
+      return "text-danger bg-danger-soft";
     default:
-      return "text-muted bg-background";
+      return "text-muted bg-surface-2";
   }
 }
 
@@ -135,17 +135,17 @@ import type { ReleasePhase } from "./types";
 export function releasePhaseColor(phase?: ReleasePhase | string): string {
   switch (phase) {
     case "ux":
-      return "text-violet-700 bg-violet-50 border-violet-200";
+      return "text-accent bg-accent-soft border-accent/25";
     case "art":
-      return "text-pink-700 bg-pink-50 border-pink-200";
+      return "text-pop-ink bg-pop-soft border-pop/30";
     case "animation":
-      return "text-orange-700 bg-orange-50 border-orange-200";
+      return "text-caution bg-caution-soft border-caution/25";
     case "dev":
-      return "text-blue-700 bg-blue-50 border-blue-200";
+      return "text-info bg-info-soft border-info/25";
     case "qa":
-      return "text-amber-700 bg-amber-50 border-amber-200";
+      return "text-success bg-success-soft border-success/25";
     default:
-      return "text-slate-700 bg-slate-100 border-slate-200";
+      return "text-muted bg-surface-2 border-border";
   }
 }
 

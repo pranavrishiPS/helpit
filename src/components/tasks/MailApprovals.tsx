@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import type { SprintApproval, SprintApprovalParty } from "@/lib/types";
-import { Badge, Card } from "@/components/ui";
-import { CheckCircle2, ChevronDown, Circle } from "lucide-react";
+import { Badge, Button, Card, EmptyState, tableClasses } from "@/components/ui";
+import { CheckCircle2, ChevronDown, Circle, Send } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   releasePlatformTitleClass,
@@ -68,9 +68,9 @@ function ApprovalMobileCard({
   return (
     <Card
       className={cn(
-        "p-3",
-        complete && "border-emerald-200 bg-emerald-50/50",
-        !mailSent && !complete && "bg-slate-50/50"
+        "p-3 sm:p-3",
+        complete && "border-success/30 bg-success-soft/60",
+        !mailSent && !complete && "bg-surface-2/60"
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -83,47 +83,41 @@ function ApprovalMobileCard({
           {title}
         </p>
         {!mailSent ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleMarkSent}
             disabled={markingSent}
-            className="text-[11px] font-medium text-accent hover:underline disabled:opacity-50"
+            className="-my-1 text-accent hover:bg-accent-soft hover:text-accent"
           >
             {markingSent ? "Saving…" : "Mark mail sent"}
-          </button>
+          </Button>
         ) : (
-          <Badge
-            className={cn(
-              "px-1.5 py-px text-[11px]",
-              complete
-                ? "border-emerald-600 bg-emerald-600 text-white"
-                : "border-warning/30 bg-warning/10 text-warning"
-            )}
-          >
+          <Badge tone={complete ? "success" : "caution"} solid={complete}>
             {complete ? "Complete" : "Pending"}
           </Badge>
         )}
       </div>
 
       {!mailSent ? (
-        <p className="mt-3 text-center text-[11px] italic text-muted">Mail not sent yet</p>
+        <p className="mt-3 text-center text-xs text-muted">Mail not sent yet</p>
       ) : (
         <div className="mt-3 grid grid-cols-3 gap-2">
           {PARTIES.map((party) => {
             const approved = item.approvals[party];
             return (
               <div key={party} className="flex flex-col items-center gap-1">
-                <span className="text-[10px] font-medium text-muted">{PARTY_LABELS[party]}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">{PARTY_LABELS[party]}</span>
                 <button
                   type="button"
                   onClick={() => onToggle(item.id, party, !approved)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded text-muted transition-colors hover:bg-slate-100 hover:text-foreground"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-control text-subtle transition-colors hover:bg-surface-3 hover:text-foreground"
                   aria-label={`${PARTY_LABELS[party]} ${approved ? "approved" : "pending"}`}
                 >
                   {approved ? (
-                    <CheckCircle2 className="h-4 w-4 fill-emerald-500 stroke-emerald-500 text-white" />
+                    <CheckCircle2 className="h-5 w-5 fill-success stroke-success text-white" />
                   ) : (
-                    <Circle className="h-4 w-4 stroke-current" />
+                    <Circle className="h-5 w-5 stroke-current" />
                   )}
                 </button>
               </div>
@@ -153,12 +147,12 @@ function ApprovalRow({ item, onToggle, onMailSent, complete }: ApprovalItemProps
   return (
     <tr
       className={cn(
-        "border-b border-border/60 last:border-b-0",
-        complete && "bg-emerald-50",
-        !mailSent && !complete && "bg-slate-50/50"
+        tableClasses.row,
+        complete && tableClasses.successRow,
+        !mailSent && !complete && "bg-surface-2/60"
       )}
     >
-      <td className="px-3 py-2">
+      <td className="px-3 py-2.5">
         <p
           className={cn(
             "text-sm font-medium leading-tight",
@@ -176,42 +170,40 @@ function ApprovalRow({ item, onToggle, onMailSent, complete }: ApprovalItemProps
               <button
                 type="button"
                 onClick={() => onToggle(item.id, party, !approved)}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-slate-100 hover:text-foreground"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-subtle transition-colors hover:bg-surface-3 hover:text-foreground"
                 aria-label={`${PARTY_LABELS[party]} ${approved ? "approved" : "pending"}`}
                 title={approved ? `Undo ${PARTY_LABELS[party]} approval` : `Mark ${PARTY_LABELS[party]} approved`}
               >
                 {approved ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0 fill-emerald-500 stroke-emerald-500 text-white" />
+                  <CheckCircle2 className="h-[18px] w-[18px] shrink-0 fill-success stroke-success text-white" />
                 ) : (
-                  <Circle className="h-4 w-4 shrink-0 stroke-current" />
+                  <Circle className="h-[18px] w-[18px] shrink-0 stroke-current" />
                 )}
               </button>
             </td>
           );
         })
       ) : (
-        <td colSpan={3} className="px-3 py-2 text-center">
-          <span className="text-[11px] italic text-muted">Mail not sent yet</span>
+        <td colSpan={3} className="px-3 py-2.5 text-center">
+          <span className="text-xs text-muted">Mail not sent yet</span>
         </td>
       )}
-      <td className="w-28 px-3 py-2 text-center">
+      <td className="w-32 px-3 py-2.5 text-center">
         {!mailSent ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleMarkSent}
             disabled={markingSent}
-            className="text-[11px] font-medium text-accent hover:underline disabled:opacity-50"
+            className="-my-1 text-accent hover:bg-accent-soft hover:text-accent"
           >
             {markingSent ? "Saving…" : "Mark mail sent"}
-          </button>
+          </Button>
         ) : (
           <Badge
-            className={cn(
-              "min-w-[4.75rem] justify-center px-1.5 py-px text-[11px]",
-              complete
-                ? "border-emerald-600 bg-emerald-600 text-white"
-                : "border-warning/30 bg-warning/10 text-warning"
-            )}
+            tone={complete ? "success" : "caution"}
+            solid={complete}
+            className="min-w-[4.75rem] justify-center"
           >
             {complete ? "Complete" : "Pending"}
           </Badge>
@@ -246,17 +238,17 @@ function ApprovalTable({
         ))}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
+      <div className={cn(tableClasses.wrapper, "hidden md:block")}>
         <table className="w-full min-w-[560px] text-xs">
           <thead>
-            <tr className="border-b border-border bg-slate-50/80 text-left text-[11px] text-muted">
-              <th className="px-3 py-2 font-medium">Builds</th>
+            <tr className={tableClasses.headRow}>
+              <th className="px-3 py-2.5">Builds</th>
               {PARTIES.map((party) => (
-                <th key={party} className="w-14 px-1 py-2 text-center font-medium">
+                <th key={party} className="w-14 px-1 py-2.5 text-center">
                   {PARTY_LABELS[party]}
                 </th>
               ))}
-              <th className="w-28 px-3 py-2 text-center font-medium">Status</th>
+              <th className="w-32 px-3 py-2.5 text-center">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -290,11 +282,12 @@ export function MailApprovals({ items, onToggle, onMailSent }: MailApprovalsProp
 
   if (items.length === 0) {
     return (
-      <Card className="py-8 text-center">
-        <p className="text-sm text-muted">
-          No sprint costing approvals yet. Add a release in Planning to track GM, Dev, and QA
-          sign-off here.
-        </p>
+      <Card>
+        <EmptyState
+          compact
+          icon={Send}
+          title="No sprint costing approvals yet. Add a release in Planning to track GM, Dev, and QA sign-off here."
+        />
       </Card>
     );
   }
@@ -304,8 +297,8 @@ export function MailApprovals({ items, onToggle, onMailSent }: MailApprovalsProp
       {pending.length > 0 ? (
         <ApprovalTable items={pending} onToggle={onToggle} onMailSent={onMailSent} />
       ) : (
-        <Card className="py-5 text-center">
-          <p className="text-sm text-muted">No pending approvals — you&apos;re all caught up.</p>
+        <Card>
+          <EmptyState compact icon={CheckCircle2} title="No pending approvals — you’re all caught up." />
         </Card>
       )}
 
@@ -314,7 +307,7 @@ export function MailApprovals({ items, onToggle, onMailSent }: MailApprovalsProp
           <button
             type="button"
             onClick={() => setCompletedOpen((open) => !open)}
-            className="flex w-full flex-wrap items-center gap-2 rounded-lg border border-border bg-slate-50/60 px-3 py-2 text-left text-xs font-medium text-muted transition-colors hover:bg-slate-100"
+            className="flex w-full flex-wrap items-center gap-2 rounded-control bg-surface-2 px-3 py-2.5 text-left text-xs font-semibold text-muted transition-colors hover:bg-surface-3 hover:text-foreground"
             aria-expanded={completedOpen}
           >
             <ChevronDown
@@ -325,7 +318,7 @@ export function MailApprovals({ items, onToggle, onMailSent }: MailApprovalsProp
             />
             <span>Completed ({completed.length})</span>
             {!completedOpen && (
-              <span className="font-normal text-muted/70">— uncheck to restore</span>
+              <span className="font-normal text-muted">— uncheck to restore</span>
             )}
           </button>
           {completedOpen && (

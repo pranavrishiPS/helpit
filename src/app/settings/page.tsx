@@ -2,8 +2,23 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { PageHeader, Card, Button, ErrorBanner } from "@/components/ui";
-import { MessageSquare, Mail, Link2, RefreshCw } from "lucide-react";
+import {
+  PageHeader,
+  Alert,
+  Badge,
+  Card,
+  CardHeader,
+  Button,
+  ErrorBanner,
+  Input,
+  Label,
+  ModuleChip,
+  PageSkeleton,
+  buttonClasses,
+  type BadgeTone,
+} from "@/components/ui";
+import { Link2, Plug, RefreshCw, UserRound } from "lucide-react";
+import type { ModuleId } from "@/lib/modules";
 import { useDashboard } from "@/lib/use-dashboard";
 import {
   disconnectGmail,
@@ -162,11 +177,11 @@ function SettingsContent() {
   }
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading settings...</div>;
+    return <PageSkeleton label="Loading settings..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load settings"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load settings"} />;
   }
 
   return (
@@ -175,71 +190,74 @@ function SettingsContent() {
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Settings"
+        module="settings"
         description="Profile and integrations"
       />
 
       {integrationMessage && (
-        <div className="mb-4 rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted">
+        <Alert tone="info" role="status" className="mb-4">
           {integrationMessage}
-        </div>
+        </Alert>
       )}
 
       <div className="space-y-4">
         <Card>
-          <h2 className="font-medium">Profile</h2>
-          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <CardHeader module="settings" icon={UserRound} title="Profile" />
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-xs text-muted" htmlFor="profile-name">
-                Name
-              </label>
-              <input
+              <Label htmlFor="profile-name">Name</Label>
+              <Input
                 id="profile-name"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2"
                 value={profileForm.name}
                 onChange={(e) => editProfile({ name: e.target.value })}
               />
             </div>
             <div>
-              <label className="text-xs text-muted" htmlFor="profile-role">
-                Role
-              </label>
-              <input
+              <Label htmlFor="profile-role">Role</Label>
+              <Input
                 id="profile-role"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2"
                 value={profileForm.role}
                 onChange={(e) => editProfile({ role: e.target.value })}
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs text-muted" htmlFor="profile-company">
-                Company
-              </label>
-              <input
+              <Label htmlFor="profile-company">Company</Label>
+              <Input
                 id="profile-company"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2"
                 value={profileForm.company}
                 onChange={(e) => editProfile({ company: e.target.value })}
               />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-3">
-            <Button size="sm" onClick={saveProfile} disabled={savingProfile}>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Button onClick={saveProfile} disabled={savingProfile}>
               {savingProfile ? "Saving…" : "Save profile"}
             </Button>
-            {profileMessage && <p className="text-xs text-muted">{profileMessage}</p>}
+            {profileMessage && (
+              <p
+                role="status"
+                className={
+                  profileMessage === "Profile saved."
+                    ? "text-xs font-medium text-success"
+                    : "text-xs font-medium text-danger"
+                }
+              >
+                {profileMessage}
+              </p>
+            )}
           </div>
           <p className="mt-4 text-xs text-muted">
             Locally, data lives in{" "}
-            <code className="rounded bg-slate-100 px-1">data/store.json</code>. On Vercel it
+            <code className="rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-foreground">data/store.json</code>. On Vercel it
             persists in a private Blob store.
           </p>
         </Card>
 
         <Card>
-          <h2 className="font-medium">Integrations</h2>
-          <div className="mt-4 space-y-3">
+          <CardHeader module="settings" icon={Plug} title="Integrations" />
+          <div className="space-y-3">
             <IntegrationRow
-              icon={<MessageSquare className="h-4 w-4 text-accent" />}
+              module="slack"
               name="Slack"
               status={
                 !slack
@@ -257,14 +275,12 @@ function SettingsContent() {
               }
               action={
                 slack?.configured && !slack.connected ? (
-                  <a href="/api/slack/auth">
-                    <Button variant="secondary" size="sm">
-                      <Link2 className="mr-1.5 h-3.5 w-3.5" />
-                      Connect
-                    </Button>
+                  <a href="/api/slack/auth" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                    <Link2 />
+                    Connect
                   </a>
                 ) : slack?.connected ? (
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-col sm:items-end">
                     <span className="text-xs text-muted">
                       {slack.autoSyncAvailable === false
                         ? "Manual tracking"
@@ -284,7 +300,7 @@ function SettingsContent() {
               }
             />
             <IntegrationRow
-              icon={<Mail className="h-4 w-4 text-accent" />}
+              module="mail"
               name="Gmail"
               status={
                 !gmail
@@ -298,14 +314,12 @@ function SettingsContent() {
               description="Sync recent inbox messages into the Mail inbox"
               action={
                 gmail?.configured && !gmail.connected ? (
-                  <a href="/api/gmail/auth">
-                    <Button variant="secondary" size="sm">
-                      <Link2 className="mr-1.5 h-3.5 w-3.5" />
-                      Connect
-                    </Button>
+                  <a href="/api/gmail/auth" className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                    <Link2 />
+                    Connect
                   </a>
                 ) : gmail?.connected ? (
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col items-start gap-2 sm:items-end">
                     {gmail.lastSyncedAt && (
                       <span className="text-xs text-muted">
                         Last sync {new Date(gmail.lastSyncedAt).toLocaleString()}
@@ -318,9 +332,7 @@ function SettingsContent() {
                         onClick={handleGmailSync}
                         disabled={syncingGmail}
                       >
-                        <RefreshCw
-                          className={`mr-1.5 h-3.5 w-3.5 ${syncingGmail ? "animate-spin" : ""}`}
-                        />
+                        <RefreshCw className={syncingGmail ? "animate-spin" : ""} />
                         Sync now
                       </Button>
                       <Button
@@ -343,43 +355,47 @@ function SettingsContent() {
   );
 }
 
+function integrationTone(status: string): BadgeTone {
+  if (status.startsWith("Connected")) return "success";
+  if (status === "Needs setup") return "caution";
+  return "neutral";
+}
+
 function IntegrationRow({
-  icon,
+  module,
   name,
   status,
   description,
   action,
 }: {
-  icon: React.ReactNode;
+  module: ModuleId;
   name: string;
   status: string;
   description: string;
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border border-border p-4 transition-colors hover:border-border-strong sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-          {icon}
-        </div>
-        <div>
+        <ModuleChip module={module} variant="soft" size="md" />
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{name}</span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-muted">
+            <span className="font-semibold">{name}</span>
+            <Badge dot tone={integrationTone(status)} className="max-w-full whitespace-normal">
               {status}
-            </span>
+            </Badge>
           </div>
           <p className="mt-1 text-sm text-muted">{description}</p>
         </div>
       </div>
-      {action && <div className="shrink-0 sm:ml-auto">{action}</div>}
+      {action && <div className="shrink-0 pl-12 sm:ml-auto sm:pl-0">{action}</div>}
     </div>
   );
 }
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-muted">Loading settings...</div>}>
+    <Suspense fallback={<PageSkeleton label="Loading settings..." />}>
       <SettingsContent />
     </Suspense>
   );

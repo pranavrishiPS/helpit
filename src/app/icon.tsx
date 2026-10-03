@@ -13,11 +13,11 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0f172a",
-          color: "#38bdf8",
+          background: "linear-gradient(135deg, #5B3BF0, #FF6B4A)",
+          color: "#FFFFFF",
           fontSize: 18,
           fontWeight: 700,
-          borderRadius: 6,
+          borderRadius: 8,
         }}
       >
         H

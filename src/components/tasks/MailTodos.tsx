@@ -17,13 +17,13 @@ import {
   reminderToDueDate,
 } from "@/lib/reminder-utils";
 import { ReminderPicker } from "./ReminderPicker";
-import { EmptyState } from "@/components/ui";
+import { Button, EmptyState, Tabs, checkboxClasses } from "@/components/ui";
 
 const PRIORITIES: { id: TaskPriority; label: string; color: string }[] = [
-  { id: "low", label: "Low", color: "bg-slate-100 text-slate-600" },
-  { id: "medium", label: "Med", color: "bg-accent-secondary/10 text-accent-secondary" },
-  { id: "high", label: "High", color: "bg-warning/10 text-warning" },
-  { id: "urgent", label: "Urgent", color: "bg-warning/15 text-warning" },
+  { id: "low", label: "Low", color: "bg-surface-2 text-muted" },
+  { id: "medium", label: "Med", color: "bg-info-soft text-info" },
+  { id: "high", label: "High", color: "bg-pop-soft text-pop-ink" },
+  { id: "urgent", label: "Urgent", color: "bg-danger-soft text-danger" },
 ];
 
 type TaskFilter = "open" | "done" | "all";
@@ -116,22 +116,23 @@ export function MailTodos({
       <form
         onSubmit={submit}
         className={cn(
-          "overflow-hidden rounded-2xl border bg-card transition-all",
+          "overflow-hidden rounded-card border bg-card transition-[border-color,box-shadow] duration-150",
           expanded
-            ? "border-accent/25 shadow-md shadow-accent/5"
-            : "border-border shadow-sm hover:shadow-md"
+            ? "border-accent/30 shadow-raised"
+            : "border-border shadow-card hover:border-border-strong"
         )}
       >
         <div className="flex items-center gap-3 px-4 py-3.5">
-          <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-dashed border-slate-300">
-            <Plus className="h-3 w-3 text-slate-400" />
+          <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-dashed border-border-strong">
+            <Plus className="h-3 w-3 text-subtle" />
           </div>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onFocus={() => setExpanded(true)}
             placeholder="Add a task..."
-            className="min-w-0 flex-1 bg-transparent text-sm leading-[22px] outline-none placeholder:text-slate-400"
+            aria-label="Add a task"
+            className="min-w-0 flex-1 bg-transparent text-sm leading-[22px] outline-none placeholder:text-subtle"
           />
         </div>
 
@@ -143,17 +144,18 @@ export function MailTodos({
                 onChange={setReminderAt}
                 compact
               />
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {PRIORITIES.map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     onClick={() => setPriority(p.id)}
+                    aria-pressed={priority === p.id}
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-medium transition-all",
+                      "h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                       priority === p.id
-                        ? p.color + " ring-1 ring-inset ring-current/20"
-                        : "text-muted hover:bg-slate-100"
+                        ? p.color + " ring-1 ring-inset ring-current/25"
+                        : "text-muted hover:bg-surface-2 hover:text-foreground"
                     )}
                   >
                     {p.label}
@@ -163,48 +165,22 @@ export function MailTodos({
             </div>
 
             <div className="flex items-center justify-end gap-2 pl-8">
-              <button
-                type="button"
-                onClick={resetComposer}
-                className="rounded-lg px-3 py-1.5 text-xs text-muted hover:bg-slate-100"
-              >
+              <Button variant="ghost" size="sm" onClick={resetComposer}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!title.trim() || submitting}
-                className="rounded-lg bg-accent px-4 py-1.5 text-xs font-medium text-white shadow-sm shadow-accent/25 hover:bg-accent-hover disabled:opacity-40"
-              >
+              </Button>
+              <Button type="submit" size="sm" disabled={!title.trim() || submitting}>
                 Add task
-              </button>
+              </Button>
             </div>
           </div>
         )}
       </form>
 
       {/* Filter tabs */}
-      <div className="max-w-full overflow-x-auto">
-        <div className="inline-flex min-w-0 rounded-xl border border-border bg-slate-50/80 p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              filter === tab.id
-                ? "bg-white text-foreground shadow-sm"
-                : "text-muted hover:text-foreground"
-            )}
-          >
-            {tab.label}
-            <span className="ml-1 text-muted">({tab.count})</span>
-          </button>
-        ))}
-        </div>
-      </div>
+      <Tabs aria-label="Filter reminders" value={filter} onChange={setFilter} items={tabs} />
 
       {/* Task list */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="overflow-hidden rounded-card border border-border bg-card shadow-card">
         {filtered.length === 0 ? (
           <EmptyState
             title={
@@ -276,9 +252,9 @@ function TaskSection({
 }) {
   return (
     <div className={cn(!noBorder && "border-b border-border")}>
-      <div className="flex items-center gap-2 bg-slate-50/60 px-4 py-2">
+      <div className="flex items-center gap-2 bg-surface-2 px-4 py-2">
         {icon}
-        <span className="text-[11px] font-semibold tracking-wide text-muted uppercase">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
           {title}
         </span>
       </div>
@@ -310,9 +286,9 @@ function MailTaskRow({
   return (
     <li
       className={cn(
-        "group flex items-start gap-3 border-b border-border/60 px-4 py-3 transition-colors last:border-b-0 hover:bg-slate-50/50",
-        task.status === "done" && "opacity-55",
-        reminderDue && "bg-accent/5"
+        "group flex items-start gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2/60",
+        task.status === "done" && "opacity-70",
+        reminderDue && "bg-accent-soft/50 shadow-[inset_3px_0_0_var(--accent)] hover:bg-accent-soft/70"
       )}
     >
       <button
@@ -322,16 +298,12 @@ function MailTaskRow({
             status: task.status === "done" ? "todo" : "done",
           })
         }
-        className={cn(
-          "mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 transition-all",
-          task.status === "done"
-            ? "border-accent bg-accent text-white"
-            : "border-slate-300 hover:border-accent hover:bg-accent/5"
-        )}
+        type="button"
+        className={cn("mt-0.5", checkboxClasses({ done: task.status === "done", round: true }))}
         aria-label={task.status === "done" ? "Mark incomplete" : "Mark complete"}
       >
         {task.status === "done" ? (
-          <Check className="h-3 w-3" />
+          <Check className="h-3 w-3 animate-pop" strokeWidth={3} />
         ) : (
           <Circle className="h-3 w-3 text-transparent" />
         )}
@@ -341,7 +313,7 @@ function MailTaskRow({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span
             className={cn(
-              "text-sm text-foreground",
+              "break-words text-sm text-foreground",
               task.status === "done" && "line-through text-muted"
             )}
           >
@@ -350,7 +322,7 @@ function MailTaskRow({
           {task.priority !== "medium" && task.status !== "done" && (
             <span
               className={cn(
-                "rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize",
+                "rounded-full px-1.5 py-0.5 text-[11px] font-semibold capitalize",
                 PRIORITIES.find((p) => p.id === task.priority)?.color
               )}
             >
@@ -369,14 +341,14 @@ function MailTaskRow({
             <span
               className={cn(
                 "text-[11px]",
-                overdue ? "font-medium text-warning" : "text-muted"
+                overdue ? "font-semibold text-danger" : "text-muted"
               )}
             >
               Due {formatDueDate(task.dueDate)}
             </span>
           )}
           {reminderDue && (
-            <span className="text-[11px] font-medium text-accent">
+            <span className="text-[11px] font-semibold text-accent">
               Reminder due
             </span>
           )}
@@ -384,11 +356,12 @@ function MailTaskRow({
       </div>
 
       <button
+        type="button"
         onClick={() => onDelete(task.id)}
-        className="shrink-0 rounded-lg p-1.5 text-muted opacity-100 transition-all hover:bg-warning/10 hover:text-warning sm:opacity-0 sm:group-hover:opacity-100"
+        className="-my-1 grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted opacity-100 transition-[opacity,background-color,color] hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
         aria-label="Delete task"
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <Trash2 className="h-4 w-4" />
       </button>
     </li>
   );

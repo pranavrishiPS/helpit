@@ -1,76 +1,263 @@
 @import "tailwindcss";
 
+/* "Arcade Night" tokens — see docs/specs/visual-redesign.md §2 */
 :root {
-  --brand: #1e293b;
-  --brand-hover: #0f172a;
-  --foreground: #1e293b;
-  --sidebar: #1e293b;
-  --sidebar-foreground: #f8fafc;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-secondary: #06b6d4;
-  --accent-secondary-hover: #0891b2;
-  --warning: #ef4444;
-  --warning-hover: #dc2626;
-  --success: #16a34a;
-  --success-hover: #15803d;
-  --background: #f8fafc;
-  --card: #ffffff;
-  --border: #e2e8f0;
-  --muted: #64748b;
+  color-scheme: light;
+
+  /* Neutrals — lavender-tinted, never pure gray */
+  --background: #F7F6FB;      /* app canvas */
+  --card: #FFFFFF;            /* cards, inputs, popovers, modals */
+  --surface-2: #F3F1F9;       /* wells, table heads, hover fill, section bands */
+  --surface-3: #E9E6F3;       /* pressed/selected neutral, progress tracks, skeletons */
+  --border: #E6E2F0;          /* card + divider lines (decorative) */
+  --border-strong: #D3CDE5;   /* hover borders, dashed drop zones */
+  --border-input: #8E87AB;    /* form control outline — 3.4:1 on white (WCAG 1.4.11) */
+
+  --foreground: #1F1640;      /* body + headings (ink) */
+  --muted: #6B6485;           /* secondary text — 5.5:1 on white */
+  --subtle: #9A93B3;          /* placeholders, decorative icons, disabled. Never essential text */
+
+  --brand: #1F1640;           /* = ink; kept for back-compat (text-brand) */
+  --brand-hover: #140C33;
+
+  /* Primary + brand pop */
+  --accent: #5B3BF0;
+  --accent-hover: #4A2AD6;
+  --accent-soft: #EEEAFF;
+  --pop: #FF6B4A;             /* decorative fills only — text on it must be ink */
+  --pop-ink: #B3361B;
+  --pop-soft: #FFEDE8;
+
+  /* Semantic */
+  --success: #0F7B45;  --success-hover: #0B6338;  --success-soft: #E3F6EA;
+  --caution: #B45309;  --caution-hover: #92400E;  --caution-soft: #FFF4DC;
+  --danger:  #C21F45;  --danger-hover:  #A3173A;  --danger-soft:  #FDECEF;
+  --info:    #0E7490;  --info-hover:    #0B5F76;  --info-soft:    #E0F5FA;
+
+  /* Back-compat aliases — existing "warning" usages are all red/danger semantics */
+  --warning: var(--danger);
+  --warning-hover: var(--danger-hover);
+  --accent-secondary: var(--info);
+  --accent-secondary-hover: var(--info-hover);
+
+  /* Platforms */
+  --android: #15803D;  --android-soft: #DCF5E5;  --android-ink: #14532D;
+  --ios:     #2563EB;  --ios-soft:     #E0EAFF;  --ios-ink:     #1E3A8A;
+
+  /* Sidebar */
+  --sidebar: #1A1140;
+  --sidebar-2: #23174F;
+  --sidebar-foreground: #C9C2E8;
+  --sidebar-muted: #8F86B8;
+
+  /* Overlay scrim */
+  --overlay: rgb(20 12 51 / 0.5);
+
+  /* Module hues — icon-chip fills / indicators only. Not for text. */
+  --mod-home: #5B3BF0;
+  --mod-tasks: #5B3BF0;
+  --mod-scrum: #0891B2;
+  --mod-slack: #C026D3;
+  --mod-mail: #2563EB;
+  --mod-planning: #059669;
+  --mod-features: #E11D74;
+  --mod-resources: #B7791F;
+  --mod-outings: #E8590C;
+  --mod-settings: #6B6485;
 }
 
 @theme inline {
-  --color-brand: var(--brand);
-  --color-brand-hover: var(--brand-hover);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-card: var(--card);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--border-input);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
-  --color-accent-secondary: var(--accent-secondary);
-  --color-accent-secondary-hover: var(--accent-secondary-hover);
-  --color-warning: var(--warning);
-  --color-warning-hover: var(--warning-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-pop: var(--pop);
+  --color-pop-ink: var(--pop-ink);
+  --color-pop-soft: var(--pop-soft);
   --color-success: var(--success);
   --color-success-hover: var(--success-hover);
-  --color-card: var(--card);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
+  --color-success-soft: var(--success-soft);
+  --color-caution: var(--caution);
+  --color-caution-hover: var(--caution-hover);
+  --color-caution-soft: var(--caution-soft);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-hover: var(--info-hover);
+  --color-info-soft: var(--info-soft);
+  --color-warning: var(--warning);
+  --color-warning-hover: var(--warning-hover);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-secondary-hover: var(--accent-secondary-hover);
+  --color-android: var(--android);
+  --color-android-soft: var(--android-soft);
+  --color-android-ink: var(--android-ink);
+  --color-ios: var(--ios);
+  --color-ios-soft: var(--ios-soft);
+  --color-ios-ink: var(--ios-ink);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-2: var(--sidebar-2);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-overlay: var(--overlay);
+  --color-mod-home: var(--mod-home);
+  --color-mod-tasks: var(--mod-tasks);
+  --color-mod-scrum: var(--mod-scrum);
+  --color-mod-slack: var(--mod-slack);
+  --color-mod-mail: var(--mod-mail);
+  --color-mod-planning: var(--mod-planning);
+  --color-mod-features: var(--mod-features);
+  --color-mod-resources: var(--mod-resources);
+  --color-mod-outings: var(--mod-outings);
+  --color-mod-settings: var(--mod-settings);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage); /* not var(--font-display) — would be circular */
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
-  -webkit-tap-highlight-color: transparent;
+/* static: always emit these vars so arbitrary values like var(--shadow-card) resolve */
+@theme static {
+  --radius-chip: 0.375rem;     /* 6px  — tags, tiny count pills, calendar banners */
+  --radius-control: 0.625rem;  /* 10px — buttons, inputs, selects, tab items, nav items */
+  --radius-card: 1rem;         /* 16px — cards, stat tiles, tables, list containers */
+  --radius-modal: 1.25rem;     /* 20px — modals, hero, login card */
+
+  --shadow-card: 0 1px 2px rgb(31 22 64 / 0.04), 0 1px 3px rgb(31 22 64 / 0.06);
+  --shadow-raised: 0 6px 16px -4px rgb(31 22 64 / 0.12), 0 2px 4px rgb(31 22 64 / 0.05);
+  --shadow-overlay: 0 24px 48px -12px rgb(31 22 64 / 0.30), 0 0 0 1px rgb(31 22 64 / 0.05);
+  --shadow-glow: 0 6px 18px -6px rgb(91 59 240 / 0.55);
+  --shadow-chip: 0 4px 10px -3px rgb(31 22 64 / 0.25);
+
+  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-fade-in: fade-in 160ms var(--ease-soft);
+  --animate-scale-in: scale-in 180ms var(--ease-soft);
+  --animate-sheet-up: sheet-up 220ms var(--ease-soft);
+  --animate-drawer-in: drawer-in 220ms var(--ease-soft);
+  --animate-pop: pop 220ms var(--ease-soft);
+
+  @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes scale-in { from { opacity: 0; transform: scale(0.97) translateY(4px) } to { opacity: 1; transform: none } }
+  @keyframes sheet-up { from { transform: translateY(100%) } to { transform: none } }
+  @keyframes drawer-in { from { transform: translateX(-100%) } to { transform: none } }
+  @keyframes pop { 0% { transform: scale(0.8) } 60% { transform: scale(1.12) } 100% { transform: scale(1) } }
 }
 
-img,
-video,
-svg {
-  max-width: 100%;
-  height: auto;
+@utility bg-brand-gradient {
+  background-image: linear-gradient(135deg, var(--accent) 0%, #9B5CF6 55%, var(--pop) 100%);
 }
 
-a[href],
-button:not(:disabled),
-label[for],
-select,
-summary,
-[role="button"] {
-  cursor: pointer;
+@utility bg-hero {
+  background-image:
+    radial-gradient(120% 140% at 100% 0%, rgb(255 107 74 / 0.55) 0%, transparent 55%),
+    linear-gradient(135deg, #2A1B66 0%, var(--accent) 70%);
 }
 
-button:disabled {
-  cursor: not-allowed;
+@utility sidebar-surface {
+  background-image:
+    radial-gradient(120% 50% at 0% 0%, rgb(124 92 255 / 0.35) 0%, transparent 60%),
+    linear-gradient(180deg, var(--sidebar-2) 0%, var(--sidebar) 100%);
 }
 
-* {
-  box-sizing: border-box;
+@utility app-canvas {
+  background:
+    radial-gradient(900px 320px at 0% -80px, rgb(91 59 240 / 0.07), transparent 70%),
+    radial-gradient(700px 260px at 100% -80px, rgb(255 107 74 / 0.06), transparent 70%),
+    var(--background);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Right-edge fade hint for horizontally scrolling calendars/tables on phones */
+@utility scroll-fade-x {
+  @media (width < 40rem) {
+    mask-image: linear-gradient(90deg, #000 92%, transparent);
+  }
+}
+
+@layer base {
+  html {
+    accent-color: var(--accent);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-bricolage), var(--font-geist-sans), sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: rgb(91 59 240 / 0.2);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  input[type="date"],
+  input[type="datetime-local"] {
+    color-scheme: light;
+  }
+
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  a[href],
+  button:not(:disabled),
+  label[for],
+  select,
+  summary,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -79,6 +266,10 @@ button:disabled {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border-strong);
   border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--subtle);
 }

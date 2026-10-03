@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { PageHeader, Button, ErrorBanner } from "@/components/ui";
+import { PageHeader, Button, ErrorBanner, PageSkeleton, Tabs } from "@/components/ui";
 import { useDashboard } from "@/lib/use-dashboard";
 import type { ProjectResourceType } from "@/lib/types";
 import { AddResourceDialog, ResourceList } from "@/components/resources/ResourceList";
-import { cn } from "@/lib/cn";
 
 type Filter = "all" | ProjectResourceType;
 
@@ -25,11 +24,11 @@ export default function ResourcesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading resources...</div>;
+    return <PageSkeleton label="Loading resources..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load resources"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load resources"} />;
   }
 
   const resources = store.projectResources ?? [];
@@ -50,33 +49,23 @@ export default function ResourcesPage() {
       {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Resources"
+        module="resources"
         description="Docs, Figma, Sheets, Slides, and project links in one place"
         action={
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
+            <Plus />
             Add link
           </Button>
         }
       />
 
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setFilter(tab.id)}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-              filter === tab.id
-                ? "bg-brand text-white"
-                : "text-muted hover:bg-slate-100"
-            )}
-          >
-            {tab.label}
-            <span className="ml-1 tabular-nums opacity-80">{counts[tab.id]}</span>
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="mb-4"
+        aria-label="Filter resources"
+        value={filter}
+        onChange={setFilter}
+        items={TABS.map((tab) => ({ ...tab, count: counts[tab.id] }))}
+      />
 
       <ResourceList resources={filtered} onChanged={reload} />
 

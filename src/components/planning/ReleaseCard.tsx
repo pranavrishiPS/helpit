@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { AlertTriangle, ChevronDown, Plus, X } from "lucide-react";
+import { ChevronDown, Plus, X } from "lucide-react";
 import type { Release, ReleasePhase, ReleaseStatus } from "@/lib/types";
-import { Badge, Card, Button } from "@/components/ui";
+import { Alert, Badge, Card, Button, Input, Textarea, fieldClasses } from "@/components/ui";
 import { DateCommitInput } from "@/components/ui/DateCommitInput";
 import {
   RELEASE_PHASE_LABELS,
@@ -22,9 +22,6 @@ import {
   formatSprintItems,
 } from "@/lib/utils";
 import { cn } from "@/lib/cn";
-
-const sprintInputClass =
-  "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent";
 
 const MARK_SHIPPED_VALUE = "__mark_shipped__";
 
@@ -99,9 +96,9 @@ export function ReleaseCard({
   const sprintItems = parseSprintItems(release.notes);
   const isCompleted = release.status === "live";
   const isExpanded = detailPanel || expanded;
-  const sectionClass = detailPanel
-    ? "rounded-lg border border-border/80 bg-slate-50/40 p-2"
-    : "rounded-lg border border-border/80 bg-slate-50/40 p-3";
+  const sectionClass = "rounded-xl bg-surface-2/70 p-3";
+  const sectionLabelClass =
+    "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-muted";
 
   const phaseControl = isCompleted ? (
     <Badge className={cn("shrink-0", statusColor("live"))}>Live</Badge>
@@ -121,7 +118,7 @@ export function ReleaseCard({
         onUpdate({ phase: e.target.value as ReleasePhase });
       }}
       className={cn(
-        "shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-medium outline-none focus:border-accent",
+        "h-7 shrink-0 cursor-pointer rounded-full border px-2.5 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent",
         releasePhaseColor(release.phase)
       )}
       aria-label="Release phase"
@@ -149,19 +146,19 @@ export function ReleaseCard({
         releasePlatformCardClass(platform),
         isCompleted && !isExpanded && "py-3",
         "w-full min-w-0",
-        detailPanel && "p-3",
+        detailPanel && "p-4 sm:p-4",
         className
       )}
     >
       {detailPanel ? (
         <div className="space-y-2">
           {detailDateLabel && (
-            <p className="text-[11px] font-medium text-muted">{detailDateLabel}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">{detailDateLabel}</p>
           )}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <h3
               className={cn(
-                "min-w-0 text-sm font-semibold leading-tight",
+                "min-w-0 font-display text-[15px] font-semibold leading-5",
                 releasePlatformTitleClass(platform)
               )}
             >
@@ -177,7 +174,7 @@ export function ReleaseCard({
             <button
               type="button"
               onClick={() => setExpanded((open) => !open)}
-              className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-center gap-2.5 text-left"
+              className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-center gap-2.5 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               aria-expanded={isExpanded}
             >
               <ChevronDown
@@ -186,7 +183,7 @@ export function ReleaseCard({
                   isExpanded && "rotate-180"
                 )}
               />
-              <h3 className={cn("font-medium", releasePlatformTitleClass(platform))}>
+              <h3 className={cn("font-display text-[15px] font-semibold", releasePlatformTitleClass(platform))}>
                 {release.name}
               </h3>
               {!isExpanded && (
@@ -219,17 +216,14 @@ export function ReleaseCard({
                   <p className="text-sm italic text-muted">No sprint items yet</p>
                 ) : null)}
               {release.blockers.length > 0 && (
-                <div className="mt-3 flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                  <div>
-                    <p className="text-xs font-medium text-foreground">Blockers</p>
-                    <ul className="mt-1 text-sm text-muted">
-                      {release.blockers.map((b) => (
-                        <li key={b}>· {b}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                <Alert tone="danger" className="mt-3">
+                  <p className="text-xs font-semibold">Blockers</p>
+                  <ul className="mt-1 text-sm text-foreground">
+                    {release.blockers.map((b) => (
+                      <li key={b}>· {b}</li>
+                    ))}
+                  </ul>
+                </Alert>
               )}
             </div>
           )}
@@ -240,19 +234,20 @@ export function ReleaseCard({
         <div
           className={cn(
             "border-t border-border pt-3",
-            detailPanel ? "mt-2.5 space-y-2.5" : "mt-3 space-y-3"
+            detailPanel ? "mt-3 space-y-2.5" : "mt-3 space-y-3"
           )}
         >
           {onUpdate ? (
             <div className={sectionClass}>
               <label
                 htmlFor={`sprint-item-input-${release.id}`}
-                className="mb-1 block text-[11px] font-medium text-muted"
+                className={sectionLabelClass}
               >
                 Sprint Items
               </label>
               <div className="flex gap-1.5">
-                <input
+                <Input
+                  size="sm"
                   id={`sprint-item-input-${release.id}`}
                   type="text"
                   value={newSprintItem}
@@ -264,42 +259,41 @@ export function ReleaseCard({
                     }
                   }}
                   placeholder="Add item…"
-                  className={cn(
-                    sprintInputClass,
-                    detailPanel && "px-2 py-1.5 text-xs"
-                  )}
                 />
                 <Button
                   type="button"
                   variant="secondary"
-                  size="sm"
+                  size="icon"
                   onClick={addSprintItem}
                   disabled={!newSprintItem.trim()}
+                  aria-label="Add sprint item"
+                  className="shrink-0"
                 >
-                  <Plus className={detailPanel ? "h-3.5 w-3.5" : "h-4 w-4"} />
+                  <Plus />
                 </Button>
               </div>
               {sprintItemsDraft.length > 0 ? (
                 <ul
                   className={cn(
-                    "mt-1.5 space-y-0.5 rounded-lg border border-border bg-white px-1.5 py-1",
+                    "mt-2 space-y-0.5 rounded-lg bg-card px-1.5 py-1 shadow-card",
                     detailPanel && "max-h-36 overflow-y-auto overscroll-contain"
                   )}
                 >
                   {sprintItemsDraft.map((item, index) => (
                     <li
                       key={`${item}-${index}`}
-                      className="flex items-center justify-between gap-1.5 rounded px-1 py-0.5 text-xs hover:bg-slate-50"
+                      className="flex items-center justify-between gap-1.5 rounded-md py-0.5 pl-1.5 pr-0.5 text-xs hover:bg-surface-2"
                     >
                       <span className="min-w-0 flex-1 text-foreground">{item}</span>
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => removeSprintItem(index)}
-                        className="shrink-0 rounded p-0.5 text-muted hover:bg-slate-100 hover:text-foreground"
+                        className="h-7 w-7 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5"
                         aria-label={`Remove ${item}`}
                       >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
+                        <X />
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -307,7 +301,7 @@ export function ReleaseCard({
             </div>
           ) : (
             <div className={sectionClass}>
-              <p className="mb-1 text-[11px] font-medium text-muted">Sprint Items</p>
+              <p className={sectionLabelClass}>Sprint Items</p>
               {sprintItems.length > 0 ? (
                 <ul className="list-inside list-disc text-sm text-muted">
                   {sprintItems.map((item, index) => (
@@ -328,20 +322,20 @@ export function ReleaseCard({
             >
               <div
                 className={cn(
-                  "rounded-md border border-border bg-white px-2 py-1.5",
+                  "rounded-lg border border-border bg-card px-2.5 py-2",
                   platform && "border-t-2",
-                  platform === "android" && "border-t-emerald-500",
-                  platform === "ios" && "border-t-blue-500"
+                  platform === "android" && "border-t-android",
+                  platform === "ios" && "border-t-ios"
                 )}
               >
-                <p className="text-[9px] font-medium uppercase tracking-wider text-muted">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Planned
                 </p>
                 {onUpdate ? (
                   <DateCommitInput
                     value={release.targetDate ?? ""}
                     onCommit={(value) => onUpdate({ targetDate: value || null })}
-                    className="mt-0.5 w-full rounded border border-border bg-white px-1.5 py-0.5 text-xs font-semibold text-foreground outline-none focus:border-accent"
+                    className={cn(fieldClasses({ size: "sm" }), "mt-1 font-semibold")}
                     aria-label="Planned release date"
                   />
                 ) : (
@@ -350,8 +344,15 @@ export function ReleaseCard({
                   </p>
                 )}
               </div>
-              <div className="rounded-md border border-border bg-white px-2 py-1.5">
-                <p className="text-[9px] font-medium uppercase tracking-wider text-muted">
+              <div
+                className={cn(
+                  "rounded-lg border border-border bg-card px-2.5 py-2",
+                  platform && "border-t-2",
+                  platform === "android" && "border-t-android",
+                  platform === "ios" && "border-t-ios"
+                )}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Actual
                 </p>
                 {onUpdate ? (
@@ -359,7 +360,8 @@ export function ReleaseCard({
                     value={release.actualDate ?? ""}
                     onCommit={(value) => onUpdate({ actualDate: value || null })}
                     className={cn(
-                      "mt-0.5 w-full rounded border border-border bg-white px-1.5 py-0.5 text-xs outline-none focus:border-accent",
+                      fieldClasses({ size: "sm" }),
+                      "mt-1",
                       release.actualDate
                         ? "font-semibold text-foreground"
                         : "text-muted"
@@ -383,28 +385,25 @@ export function ReleaseCard({
           </div>
 
           {isCompleted && release.blockers.length > 0 && (
-            <div className="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-              <div>
-                <p className="text-xs font-medium text-foreground">Blockers</p>
-                <ul className="mt-1 text-sm text-muted">
-                  {release.blockers.map((b) => (
-                    <li key={b}>· {b}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            <Alert tone="danger">
+              <p className="text-xs font-semibold">Blockers</p>
+              <ul className="mt-1 text-sm text-foreground">
+                {release.blockers.map((b) => (
+                  <li key={b}>· {b}</li>
+                ))}
+              </ul>
+            </Alert>
           )}
 
           {onUpdate ? (
             <div className={sectionClass}>
               <label
                 htmlFor={`sprint-note-${release.id}`}
-                className="mb-1 block text-[11px] font-medium text-muted"
+                className={sectionLabelClass}
               >
                 Sprint note
               </label>
-              <textarea
+              <Textarea
                 id={`sprint-note-${release.id}`}
                 rows={detailPanel ? 2 : 2}
                 value={sprintNoteDraft}
@@ -417,16 +416,12 @@ export function ReleaseCard({
                   }
                 }}
                 placeholder="Planning context…"
-                className={cn(
-                  sprintInputClass,
-                  "resize-none",
-                  detailPanel && "px-2 py-1.5 text-xs"
-                )}
+                className={cn("min-h-0 resize-none", detailPanel && "px-2.5 text-xs")}
               />
             </div>
           ) : release.sprintNote ? (
             <div className={sectionClass}>
-              <p className="mb-1 text-[11px] font-medium text-muted">Sprint note</p>
+              <p className={sectionLabelClass}>Sprint note</p>
               <p className="whitespace-pre-wrap text-sm text-muted">{release.sprintNote}</p>
             </div>
           ) : null}

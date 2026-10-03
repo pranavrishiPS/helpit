@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { CalendarRange, Plus } from "lucide-react";
 import { startOfMonth, isSameMonth, parseISO } from "date-fns";
-import { PageHeader, Card, Button, ErrorBanner } from "@/components/ui";
+import { PageHeader, Card, Badge, Button, EmptyState, ErrorBanner, PageSkeleton } from "@/components/ui";
 import { useDashboard } from "@/lib/use-dashboard";
 import { ReleaseCard } from "@/components/planning/ReleaseCard";
 import {
@@ -127,11 +127,11 @@ export default function PlanningPage() {
   }
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading planning...</div>;
+    return <PageSkeleton label="Loading planning..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load planning"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load planning"} />;
   }
 
   const inFlight = releases.filter((r) => r.status !== "live");
@@ -146,10 +146,11 @@ export default function PlanningPage() {
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Planning"
+        module="planning"
         description="Mon–Fri release calendar"
         action={
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
+            <Plus />
             New release
           </Button>
         }
@@ -164,24 +165,24 @@ export default function PlanningPage() {
         }}
       />
 
-      <div className="mb-3 flex flex-wrap gap-1.5 text-[11px] text-muted">
-        <span className="rounded-full border border-border/80 bg-card px-2.5 py-0.5">
-          <strong className="text-foreground">{inFlight.length}</strong> in flight
-        </span>
-        <span className="rounded-full border border-border/80 bg-card px-2.5 py-0.5">
-          <strong className="text-foreground">{monthCount}</strong> this month
-        </span>
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        <Badge tone="neutral">
+          <strong className="tabular-nums text-foreground">{inFlight.length}</strong> in flight
+        </Badge>
+        <Badge tone="neutral">
+          <strong className="tabular-nums text-foreground">{monthCount}</strong> this month
+        </Badge>
         {inFlight.filter((r) => r.blockers.length > 0).length > 0 && (
-          <span className="rounded-full border border-warning/30 bg-warning/5 px-2.5 py-0.5">
-            <strong className="text-warning">
+          <Badge tone="danger" dot>
+            <strong className="tabular-nums">
               {inFlight.filter((r) => r.blockers.length > 0).length}
             </strong>{" "}
             with blockers
-          </span>
+          </Badge>
         )}
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <ReleaseCalendar
           releases={releases}
           month={calendarMonth}
@@ -193,7 +194,7 @@ export default function PlanningPage() {
           onSelectDate={handleSelectDate}
         />
 
-        <aside className="min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+        <aside className="min-w-0 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-5.5rem)] xl:overflow-y-auto xl:overscroll-contain">
           {selectedRelease ? (
             <ReleaseCard
               key={selectedRelease.id}
@@ -205,11 +206,13 @@ export default function PlanningPage() {
               onUpdate={(updates) => handleReleaseUpdate(selectedRelease.id, updates)}
             />
           ) : (
-            <Card className="py-8 text-center">
-              <p className="text-sm font-medium text-foreground">Select a release</p>
-              <p className="mt-1 text-xs text-muted">
-                Click any day with a release to see details.
-              </p>
+            <Card>
+              <EmptyState
+                compact
+                icon={CalendarRange}
+                title="Select a release"
+                description="Click any day with a release to see details."
+              />
             </Card>
           )}
         </aside>

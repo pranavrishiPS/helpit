@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, ErrorBanner } from "@/components/ui";
+import { PageHeader, ErrorBanner, PageSkeleton } from "@/components/ui";
 import { useDashboard } from "@/lib/use-dashboard";
 import { ScrumAttendanceBoard } from "@/components/scrum/ScrumAttendanceBoard";
 import { ScrumSheetSync } from "@/components/scrum/ScrumSheetSync";
@@ -9,11 +9,11 @@ export default function ScrumAttendancePage() {
   const { store, loading, error, clearError, reload } = useDashboard();
 
   if (loading) {
-    return <div className="text-sm text-muted">Loading scrum attendance...</div>;
+    return <PageSkeleton label="Loading scrum attendance..." />;
   }
 
   if (!store) {
-    return <div className="text-sm text-warning">{error ?? "Failed to load scrum attendance"}</div>;
+    return <ErrorBanner message={error ?? "Failed to load scrum attendance"} />;
   }
 
   return (
@@ -21,6 +21,7 @@ export default function ScrumAttendancePage() {
       {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Scrum attendance"
+        module="scrum"
         description="Log daily standup attendance and see individual trends"
       />
       <div className="mb-5">
