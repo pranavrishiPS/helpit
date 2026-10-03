@@ -181,57 +181,6 @@ export function getOverdueTasks(tasks: Task[]): Task[] {
   );
 }
 
-export function buildAssistantContext(store: DashboardStore): string {
-  const overdue = getOverdueTasks(store.tasks);
-  const todayTasks = getTodayTasks(store.tasks);
-  const openSlack = store.slackItems.filter((s) => !s.completed);
-  const mailNeedsAction = store.mailItems.filter(
-    (m) => m.status === "needs_reply" || m.status === "unread"
-  );
-  const activeReleases = store.releases.filter((r) => r.status !== "live");
-  const upcomingTasks = getUpcomingTasks(store.tasks).slice(0, 5);
-
-  const lines: string[] = [
-    `User: ${store.profile.name}, ${store.profile.role} at ${store.profile.company}`,
-    "",
-    `## Overdue tasks (${overdue.length})`,
-    ...overdue.map((t) => `- [${t.priority}] ${t.title} (due ${t.dueDate})`),
-    "",
-    `## Due today (${todayTasks.length})`,
-    ...todayTasks.map((t) => `- [${t.priority}] ${t.title}`),
-    "",
-    `## Open Slack items (${openSlack.length})`,
-    ...openSlack.map((s) => `- ${s.channel}: ${s.summary} [${s.action}]`),
-    "",
-    `## Mail needing action (${mailNeedsAction.length})`,
-    ...mailNeedsAction.map((m) => `- ${m.subject}: ${m.summary}`),
-    "",
-    `## Active releases (${activeReleases.length})`,
-    ...activeReleases.map(
-      (r) =>
-        `- ${r.name} (${r.phase ?? "phase unset"}, ${r.status}, target ${r.targetDate ?? "TBD"})${
-          r.blockers.length ? ` — blockers: ${r.blockers.join(", ")}` : ""
-        }`
-    ),
-    "",
-    `## Coming up (${upcomingTasks.length})`,
-    ...upcomingTasks.map((t) => `- [${t.priority}] ${t.title} (due ${t.dueDate})`),
-    "",
-    `## Team outings`,
-    ...store.outings.map((o) => {
-      const spent = getOutingSpent(o);
-      const remaining = o.budget - spent;
-      const outingMembers = getOutingConfirmedAttendees(o).length;
-      const snackMembers = getFollowUpAttendeeCount(o);
-      const snackLine =
-        snackMembers > 0 ? `, ${snackMembers} for follow-up snacks` : "";
-      return `- ${o.title}: budget ${o.budget}, spent ${spent}, ${remaining} remaining, ${outingMembers}/${o.attendees.length} outing members${snackLine}`;
-    }),
-  ];
-
-  return lines.join("\n");
-}
-
 export function summarizeDashboard(store: DashboardStore) {
   const appTasks = getTasksTabTasks(store.tasks);
   return {

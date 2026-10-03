@@ -491,14 +491,3 @@ export async function fetchGmailStatus() {
   return res.json();
 }
 
-export async function sendChatMessage(
-  message: string,
-  history: { role: "user" | "assistant"; content: string }[]
-) {
-  const res = await apiFetch("/api/chat", {
-    method: "POST",
-    body: JSON.stringify({ message, history }),
-  });
-  if (!res.ok) throw new Error("Chat request failed");
-  return res.json();
-}

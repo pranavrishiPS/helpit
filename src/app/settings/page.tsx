@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader, Card, Button, ErrorBanner } from "@/components/ui";
-import { Bot, MessageSquare, Mail, Link2, RefreshCw } from "lucide-react";
+import { MessageSquare, Mail, Link2, RefreshCw } from "lucide-react";
 import { useDashboard } from "@/lib/use-dashboard";
 import {
   disconnectGmail,
@@ -175,7 +175,7 @@ function SettingsContent() {
       {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Settings"
-        description="Profile, integrations, and assistant configuration"
+        description="Profile and integrations"
       />
 
       {integrationMessage && (
@@ -335,12 +335,6 @@ function SettingsContent() {
                   </div>
                 ) : undefined
               }
-            />
-            <IntegrationRow
-              icon={<Bot className="h-4 w-4 text-accent" />}
-              name="AI Assistant"
-              status="Local mode (add API key for AI)"
-              description="Add OPENAI_API_KEY to .env.local for full AI responses"
             />
           </div>
         </Card>

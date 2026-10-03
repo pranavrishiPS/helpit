@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { cn } from "@/lib/cn";
-import { ChatPanel } from "./ChatPanel";
 import { SlackSyncPoller } from "./SlackSyncPoller";
 import { SlackRateLimitToast } from "./SlackRateLimitToast";
 import { TaskReminderProvider } from "./TaskReminderProvider";
@@ -73,7 +72,6 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [chatOpen, setChatOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
@@ -193,31 +191,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <div className="relative flex min-h-0 flex-1">
-          <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 pb-24 sm:p-6 sm:pb-24">
+          <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
             {children}
           </main>
-
-          <div className="pointer-events-none fixed bottom-4 left-4 right-4 z-20 flex flex-col items-stretch gap-3 sm:left-auto sm:right-6 sm:bottom-6 sm:items-end sm:w-auto">
-            {chatOpen && (
-              <div className="pointer-events-auto w-full sm:w-auto">
-                <ChatPanel onClose={() => setChatOpen(false)} />
-              </div>
-            )}
-            {!chatOpen && (
-              <button
-                onClick={() => setChatOpen(true)}
-                aria-label="Open assistant"
-                className={cn(
-                  "pointer-events-auto ml-auto flex cursor-pointer items-center gap-2 rounded-full px-4 py-3 text-sm font-medium transition-all",
-                  "shadow-[0_12px_40px_-8px_rgba(15,23,42,0.22),0_8px_16px_-6px_rgba(15,23,42,0.12)]",
-                  "bg-accent text-white hover:bg-accent-hover"
-                )}
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="hidden sm:inline">Assistant</span>
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>

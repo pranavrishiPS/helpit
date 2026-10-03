@@ -132,7 +132,7 @@ export default function SlackPage() {
                 {status.autoSyncAvailable === false ? (
                   <p className="mt-1 text-muted">
                     {status.autoSyncDisabledReason ??
-                      "Auto-sync is off — add items via the assistant or mark them done here."}
+                      "Auto-sync is off — mark items done here."}
                   </p>
                 ) : (
                   syncCountdown && (

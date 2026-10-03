@@ -1,6 +1,6 @@
 # Helpit
 
-Your daily command center — tasks, Slack follow-ups, mail, release planning, resources, team outings, and a context-aware assistant.
+Your daily command center — tasks, Slack follow-ups, mail, release planning, resources, team outings.
 
 Built for game producers at PlaySimple Games.
 
@@ -62,7 +62,6 @@ OAuth flows use CSRF `state` cookies. Callback routes stay public.
 
 - **Gmail** — Connect in Settings, sync from Mail
 - **Slack** — OAuth + MCP import (`/api/slack/import`); background auto-sync is currently disabled in code (manual sync from Settings)
-- **OpenAI** — Optional assistant (`OPENAI_API_KEY`)
 
 Copy `.env.example` → `.env.local` to configure.
 

@@ -359,19 +359,6 @@ export const updateSprintApprovalSchema = z.object({
   { message: "Cannot update party and mailSent in one request" }
 );
 
-export const chatMessageSchema = z.object({
-  message: z.string().min(1).max(10000),
-  history: z
-    .array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string().max(20000),
-      })
-    )
-    .max(20)
-    .optional(),
-});
-
 export const profileSchema = z.object({
   name: z.string().min(1).max(100),
   role: z.string().min(1).max(100),
