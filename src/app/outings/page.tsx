@@ -6,7 +6,6 @@ import { PageHeader, Card, Badge, Button, ErrorBanner } from "@/components/ui";
 import {
   formatCurrency,
   getOutingSpent,
-  getOutingExpensesByType,
   getOutingRemaining,
   isOutingPast,
   getOutingPoolBreakdown,
@@ -76,56 +75,55 @@ function formatOutingDate(date?: string): string {
 
 function BudgetStrip({ outing, past }: { outing: Outing; past: boolean }) {
   const totalSpent = getOutingSpent(outing);
-  const outingSpent = getOutingExpensesByType(outing, "outing");
-  const followUpSpent = getOutingExpensesByType(outing, "follow_up");
   const remaining = getOutingRemaining(outing);
+  const over = remaining < 0;
   const usedPct = outing.budget > 0 ? (totalSpent / outing.budget) * 100 : 0;
   const pool = getOutingPoolBreakdown(outing);
   const goingLabel = past ? "attended" : "going";
 
   return (
-    <div className="rounded-lg bg-slate-50 px-4 py-3">
-      <div className="flex items-center gap-2 text-sm">
-        <Wallet className="h-4 w-4 text-muted" />
-        <span className="font-medium">Team pool</span>
+    <div className="rounded-lg bg-slate-50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm">
+        <span className="flex items-center gap-1.5 font-medium">
+          <Wallet className="h-4 w-4 text-muted" aria-hidden="true" />
+          Team pool
+        </span>
+        <span>
+          <span className="text-muted">Spent </span>
+          <span className="font-medium">{formatCurrency(totalSpent)}</span>
+        </span>
+        <span className={over ? "text-warning" : "text-accent"}>
+          <span>{over ? "Over budget " : "Remaining "}</span>
+          <span className="font-medium">
+            {formatCurrency(over ? -remaining : remaining)}
+          </span>
+        </span>
+        {past && remaining > 0 && (
+          <span className="text-xs text-muted">Usable later this quarter</span>
+        )}
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <div className="rounded-md border border-border bg-white px-3 py-2">
-          <p className="text-xs text-muted">Outing spend</p>
-          <p className="text-sm font-medium">{formatCurrency(outingSpent)}</p>
-          {pool.going > 0 && (
-            <p className="mt-0.5 text-xs text-muted">
-              {pool.going} {goingLabel}
-            </p>
-          )}
-        </div>
-        <div className="rounded-md border border-border bg-white px-3 py-2">
-          <p className="text-xs text-muted">Other spend</p>
-          <p className="text-sm font-medium">{formatCurrency(followUpSpent)}</p>
-        </div>
-        <div className="rounded-md border border-accent/20 bg-accent/10 px-3 py-2">
-          <p className="text-xs text-accent">Remaining</p>
-          <p className="text-sm font-medium text-accent">
-            {formatCurrency(remaining)}
-          </p>
-          {remaining > 0 && (
-            <p className="mt-0.5 text-xs text-accent/80">
-              Usable later this quarter
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap justify-between gap-1 text-xs text-muted">
-        <span>{formatCurrency(totalSpent)} spent total</span>
-        <span>{usedPct.toFixed(0)}% of team pool used</span>
-      </div>
-      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+      <div className="mt-1.5 flex items-center gap-2">
         <div
-          className="h-full rounded-full bg-accent"
-          style={{ width: `${Math.min(usedPct, 100)}%` }}
-        />
+          role="progressbar"
+          aria-label="Team pool used"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.min(Math.round(usedPct), 100)}
+          className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200"
+        >
+          <div
+            className={cn(
+              "h-full rounded-full",
+              over ? "bg-warning" : "bg-accent"
+            )}
+            style={{ width: `${Math.min(usedPct, 100)}%` }}
+          />
+        </div>
+        <span className="shrink-0 text-xs text-muted">
+          {usedPct.toFixed(0)}% used
+          {pool.going > 0 && ` · ${pool.going} ${goingLabel}`}
+        </span>
       </div>
     </div>
   );
