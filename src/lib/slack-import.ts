@@ -88,7 +88,6 @@ export async function importSlackMatches(
       ...s.slackItems.filter((item) => item.slackTs),
       ...manualSlack,
     ],
-    tasks: s.tasks.filter((t) => t.source !== "slack" && !t.slackTs),
     integrations: {
       ...s.integrations,
       slack: {

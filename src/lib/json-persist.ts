@@ -45,12 +45,9 @@ export async function withJsonLock<T>(filename: string, fn: () => Promise<T>): P
 
   const filePath = path.join(DATA_DIR, filename);
   await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(filePath);
-  } catch {
-    await fs.writeFile(filePath, "", "utf-8");
-  }
-  const release = await lockfile.lock(filePath, LOCK_OPTIONS);
+  // realpath:false lets us lock a file that doesn't exist yet, so we never create an
+  // empty placeholder that would look like an existing (unreadable) store.
+  const release = await lockfile.lock(filePath, { ...LOCK_OPTIONS, realpath: false });
   try {
     return await fn();
   } finally {
@@ -65,8 +62,11 @@ export async function readJsonText(filename: string): Promise<string | null> {
   try {
     const raw = await fs.readFile(path.join(DATA_DIR, filename), "utf-8");
     return raw.trim() ? raw : null;
-  } catch {
-    return null;
+  } catch (err) {
+    // Only a definitely-missing file is "missing". Any other error (EBUSY, EPERM,
+    // EACCES, ...) must surface so callers don't seed defaults over a real store.
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
   }
 }
 
@@ -85,8 +85,9 @@ export async function jsonExists(filename: string): Promise<boolean> {
   try {
     await fs.access(path.join(DATA_DIR, filename));
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
   }
 }
 

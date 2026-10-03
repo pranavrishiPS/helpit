@@ -5,7 +5,9 @@ import {
   getApiKeyFromRequest,
   getClientApiKey,
   isApiAuthEnabled,
+  isApiKeyExemptPath,
   isPublicApiPath,
+  isSiteAuthPublicPath,
   validateApiKey,
 } from "@/lib/auth";
 
@@ -69,7 +71,45 @@ describe("auth", () => {
     });
   });
 
+  describe("isSiteAuthPublicPath", () => {
+    it("only lets the site sign-in routes bypass the site-auth session", () => {
+      expect(isSiteAuthPublicPath("/login")).toBe(true);
+      expect(isSiteAuthPublicPath("/api/auth/google/login")).toBe(true);
+      expect(isSiteAuthPublicPath("/api/auth/google/callback")).toBe(true);
+    });
+
+    it("requires a session for OAuth start/callback routes and everything else", () => {
+      expect(isSiteAuthPublicPath("/api/gmail/auth")).toBe(false);
+      expect(isSiteAuthPublicPath("/api/gmail/callback")).toBe(false);
+      expect(isSiteAuthPublicPath("/api/slack/auth")).toBe(false);
+      expect(isSiteAuthPublicPath("/api/slack/callback")).toBe(false);
+      expect(isSiteAuthPublicPath("/api/scrum-attendance/sheet/auth")).toBe(false);
+      expect(isSiteAuthPublicPath("/api/scrum-attendance/sheet/callback")).toBe(false);
+      expect(isSiteAuthPublicPath("/api/tasks")).toBe(false);
+    });
+  });
+
+  describe("isApiKeyExemptPath", () => {
+    it("exempts OAuth routes and Google site sign-in from the API key", () => {
+      expect(isApiKeyExemptPath("/api/gmail/callback")).toBe(true);
+      expect(isApiKeyExemptPath("/api/scrum-attendance/sheet/auth")).toBe(true);
+      expect(isApiKeyExemptPath("/api/auth/google/login")).toBe(true);
+      expect(isApiKeyExemptPath("/api/auth/google/callback")).toBe(true);
+    });
+
+    it("does not exempt other API paths", () => {
+      expect(isApiKeyExemptPath("/api/tasks")).toBe(false);
+      expect(isApiKeyExemptPath("/api/auth/google/other")).toBe(false);
+    });
+  });
+
   describe("validateApiKey", () => {
+    it("lets Google site sign-in through without a key when auth is enabled", () => {
+      process.env.HELPIT_API_KEY = "secret";
+      expect(validateApiKey(request("/api/auth/google/login"))).toBeNull();
+      expect(validateApiKey(request("/api/auth/google/callback"))).toBeNull();
+    });
+
     it("allows every request through when auth is disabled", () => {
       delete process.env.HELPIT_API_KEY;
       expect(validateApiKey(request("/api/tasks"))).toBeNull();

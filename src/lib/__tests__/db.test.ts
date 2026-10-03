@@ -55,14 +55,24 @@ describe("db", () => {
     expect(mockFiles.has("store.json")).toBe(true);
   });
 
-  it("refuses to seed defaults over a Blob store that exists but reads as empty", async () => {
+  it("refuses to seed defaults over a store that exists but reads as empty", async () => {
     mockFiles.set("store.json", "");
-    vi.mocked(jsonPersist.usesBlobStore).mockReturnValueOnce(true);
     // Real readJsonText reports an empty file as null
     vi.mocked(jsonPersist.readJsonText).mockResolvedValueOnce(null);
 
     await expect(readStore()).rejects.toThrow(/refusing to overwrite/);
     expect(mockFiles.get("store.json")).toBe("");
+  });
+
+  it("rejects without touching the file when a local read throws a transient error", async () => {
+    seedStore();
+    const before = mockFiles.get("store.json");
+    const busy = Object.assign(new Error("EBUSY: resource busy or locked"), { code: "EBUSY" });
+    vi.mocked(jsonPersist.readJsonText).mockRejectedValueOnce(busy);
+
+    await expect(readStore()).rejects.toThrow(/EBUSY/);
+    expect(mockFiles.get("store.json")).toBe(before);
+    expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
   });
 
   it("migrates legacy reminders into tasks and drops the reminders array", async () => {

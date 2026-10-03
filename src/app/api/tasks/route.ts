@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { readStore, updateStore } from "@/lib/db";
 import type { Task } from "@/lib/types";
+import { applyTaskPatch } from "@/lib/task-update";
 import {
   createTaskSchema,
   deleteTaskSchema,
@@ -60,18 +61,13 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { id, ...updates } = parsed.data;
-  const normalized = {
-    ...updates,
-    dueDate: updates.dueDate === null ? undefined : updates.dueDate,
-    reminderAt: updates.reminderAt === null ? undefined : updates.reminderAt,
-  };
   let updated: Task | undefined;
 
   await updateStore((s) => ({
     ...s,
     tasks: s.tasks.map((t) => {
       if (t.id !== id) return t;
-      updated = { ...t, ...normalized, updatedAt: new Date().toISOString() };
+      updated = applyTaskPatch(t, updates, new Date().toISOString());
       return updated;
     }),
   }));
