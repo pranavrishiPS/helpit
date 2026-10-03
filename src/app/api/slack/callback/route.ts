@@ -3,6 +3,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { exchangeSlackCode } from "@/lib/slack";
 import { updateStore } from "@/lib/db";
 import { consumeOAuthState } from "@/lib/oauth-state";
+import { publicErrorMessage } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     }));
     return NextResponse.redirect(`${base}/settings?slack=connected`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "OAuth failed";
+    const message = publicErrorMessage(err, "Slack connection failed — check the server logs", "Slack OAuth callback");
     await updateStore((s) => ({
       ...s,
       integrations: {

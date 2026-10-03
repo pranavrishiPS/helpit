@@ -170,8 +170,11 @@ function ResourceDialog({
 
         <form onSubmit={handleSubmit} className="space-y-3 overflow-y-auto p-5">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Title</label>
+            <label htmlFor="resource-title" className="mb-1 block text-xs font-medium text-muted">
+              Title
+            </label>
             <input
+              id="resource-title"
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -181,8 +184,11 @@ function ResourceDialog({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">URL</label>
+            <label htmlFor="resource-url" className="mb-1 block text-xs font-medium text-muted">
+              URL
+            </label>
             <input
+              id="resource-url"
               value={url}
               onChange={(e) => handleUrlChange(e.target.value)}
               placeholder="docs.google.com/… or figma.com/…"
@@ -192,8 +198,11 @@ function ResourceDialog({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Type</label>
+              <label htmlFor="resource-type" className="mb-1 block text-xs font-medium text-muted">
+                Type
+              </label>
               <select
+                id="resource-type"
                 value={type}
                 onChange={(e) => {
                   setTypeOverridden(true);
@@ -216,10 +225,14 @@ function ResourceDialog({
               )}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">
+              <label
+                htmlFor="resource-note"
+                className="mb-1 block text-xs font-medium text-muted"
+              >
                 Note (optional)
               </label>
               <input
+                id="resource-note"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What this is for"

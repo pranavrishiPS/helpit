@@ -31,13 +31,19 @@ export function isSpecReviewOverdue(feature: Feature): boolean {
   return isDatePast(due);
 }
 
+/**
+ * Dated features first by date, undated last. Ties (same date, or both undated) fall back
+ * to title A-Z then id, so the order is deterministic regardless of input order.
+ */
 export function sortFeatures(features: Feature[]): Feature[] {
+  const dateOf = (f: Feature) =>
+    f.releaseDate || f.startDate || f.scopeClosureDate || f.preProductionClosureDate || "";
   return [...features].sort((a, b) => {
-    const aDate = a.releaseDate ?? a.startDate ?? a.scopeClosureDate ?? a.preProductionClosureDate ?? "";
-    const bDate = b.releaseDate ?? b.startDate ?? b.scopeClosureDate ?? b.preProductionClosureDate ?? "";
-    if (aDate && bDate) return aDate.localeCompare(bDate);
-    if (aDate) return -1;
-    if (bDate) return 1;
-    return b.title.localeCompare(a.title);
+    const aDate = dateOf(a);
+    const bDate = dateOf(b);
+    if (aDate && !bDate) return -1;
+    if (!aDate && bDate) return 1;
+    if (aDate && bDate && aDate !== bDate) return aDate < bDate ? -1 : 1;
+    return a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
   });
 }

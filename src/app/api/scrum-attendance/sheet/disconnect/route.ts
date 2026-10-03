@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { guardMutation } from "@/lib/request";
 import { deleteScrumSheetTokens } from "@/lib/scrum-sheet-store";
 import { updateStore } from "@/lib/db";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const blocked = guardMutation(request);
+  if (blocked) return blocked;
+
   await deleteScrumSheetTokens();
   await updateStore((s) => ({
     ...s,

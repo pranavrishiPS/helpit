@@ -5,7 +5,7 @@ import {
   parseBody,
   removeScrumMemberSchema,
 } from "@/lib/validation";
-import { isErrorResponse, parseJsonBody } from "@/lib/request";
+import { isErrorResponse, parseJsonBody, guardMutation } from "@/lib/request";
 
 export async function POST(request: NextRequest) {
   const body = await parseJsonBody(request);
@@ -36,16 +36,22 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guard = guardMutation(request);
+  if (guard) return guard;
   const name = request.nextUrl.searchParams.get("name");
   const parsed = parseBody(removeScrumMemberSchema, { name });
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
-  await updateStore((s) => ({
-    ...s,
-    scrumMembers: (s.scrumMembers ?? []).filter((m) => m !== parsed.data.name),
-  }));
+  // Case-insensitive, matching how POST dedupes names
+  const target = parsed.data.name.trim().toLowerCase();
+  await updateStore((s) => {
+    const existing = s.scrumMembers ?? [];
+    const next = existing.filter((m) => m.trim().toLowerCase() !== target);
+    if (next.length === existing.length) return s; // nothing to remove
+    return { ...s, scrumMembers: next };
+  });
 
   return NextResponse.json({ success: true });
 }

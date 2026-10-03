@@ -3,6 +3,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { exchangeCodeForTokens } from "@/lib/scrum-sheet";
 import { updateStore } from "@/lib/db";
 import { consumeOAuthState } from "@/lib/oauth-state";
+import { publicErrorMessage } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     }));
     return NextResponse.redirect(`${base}/scrum?sheet=connected`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "OAuth failed";
+    const message = publicErrorMessage(err, "Google Sheet connection failed — check the server logs", "Scrum sheet OAuth callback");
     await updateStore((s) => ({
       ...s,
       integrations: {

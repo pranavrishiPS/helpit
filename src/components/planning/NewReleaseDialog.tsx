@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import type { ReleasePlatform } from "@/lib/types";
 import { Button } from "@/components/ui";
@@ -26,14 +26,20 @@ export function NewReleaseDialog({ open, onClose, onCreated }: NewReleaseDialogP
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Escape follows the same path as Cancel (reset the form, then close).
+  const handleCloseRef = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    handleCloseRef.current = handleClose;
+  });
+
   useEffect(() => {
     if (!open) return;
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleCloseRef.current();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  }, [open]);
 
   function resetForm() {
     setPlatform("android");
@@ -136,6 +142,7 @@ export function NewReleaseDialog({ open, onClose, onCreated }: NewReleaseDialogP
                     key={p}
                     type="button"
                     onClick={() => setPlatform(p)}
+                    aria-pressed={platform === p}
                     className={cn(
                       "flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                       platform === p
@@ -204,6 +211,7 @@ export function NewReleaseDialog({ open, onClose, onCreated }: NewReleaseDialogP
                   size="sm"
                   onClick={addSprintItem}
                   disabled={!newSprintItem.trim()}
+                  aria-label="Add sprint item"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>

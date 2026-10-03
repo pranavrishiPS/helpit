@@ -10,6 +10,28 @@ export const taskPrioritySchema = z.enum(["low", "medium", "high", "urgent"]);
 export const taskSourceSchema = z.enum(["manual", "slack", "mail", "planning", "outing"]);
 export const mailStatusSchema = z.enum(["unread", "needs_reply", "drafted", "done"]);
 
+/** ISO date-time (what the reminder picker sends) or yyyy-MM-dd; must be a real date. */
+export const reminderAtSchema = z
+  .string()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/,
+    "Invalid reminder date-time"
+  )
+  .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid reminder date-time");
+
+/** Only http(s) URLs may be stored — they are rendered as hrefs. */
+export const httpUrlSchema = z
+  .string()
+  .max(2000)
+  .refine((v) => {
+    try {
+      const { protocol } = new URL(v);
+      return protocol === "http:" || protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Must be an http(s) URL");
+
 export const createTaskSchema = z.object({
   title: z.string().min(1).max(500),
   description: z.string().max(5000).optional(),
@@ -20,7 +42,7 @@ export const createTaskSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
-  reminderAt: z.string().min(1).optional(),
+  reminderAt: reminderAtSchema.optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
   owner: z.string().max(100).optional(),
 });
@@ -29,7 +51,7 @@ export const updateTaskSchema = z
   .object({
     id: z.string().min(1),
     title: z.string().min(1).max(500).optional(),
-    description: z.string().max(5000).optional(),
+    description: z.string().max(5000).nullable().optional(),
     status: taskStatusSchema.optional(),
     priority: taskPrioritySchema.optional(),
     source: taskSourceSchema.optional(),
@@ -38,9 +60,9 @@ export const updateTaskSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .nullable()
       .optional(),
-    reminderAt: z.string().min(1).nullable().optional(),
+    reminderAt: reminderAtSchema.nullable().optional(),
     tags: z.array(z.string().max(50)).max(20).optional(),
-    owner: z.string().max(100).optional(),
+    owner: z.string().max(100).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 1, {
     message: "At least one field to update is required",
@@ -267,6 +289,18 @@ export const upsertScrumAttendanceSchema = z.object({
     .min(1)
     .max(50),
 }).superRefine((value, ctx) => {
+  const seen = new Set<string>();
+  value.entries.forEach((entry, index) => {
+    const key = entry.member.trim().toLowerCase();
+    if (seen.has(key)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["entries", index, "member"],
+        message: `Duplicate member "${entry.member.trim()}" in request`,
+      });
+    }
+    seen.add(key);
+  });
   value.entries.forEach((entry, index) => {
     if (!isStatusAllowedOnDate(entry.status, value.date)) {
       ctx.addIssue({
@@ -390,7 +424,7 @@ const slackSearchMatchSchema = z.object({
   ts: z.string().optional(),
   text: z.string().optional(),
   username: z.string().optional(),
-  permalink: z.string().optional(),
+  permalink: z.union([z.literal(""), httpUrlSchema]).optional(),
   channel: z
     .object({
       id: z.string().optional(),

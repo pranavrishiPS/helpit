@@ -181,10 +181,14 @@ function OutingDialog({
 
         <form onSubmit={handleSubmit} className="space-y-3 overflow-y-auto p-5">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">
+            <label
+              htmlFor="outing-title"
+              className="mb-1 block text-xs font-medium text-muted"
+            >
               Title
             </label>
             <input
+              id="outing-title"
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -195,7 +199,10 @@ function OutingDialog({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">
+            <label
+              htmlFor="outing-new-member"
+              className="mb-1 block text-xs font-medium text-muted"
+            >
               Team members
               {members.length > 0 &&
                 (isEdit
@@ -240,6 +247,7 @@ function OutingDialog({
 
             <div className="flex gap-2">
               <input
+                id="outing-new-member"
                 value={newMember}
                 onChange={(e) => setNewMember(e.target.value)}
                 onKeyDown={(e) => {
@@ -318,10 +326,14 @@ function OutingDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">
+              <label
+                htmlFor="outing-date"
+                className="mb-1 block text-xs font-medium text-muted"
+              >
                 Date (optional)
               </label>
               <input
+                id="outing-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -329,10 +341,14 @@ function OutingDialog({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">
+              <label
+                htmlFor="outing-venue"
+                className="mb-1 block text-xs font-medium text-muted"
+              >
                 Venue (optional)
               </label>
               <input
+                id="outing-venue"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="Restaurant, resort…"
@@ -342,9 +358,9 @@ function OutingDialog({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">
+            <p className="mb-1 block text-xs font-medium text-muted">
               Total budget
-            </label>
+            </p>
             <div className={cn(inputClass, "bg-slate-50 font-medium")}>
               {formatCurrency(totalBudget)}
             </div>
@@ -355,10 +371,14 @@ function OutingDialog({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">
+            <label
+              htmlFor="outing-notes"
+              className="mb-1 block text-xs font-medium text-muted"
+            >
               Notes (optional)
             </label>
             <textarea
+              id="outing-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Planning notes, dietary prefs…"

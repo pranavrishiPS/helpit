@@ -3,6 +3,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { exchangeCodeForTokens } from "@/lib/gmail";
 import { updateStore } from "@/lib/db";
 import { consumeOAuthState } from "@/lib/oauth-state";
+import { publicErrorMessage } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
     }));
     return NextResponse.redirect(`${base}/settings?gmail=connected`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "OAuth failed";
+    const message = publicErrorMessage(err, "Gmail connection failed — check the server logs", "Gmail OAuth callback");
     await updateStore((s) => ({
       ...s,
       integrations: {

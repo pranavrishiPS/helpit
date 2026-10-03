@@ -2,6 +2,7 @@ import { google } from "googleapis";
 import type { MailItem } from "@/lib/types";
 import { getAppUrl } from "@/lib/app-url";
 import { readGmailTokens, writeGmailTokens, type GmailTokens } from "@/lib/gmail-store";
+import { UserFacingError } from "@/lib/errors";
 
 const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -43,7 +44,7 @@ export async function exchangeCodeForTokens(code: string): Promise<GmailTokens> 
   const { tokens } = await client.getToken(code);
 
   if (!tokens.access_token || !tokens.refresh_token) {
-    throw new Error("Google did not return access/refresh tokens. Try reconnecting.");
+    throw new UserFacingError("Google did not return access/refresh tokens. Try reconnecting.");
   }
 
   client.setCredentials(tokens);
@@ -52,7 +53,7 @@ export async function exchangeCodeForTokens(code: string): Promise<GmailTokens> 
   const email = profile.data.email;
 
   if (!email) {
-    throw new Error("Could not read Gmail account email.");
+    throw new UserFacingError("Could not read Gmail account email.");
   }
 
   const stored: GmailTokens = {
@@ -71,7 +72,7 @@ export async function exchangeCodeForTokens(code: string): Promise<GmailTokens> 
 async function getAuthorizedClient() {
   const stored = await readGmailTokens();
   if (!stored) {
-    throw new Error("Gmail not connected");
+    throw new UserFacingError("Gmail not connected");
   }
 
   const client = getOAuth2Client();

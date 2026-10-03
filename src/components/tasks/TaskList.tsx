@@ -65,12 +65,14 @@ function TaskRow({
       )}
     >
       <button
+        type="button"
         onClick={() =>
           onUpdate({
             ...task,
             status: task.status === "done" ? "todo" : "done",
           })
         }
+        aria-label={task.status === "done" ? "Mark incomplete" : "Mark complete"}
         className={cn(
           "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
           task.status === "done"
@@ -116,7 +118,9 @@ function TaskRow({
       </div>
 
       <button
+        type="button"
         onClick={() => onDelete(task.id)}
+        aria-label="Delete task"
         className="shrink-0 rounded p-1 text-muted opacity-100 transition-opacity hover:bg-warning/10 hover:text-warning sm:opacity-0 sm:group-hover:opacity-100"
       >
         <Trash2 className="h-3.5 w-3.5" />

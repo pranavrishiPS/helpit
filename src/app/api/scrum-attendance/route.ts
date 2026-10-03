@@ -9,7 +9,7 @@ import {
   updateScrumAttendanceEntrySchema,
   upsertScrumAttendanceSchema,
 } from "@/lib/validation";
-import { isErrorResponse, parseJsonBody } from "@/lib/request";
+import { isErrorResponse, parseJsonBody, guardMutation } from "@/lib/request";
 
 /** Create-or-update every member's entry for a given date in one request. */
 export async function POST(request: NextRequest) {
@@ -24,18 +24,28 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
 
   let isHoliday = false;
+  let unknownMembers: string[] = [];
   const updated = await updateStore((s) => {
-    isHoliday = false; // reset: the updater re-runs on optimistic retries
+    // reset: the updater re-runs on optimistic retries
+    isHoliday = false;
+    unknownMembers = [];
     if ((s.scrumHolidays ?? []).some((h) => h.date === date)) {
       isHoliday = true;
       return s;
     }
+    // Only roster members can be logged; match case-insensitively and store the roster's spelling.
+    const roster = new Map((s.scrumMembers ?? []).map((m) => [m.trim().toLowerCase(), m]));
+    unknownMembers = entries
+      .filter(({ member }) => !roster.has(member.trim().toLowerCase()))
+      .map(({ member }) => member.trim());
+    if (unknownMembers.length > 0) return s;
     const existing = s.scrumAttendance ?? [];
     const byMember = new Map(
       existing.filter((e) => e.date === date).map((e) => [e.member, e])
     );
 
-    const upserted: ScrumAttendanceEntry[] = entries.map(({ member, status, note }) => {
+    const upserted: ScrumAttendanceEntry[] = entries.map(({ member: rawMember, status, note }) => {
+      const member = roster.get(rawMember.trim().toLowerCase())!;
       const current = byMember.get(member);
       if (current) {
         return { ...current, status, note: note?.trim() || undefined, updatedAt: now };
@@ -58,6 +68,15 @@ export async function POST(request: NextRequest) {
 
     return { ...s, scrumAttendance: [...untouched, ...upserted] };
   });
+
+  if (unknownMembers.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Not on the scrum roster: ${unknownMembers.join(", ")}. Add them to the roster first.`,
+      },
+      { status: 400 }
+    );
+  }
 
   if (isHoliday) {
     return NextResponse.json(
@@ -121,6 +140,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guard = guardMutation(request);
+  if (guard) return guard;
   const id = request.nextUrl.searchParams.get("id");
   const parsed = parseBody(deleteScrumAttendanceEntrySchema, { id });
   if (!parsed.success) {

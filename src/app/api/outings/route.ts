@@ -8,25 +8,7 @@ import {
   parseBody,
 } from "@/lib/validation";
 import { isErrorResponse, parseJsonBody } from "@/lib/request";
-
-function resolveOutingBudget(
-  budget: number | undefined,
-  budgetPerPerson: number | undefined | null,
-  rosterSize: number
-): { totalBudget: number; perPerson?: number } | null {
-  let totalBudget = budget;
-  let perPerson = budgetPerPerson ?? undefined;
-
-  if (perPerson != null && rosterSize > 0) {
-    // Pool is funded for the whole team, including members who don't go
-    totalBudget = Math.round(perPerson * rosterSize);
-  } else if (totalBudget != null && perPerson == null && rosterSize > 0) {
-    perPerson = Math.round(totalBudget / rosterSize);
-  }
-
-  if (totalBudget == null) return null;
-  return { totalBudget, perPerson };
-}
+import { patchPerPersonInput, resolveOutingBudget } from "@/lib/outing-budget";
 
 function normalizeAttendees(attendees: OutingAttendee[]): OutingAttendee[] {
   const seen = new Set<string>();
@@ -122,10 +104,8 @@ export async function PATCH(request: NextRequest) {
             : members != null
               ? mergeAttendees(members, outing.attendees)
               : outing.attendees;
-          const perPersonInput =
-            budgetPerPerson === null
-              ? undefined
-              : budgetPerPerson ?? outing.budgetPerPerson;
+          // Explicit total without per-person: the total wins (per-person is cleared)
+          const perPersonInput = patchPerPersonInput(budget, budgetPerPerson, outing.budgetPerPerson);
           const poolInputsChanged =
             parsed.data.attendees != null ||
             members != null ||

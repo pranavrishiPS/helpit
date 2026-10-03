@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { UserFacingError } from "./errors";
 import { isStatusAllowedOnDate } from "./scrum-attendance";
 import type { ScrumAttendanceEntry, ScrumStatus } from "./types";
 
@@ -107,11 +108,34 @@ export interface ParsedSheet {
   headerRowIndex?: number;
 }
 
+/** Summary rows ("Total", "Average", ...) that sit under the member list aren't members. */
+export function isSummaryRowName(name: string): boolean {
+  return /^(total|totals|summary|count|average)\b/i.test(name.trim());
+}
+
+function isBlankRow(row: (string | null | undefined)[] | undefined): boolean {
+  return !row || row.every((c) => !String(c ?? "").trim());
+}
+
+const MEMBER_HEADER_LABEL = /^(team\s+)?(members?|names?|developers?|persons?|people)\b/i;
+
+/**
+ * True when the sheet has a member list under a labelled header cell (A1 like "Member")
+ * but no date columns yet. Sync may then add the first date column(s) to row 1 — only
+ * empty cells are written, nothing existing is moved or overwritten.
+ */
+export function hasMemberHeaderWithoutDates(rows: (string | null | undefined)[][]): boolean {
+  const first = rows[0] ?? [];
+  if (!MEMBER_HEADER_LABEL.test(String(first[0] ?? "").trim())) return false;
+  return !first.slice(1).some((c) => String(c ?? "").trim());
+}
+
 /**
  * Parses the wide grid. The header row (whichever one it is — a sheet may have
  * a leading notes row above it, as the original spreadsheet does) is the first
  * row with at least one parseable date after column A; every row before it is
- * ignored, and every row after it is read as a member.
+ * ignored, and every row after it is read as a member until the first fully blank
+ * row; summary rows ("Total", ...) are skipped.
  */
 export function parseSheetRows(rows: string[][]): ParsedSheet {
   let headerRowIndex = -1;
@@ -129,16 +153,20 @@ export function parseSheetRows(rows: string[][]): ParsedSheet {
     }
   }
 
+  let firstMemberRow = headerRowIndex + 1;
   if (headerRowIndex === -1) {
-    return { members: [], dates: [], cells: [] };
+    // No dates yet: a labelled member column (row 1 header) still yields the roster.
+    if (!hasMemberHeaderWithoutDates(rows)) return { members: [], dates: [], cells: [] };
+    firstMemberRow = 1;
   }
 
   const members: string[] = [];
   const cells: ParsedSheetCell[] = [];
 
-  for (const row of rows.slice(headerRowIndex + 1)) {
+  for (const row of rows.slice(firstMemberRow)) {
+    if (isBlankRow(row)) break; // the member list ends at the first fully blank row
     const member = row[0]?.trim();
-    if (!member) continue;
+    if (!member || isSummaryRowName(member)) continue;
     members.push(member);
 
     for (const { index, date } of dateColumns) {
@@ -147,7 +175,12 @@ export function parseSheetRows(rows: string[][]): ParsedSheet {
     }
   }
 
-  return { members, dates: dateColumns.map((c) => c.date), cells, headerRowIndex };
+  return {
+    members,
+    dates: dateColumns.map((c) => c.date),
+    cells,
+    headerRowIndex: headerRowIndex === -1 ? undefined : headerRowIndex,
+  };
 }
 
 /** Cell text written for a holiday date. Ignored when read back, so it never becomes a status. */
@@ -266,6 +299,12 @@ function isOwnedCellText(text: string): boolean {
   return !t || parseStatusLabel(t) !== undefined || t.toLowerCase() === SHEET_HOLIDAY_LABEL.toLowerCase();
 }
 
+/** Bounds of the range sync reads; writes outside it are refused (rows/cols are 1-based counts). */
+export interface SheetLimits {
+  maxRows: number;
+  maxCols: number;
+}
+
 /**
  * Plans the minimal write-back for the merged app state: only cells sync owns are
  * touched, at their real positions. The original grid is never rewritten, so rows above
@@ -278,7 +317,8 @@ export function planSheetWrite(
   members: string[],
   dates: string[],
   entries: ScrumAttendanceEntry[],
-  holidayDates: Set<string> = new Set()
+  holidayDates: Set<string> = new Set(),
+  limits?: SheetLimits
 ): SheetRangeUpdate[] {
   const parsed = parseSheetRows(rows as string[][]);
   const hasContent = rows.some((r) => (r ?? []).some((c) => String(c ?? "").trim()));
@@ -293,6 +333,8 @@ export function planSheetWrite(
     freshHeader = true;
   } else if (rows.length === 1 && !(rows[0] ?? []).slice(1).some((c) => String(c ?? "").trim())) {
     headerIdx = 0; // a lone "Member" label row with no dates yet
+  } else if (hasMemberHeaderWithoutDates(rows)) {
+    headerIdx = 0; // labelled member column, no dates yet: the first date column goes in row 1
   } else {
     headerIdx = rows.length; // never overwrite unrelated content
     freshHeader = true;
@@ -326,7 +368,7 @@ export function planSheetWrite(
   const memberRows = new Map<string, number[]>();
   for (let r = headerIdx + 1; r < rows.length; r++) {
     const name = cellText(rows, r, 0).trim();
-    if (!name) continue;
+    if (!name || isSummaryRowName(name)) continue;
     memberRows.set(name, [...(memberRows.get(name) ?? []), r]);
   }
 
@@ -354,6 +396,18 @@ export function planSheetWrite(
           ? SHEET_STATUS_LABELS[entry.status]
           : "";
       if (desired !== current) set(row, col, desired);
+    }
+  }
+
+  if (limits) {
+    for (const key of updates.keys()) {
+      const [r, c] = key.split(":").map(Number);
+      if (r >= limits.maxRows || c >= limits.maxCols) {
+        throw new UserFacingError(
+          `The sheet is full — sync only reads and writes the first ${limits.maxRows} rows and ${limits.maxCols} columns, ` +
+            "and there's no room to add more. Nothing was written to the sheet; archive old rows/columns and sync again."
+        );
+      }
     }
   }
 
@@ -400,8 +454,9 @@ export function planScrumSync(input: {
   attendance: ScrumAttendanceEntry[];
   holidayDates: Set<string>;
   rows: (string | null | undefined)[][];
+  limits?: SheetLimits;
 }): ScrumSyncPlan {
-  const { members, attendance, holidayDates, rows } = input;
+  const { members, attendance, holidayDates, rows, limits } = input;
   const sheet = parseSheetRows(rows as string[][]);
   const merged = mergeScrumWithSheet(
     members,
@@ -413,7 +468,8 @@ export function planScrumSync(input: {
     merged.members,
     [...new Set([...sheet.dates, ...merged.entries.map((e) => e.date)])],
     merged.entries,
-    holidayDates
+    holidayDates,
+    limits
   );
   return { merged, updates };
 }

@@ -99,6 +99,8 @@ export function ScrumAttendanceBoard({
   const [draftNotes, setDraftNotes] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Save errors show next to the Save button (the roster below can push `error` off-screen on phones).
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [newMember, setNewMember] = useState("");
   const [addingMember, setAddingMember] = useState(false);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
@@ -174,6 +176,7 @@ export function ScrumAttendanceBoard({
     setDraft(next);
     setDraftNotes(nextNotes);
     setError(null);
+    setSaveError(null);
   }, [dayEntries, selectedDate]);
 
   function shiftDate(days: number) {
@@ -183,20 +186,26 @@ export function ScrumAttendanceBoard({
   }
 
   async function handleSave() {
-    const toSave = Object.entries(draft).map(([member, status]) => ({
-      member,
-      status,
-      note: status === "other" ? draftNotes[member]?.trim() || undefined : undefined,
-    }));
+    // Entries for members removed from the roster stay in the draft (they're on this date's
+    // saved data) but the server only accepts roster members, so leave them out of the save.
+    const roster = new Set(members.map((m) => m.toLowerCase()));
+    const toSave = Object.entries(draft)
+      .filter(([member]) => roster.has(member.toLowerCase()))
+      .map(([member, status]) => ({
+        member,
+        status,
+        note: status === "other" ? draftNotes[member]?.trim() || undefined : undefined,
+      }));
     if (toSave.length === 0) return;
     setSaving(true);
     setError(null);
+    setSaveError(null);
     try {
       await upsertScrumAttendance(selectedDate, toSave);
       onChanged();
       notifyStoreUpdated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save attendance");
+      setSaveError(err instanceof Error ? err.message : "Failed to save attendance");
     } finally {
       setSaving(false);
     }
@@ -299,6 +308,12 @@ export function ScrumAttendanceBoard({
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
+
+        {saveError && (
+          <p role="alert" className="mb-3 text-sm text-warning">
+            {saveError}
+          </p>
+        )}
 
         {recentDates.length > 0 && (
           <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1">

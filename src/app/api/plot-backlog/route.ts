@@ -8,7 +8,7 @@ import {
   deletePlotBacklogItemSchema,
   reorderPlotBacklogSchema,
 } from "@/lib/validation";
-import { isErrorResponse, parseJsonBody } from "@/lib/request";
+import { isErrorResponse, parseJsonBody, guardMutation } from "@/lib/request";
 
 export async function POST(request: NextRequest) {
   const body = await parseJsonBody(request);
@@ -79,6 +79,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guard = guardMutation(request);
+  if (guard) return guard;
   const id = request.nextUrl.searchParams.get("id");
   const parsed = parseBody(deletePlotBacklogItemSchema, { id });
   if (!parsed.success) {

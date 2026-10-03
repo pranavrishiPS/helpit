@@ -2,6 +2,7 @@ import { WebClient } from "@slack/web-api";
 import { format, subDays } from "date-fns";
 import type { SlackItem, TaskPriority } from "@/lib/types";
 import { getAppUrl } from "@/lib/app-url";
+import { UserFacingError } from "@/lib/errors";
 import {
   readSlackTokens,
   writeSlackTokens,
@@ -33,7 +34,7 @@ export interface ParsedSlackFollowup {
   slackItem: Omit<SlackItem, "id" | "createdAt">;
 }
 
-export class SlackRateLimitError extends Error {
+export class SlackRateLimitError extends UserFacingError {
   rateLimited = true;
 
   constructor(message = "Slack rate limit reached. Sync will retry in 10 minutes.") {
@@ -125,7 +126,7 @@ async function getSlackClient(): Promise<{ client: WebClient; tokens: SlackToken
     const client = new WebClient(envToken);
     const auth = await client.auth.test();
     if (!auth.ok || !auth.user_id) {
-      throw new Error("Invalid SLACK_USER_TOKEN");
+      throw new UserFacingError("Invalid SLACK_USER_TOKEN");
     }
     const tokens: SlackTokens = {
       userId: auth.user_id,
@@ -135,7 +136,7 @@ async function getSlackClient(): Promise<{ client: WebClient; tokens: SlackToken
     return { client, tokens };
   }
 
-  throw new Error("Slack not connected");
+  throw new UserFacingError("Slack not connected");
 }
 
 function cleanText(text: string): string {
@@ -213,7 +214,7 @@ function inferDueDate(text: string): string | undefined {
 
 export function parseSlackMatch(
   match: SlackSearchMatch,
-  userId: string,
+  userId: string | undefined,
   profileName?: string
 ): ParsedSlackFollowup | null {
   if (!match.ts || !match.text || isNoise(match)) return null;
@@ -227,7 +228,7 @@ export function parseSlackMatch(
 
   const nameLower = profileName?.toLowerCase();
   const mentionsUser =
-    text.includes(`<@${userId}`) ||
+    (userId ? text.includes(`<@${userId}`) : false) ||
     (nameLower ? lower.includes(nameLower) : false) ||
     !channel.startsWith("#");
 
@@ -270,10 +271,11 @@ export async function syncSlackFollowups(): Promise<{
   synced: number;
   addedSlack: number;
   addedTasks: number;
-  userId: string;
+  userId?: string;
+  userIdMissing: boolean;
 }> {
   if (!SLACK_AUTO_SYNC_AVAILABLE) {
-    throw new Error(SLACK_AUTO_SYNC_DISABLED_REASON);
+    throw new UserFacingError(SLACK_AUTO_SYNC_DISABLED_REASON);
   }
 
   const { client, tokens } = await getSlackClient();
@@ -298,7 +300,7 @@ export async function syncSlackFollowups(): Promise<{
         throw new Error(res.error ?? "Slack search failed");
       }
       for (const m of res.messages?.matches ?? []) {
-        if (m.ts) matchMap.set(m.ts, m as SlackSearchMatch);
+        if (m.ts) matchMap.set(`${m.channel?.id ?? m.channel?.name ?? ""}|${m.ts}`, m as SlackSearchMatch);
       }
     } catch (err) {
       if (isSlackRateLimitError(err)) {

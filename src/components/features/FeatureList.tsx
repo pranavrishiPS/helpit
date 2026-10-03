@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { Feature } from "@/lib/types";
 import { Badge, Button, Card, EmptyState } from "@/components/ui";
+import { DateCommitInput } from "@/components/ui/DateCommitInput";
 import {
   createFeature,
   deleteFeature,
@@ -241,17 +242,15 @@ function MilestonePill({
   label: string;
   date?: string;
   editable?: boolean;
-  onDateChange?: (value: string) => void;
+  onDateChange?: (value: string) => void | Promise<void>;
 }) {
   return (
     <div className="min-w-0 flex-1 rounded-lg border border-border bg-slate-50 px-2 py-1.5">
       <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
       {editable && onDateChange ? (
-        <input
-          type="date"
+        <DateCommitInput
           value={date ?? ""}
-          onChange={(e) => onDateChange(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
+          onCommit={onDateChange}
           className="mt-0.5 w-full rounded border border-border bg-white px-1 py-0.5 text-xs font-semibold outline-none focus:border-accent"
           aria-label={label}
         />
@@ -306,7 +305,7 @@ function FeatureCard({
 
   async function handleFunctionCostsSave(
     costs: NonNullable<Feature["functionCosts"]>
-  ) {
+  ): Promise<boolean> {
     setError(null);
     try {
       await updateFeature(feature.id, {
@@ -314,8 +313,10 @@ function FeatureCard({
       });
       onChanged();
       notifyStoreUpdated();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save function effort");
+      return false;
     }
   }
 

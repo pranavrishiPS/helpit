@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { AlertTriangle, ChevronDown, Plus, X } from "lucide-react";
 import type { Release, ReleasePhase, ReleaseStatus } from "@/lib/types";
 import { Badge, Card, Button } from "@/components/ui";
+import { DateCommitInput } from "@/components/ui/DateCommitInput";
 import {
   RELEASE_PHASE_LABELS,
   RELEASE_PHASE_ORDER,
@@ -170,14 +171,15 @@ export function ReleaseCard({
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => setExpanded((open) => !open)}
-          className="w-full cursor-pointer text-left"
-          aria-expanded={isExpanded}
-        >
+        // Header is a div so the phase <select> is not nested inside the toggle <button>.
+        <div className="w-full text-left">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setExpanded((open) => !open)}
+              className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-center gap-2.5 text-left"
+              aria-expanded={isExpanded}
+            >
               <ChevronDown
                 className={cn(
                   "h-4 w-4 shrink-0 text-muted transition-transform",
@@ -191,17 +193,19 @@ export function ReleaseCard({
                 <time
                   dateTime={release.targetDate}
                   className={releasePlatformDateClass(platform)}
-                  onClick={(e) => e.stopPropagation()}
                 >
                   {formatReleaseDate(release.targetDate)}
                 </time>
               )}
-            </div>
+            </button>
             {phaseControl}
           </div>
 
           {!isCompleted && (
-            <div className="mt-3 pl-0 sm:pl-6">
+            <div
+              className="mt-3 cursor-pointer pl-0 sm:pl-6"
+              onClick={() => setExpanded((open) => !open)}
+            >
               {!isExpanded &&
                 (sprintItems.length > 0 ? (
                   <ul className="list-inside list-disc text-sm text-muted">
@@ -229,7 +233,7 @@ export function ReleaseCard({
               )}
             </div>
           )}
-        </button>
+        </div>
       )}
 
       {isExpanded && (
@@ -334,13 +338,9 @@ export function ReleaseCard({
                   Planned
                 </p>
                 {onUpdate ? (
-                  <input
-                    type="date"
+                  <DateCommitInput
                     value={release.targetDate ?? ""}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) =>
-                      onUpdate({ targetDate: e.target.value || null })
-                    }
+                    onCommit={(value) => onUpdate({ targetDate: value || null })}
                     className="mt-0.5 w-full rounded border border-border bg-white px-1.5 py-0.5 text-xs font-semibold text-foreground outline-none focus:border-accent"
                     aria-label="Planned release date"
                   />
@@ -355,13 +355,9 @@ export function ReleaseCard({
                   Actual
                 </p>
                 {onUpdate ? (
-                  <input
-                    type="date"
+                  <DateCommitInput
                     value={release.actualDate ?? ""}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) =>
-                      onUpdate({ actualDate: e.target.value || null })
-                    }
+                    onCommit={(value) => onUpdate({ actualDate: value || null })}
                     className={cn(
                       "mt-0.5 w-full rounded border border-border bg-white px-1.5 py-0.5 text-xs outline-none focus:border-accent",
                       release.actualDate

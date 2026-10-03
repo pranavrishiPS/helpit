@@ -9,7 +9,7 @@ import {
   parseBody,
   updateTaskSchema,
 } from "@/lib/validation";
-import { isErrorResponse, parseJsonBody } from "@/lib/request";
+import { isErrorResponse, parseJsonBody, guardMutation } from "@/lib/request";
 
 export async function GET() {
   const store = await readStore();
@@ -80,6 +80,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guard = guardMutation(request);
+  if (guard) return guard;
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 

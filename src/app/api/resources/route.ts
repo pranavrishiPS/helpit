@@ -8,7 +8,7 @@ import {
   updateProjectResourceSchema,
   deleteProjectResourceSchema,
 } from "@/lib/validation";
-import { isErrorResponse, parseJsonBody } from "@/lib/request";
+import { isErrorResponse, parseJsonBody, guardMutation } from "@/lib/request";
 
 function normalizeUrl(url: string): string {
   const trimmed = url.trim();
@@ -108,6 +108,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guard = guardMutation(request);
+  if (guard) return guard;
   const id = request.nextUrl.searchParams.get("id");
   const parsed = parseBody(deleteProjectResourceSchema, { id });
   if (!parsed.success) {

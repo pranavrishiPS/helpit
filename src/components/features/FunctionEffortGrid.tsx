@@ -15,7 +15,6 @@ import {
   functionCostsEqual,
   parseOptionalDays,
   sanitizeEffortDrafts,
-  type EffortDraft,
 } from "@/lib/effort-utils";
 import { cn } from "@/lib/cn";
 
@@ -24,7 +23,8 @@ const effortInputClass =
 
 interface FunctionEffortGridProps {
   functionCosts?: ReleaseFunctionCost[];
-  onSave?: (costs: ReleaseFunctionCost[]) => void;
+  /** Resolve to false when the save failed so the draft is reverted. */
+  onSave?: (costs: ReleaseFunctionCost[]) => void | boolean | Promise<void | boolean>;
   readOnly?: boolean;
   compact?: boolean;
   idPrefix: string;
@@ -53,23 +53,23 @@ export function FunctionEffortGrid({
     );
   }, [functionCosts]);
 
-  function persistFunctionCosts(
-    drafts: Record<ReleaseFunctionRole, EffortDraft>
-  ): Record<ReleaseFunctionRole, EffortDraft> {
-    const sanitized = sanitizeEffortDrafts(drafts);
-    if (onSave) {
-      const next = buildFunctionCostsFromDrafts(sanitized);
-      if (!functionCostsEqual(functionCosts, next)) {
-        onSave(next);
-      }
-    }
-    return sanitized;
-  }
+  const latestCostsRef = useRef(functionCosts);
+  useEffect(() => {
+    latestCostsRef.current = functionCosts;
+  }, [functionCosts]);
 
   function handleEffortBlur(role: ReleaseFunctionRole, field: "est" | "act", value: string) {
-    setEffortDrafts((prev) => {
-      const merged = { ...prev, [role]: { ...prev[role], [field]: value } };
-      return persistFunctionCosts(merged);
+    // Compute from current state (not inside a state updater, which StrictMode double-invokes)
+    // so the network save happens exactly once.
+    const merged = { ...effortDrafts, [role]: { ...effortDrafts[role], [field]: value } };
+    const sanitized = sanitizeEffortDrafts(merged);
+    setEffortDrafts(sanitized);
+    if (!onSave) return;
+    const next = buildFunctionCostsFromDrafts(sanitized);
+    if (functionCostsEqual(functionCosts, next)) return;
+    void Promise.resolve(onSave(next)).then((ok) => {
+      // A failed save reverts the draft to the stored value.
+      if (ok === false) setEffortDrafts(buildEffortDrafts(latestCostsRef.current));
     });
   }
 

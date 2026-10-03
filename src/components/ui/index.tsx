@@ -133,24 +133,20 @@ export function ErrorBanner({
 
 export function Button({
   children,
-  onClick,
   variant = "primary",
   size = "md",
-  disabled,
   type = "button",
-}: {
-  children: React.ReactNode;
-  onClick?: () => void;
+  className,
+  ...rest
+}: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "type"> & {
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md";
-  disabled?: boolean;
   type?: "button" | "submit";
 }) {
   return (
     <button
+      {...rest}
       type={type}
-      onClick={onClick}
-      disabled={disabled}
       className={cn(
         "inline-flex cursor-pointer items-center justify-center rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm",
@@ -158,7 +154,8 @@ export function Button({
         variant === "secondary" &&
           "border border-border bg-card text-foreground hover:bg-slate-50",
         variant === "ghost" && "text-muted hover:bg-slate-100",
-        variant === "danger" && "bg-warning/10 text-warning hover:bg-warning/20"
+        variant === "danger" && "bg-warning/10 text-warning hover:bg-warning/20",
+        className
       )}
     >
       {children}

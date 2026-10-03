@@ -155,8 +155,11 @@ export function ExpenseDialog({
 
         <form onSubmit={handleSubmit} className="space-y-3 p-5">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Title</label>
+            <label htmlFor="expense-title" className="mb-1 block text-xs font-medium text-muted">
+              Title
+            </label>
             <input
+              id="expense-title"
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -168,8 +171,11 @@ export function ExpenseDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Amount (₹)</label>
+              <label htmlFor="expense-amount" className="mb-1 block text-xs font-medium text-muted">
+                Amount (₹)
+              </label>
               <input
+                id="expense-amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="22000"
@@ -179,8 +185,11 @@ export function ExpenseDialog({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">Date (optional)</label>
+              <label htmlFor="expense-date" className="mb-1 block text-xs font-medium text-muted">
+                Date (optional)
+              </label>
               <input
+                id="expense-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -190,8 +199,10 @@ export function ExpenseDialog({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Type</label>
-            <div className="flex gap-2">
+            <p id="expense-type-label" className="mb-1 block text-xs font-medium text-muted">
+              Type
+            </p>
+            <div className="flex gap-2" role="group" aria-labelledby="expense-type-label">
               {(
                 [
                   { value: "outing", label: "Outing" },
@@ -202,6 +213,7 @@ export function ExpenseDialog({
                   key={option.value}
                   type="button"
                   onClick={() => setType(option.value)}
+                  aria-pressed={type === option.value}
                   className={
                     type === option.value
                       ? "rounded-lg border border-accent bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent"
@@ -216,10 +228,14 @@ export function ExpenseDialog({
 
           {type === "follow_up" && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">
+              <label
+                htmlFor="expense-attendees"
+                className="mb-1 block text-xs font-medium text-muted"
+              >
                 People covered (optional)
               </label>
               <input
+                id="expense-attendees"
                 value={attendeeCount}
                 onChange={(e) => setAttendeeCount(e.target.value)}
                 placeholder="8"
@@ -230,8 +246,11 @@ export function ExpenseDialog({
           )}
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">Notes (optional)</label>
+            <label htmlFor="expense-notes" className="mb-1 block text-xs font-medium text-muted">
+              Notes (optional)
+            </label>
             <textarea
+              id="expense-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Vendor, split, receipt…"

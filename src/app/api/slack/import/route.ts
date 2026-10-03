@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SlackSearchMatch } from "@/lib/slack";
 import { importSlackMatches, parseMcpSlackSearchResults } from "@/lib/slack-import";
 import { parseBody, slackImportSchema } from "@/lib/validation";
+import { publicErrorMessage } from "@/lib/errors";
 import { isErrorResponse, parseJsonBody } from "@/lib/request";
 
 export async function POST(request: NextRequest) {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     const result = await importSlackMatches(matches, { userId, teamName });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Import failed";
+    const message = publicErrorMessage(err, "Import failed — check the server logs", "Slack import");
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

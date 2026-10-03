@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { publicErrorMessage } from "@/lib/errors";
 import { connectScrumSheet } from "@/lib/scrum-sheet";
 import { connectScrumSheetSchema, parseBody } from "@/lib/validation";
 import { isErrorResponse, parseJsonBody } from "@/lib/request";
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const result = await connectScrumSheet(parsed.data.url);
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to connect spreadsheet";
+    const message = publicErrorMessage(err, "Failed to connect spreadsheet — check the server logs", "Scrum sheet connect");
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

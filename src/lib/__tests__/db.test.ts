@@ -48,6 +48,9 @@ function seedStore(overrides: Record<string, unknown> = {}) {
     projectResources: [],
     plotBacklog: [],
     features: [],
+    scrumMembers: [],
+    scrumAttendance: [],
+    scrumHolidays: [],
     lastUpdated: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -61,11 +64,15 @@ describe("db", () => {
     mockEtags.clear();
   });
 
-  it("creates and returns the default seed store when none exists", async () => {
+  it("creates and returns an EMPTY default store (no dummy data) when none exists", async () => {
     const store = await readStore();
 
     expect(store.profile.name).toBe("Pranav");
-    expect(store.tasks.length).toBeGreaterThan(0);
+    expect(store.tasks).toEqual([]);
+    expect(store.releases).toEqual([]);
+    expect(store.outings).toEqual([]);
+    expect(store.slackItems).toEqual([]);
+    expect(store.mailItems).toEqual([]);
     expect(mockFiles.has("store.json")).toBe(true);
   });
 
@@ -171,7 +178,7 @@ describe("db", () => {
     expect(approval?.id).toBe("sprint-approval-rel-android-1180");
   });
 
-  it("backs up and resets to defaults when store.json is corrupt, logging the error", async () => {
+  it("backs up and resets to an empty store when store.json is corrupt, logging the error", async () => {
     mockFiles.set("store.json", "{not valid json");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -185,18 +192,30 @@ describe("db", () => {
     expect(mockFiles.get(backupKeys[0])).toBe("{not valid json");
   });
 
-  it("logs when backing up a corrupt store fails, but still resets to defaults", async () => {
+  it("aborts without overwriting store.json when backing up a corrupt store fails", async () => {
     mockFiles.set("store.json", "{not valid json");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(jsonPersist.backupJson).mockRejectedValueOnce(new Error("disk full"));
 
-    const store = await readStore();
+    await expect(readStore()).rejects.toThrow(/could not be backed up/);
 
-    expect(store.profile.name).toBe("Pranav");
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("failed to back up"),
       expect.any(Error)
     );
+    expect(mockFiles.get("store.json")).toBe("{not valid json");
+    expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
+  });
+
+  it("updateStore skips the write and keeps lastUpdated when the updater returns the same store (404-style no-op)", async () => {
+    seedStore();
+    const before = mockFiles.get("store.json");
+
+    const result = await updateStore((s) => s);
+
+    expect(result.lastUpdated).toBe("2026-01-01T00:00:00.000Z");
+    expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
+    expect(mockFiles.get("store.json")).toBe(before);
   });
 
   it("updateStore persists the updater result and re-syncs sprint approvals", async () => {
@@ -284,7 +303,9 @@ describe("db", () => {
         vi.mocked(jsonPersist.writeJsonTextIfMatch).mockResolvedValueOnce(false);
       }
 
-      await expect(updateStore((s) => s)).rejects.toThrow(/after 8 attempts.*concurrently/);
+      await expect(
+        updateStore((s) => ({ ...s, profile: { ...s.profile, name: "Alex" } }))
+      ).rejects.toThrow(/after 8 attempts.*concurrently/);
       expect(jsonPersist.writeJsonTextIfMatch).toHaveBeenCalledTimes(8);
     });
 
@@ -303,6 +324,58 @@ describe("db", () => {
       await expect(updateStore((s) => s)).rejects.toThrow(/refusing to overwrite/);
       expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
       expect(mockFiles.get("store.json")).toBe("");
+    });
+
+    it("readStore never persists in Blob mode, even when migrations are pending", async () => {
+      seedStore({
+        reminders: [
+          {
+            id: "rem-1",
+            title: "Ping QA",
+            remindAt: "2026-07-01T10:00:00.000Z",
+            completed: false,
+            createdAt: "2026-06-01T00:00:00.000Z",
+          },
+        ],
+      });
+      const before = mockFiles.get("store.json");
+
+      const store = await readStore();
+
+      expect(store.tasks.some((t) => t.id === "rem-1")).toBe(true);
+      expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
+      expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
+      expect(mockFiles.get("store.json")).toBe(before);
+    });
+
+    it("readStore returns an in-memory empty store without writing when no blob exists", async () => {
+      const store = await readStore();
+
+      expect(store.tasks).toEqual([]);
+      expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
+      expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
+      expect(mockFiles.has("store.json")).toBe(false);
+    });
+
+    it("throws instead of resetting a corrupt store (read and update)", async () => {
+      mockFiles.set("store.json", "{not valid json");
+
+      await expect(readStore()).rejects.toThrow(/corrupt/);
+      await expect(updateStore((s) => s)).rejects.toThrow(/corrupt/);
+
+      expect(mockFiles.get("store.json")).toBe("{not valid json");
+      expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
+      expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
+      expect(jsonPersist.backupJson).not.toHaveBeenCalled();
+    });
+
+    it("skips the conditional write on a no-op update and leaves lastUpdated untouched", async () => {
+      seedStore();
+
+      const result = await updateStore((s) => s);
+
+      expect(result.lastUpdated).toBe("2026-01-01T00:00:00.000Z");
+      expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
     });
   });
 });

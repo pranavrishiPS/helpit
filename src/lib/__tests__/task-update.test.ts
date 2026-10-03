@@ -40,4 +40,19 @@ describe("applyTaskPatch", () => {
     expect(result.dueDate).toBe("2026-11-01");
     expect(result.reminderAt).toBe("2026-10-31T09:00:00.000Z");
   });
+
+  it("clears description and owner when null, keeps them when absent", () => {
+    const base: Task = { ...task, description: "details", owner: "Pranav" };
+    const cleared = applyTaskPatch(base, { description: null, owner: null }, now);
+    expect(cleared.description).toBeUndefined();
+    expect(cleared.owner).toBeUndefined();
+
+    const kept = applyTaskPatch(base, { status: "done" }, now);
+    expect(kept.description).toBe("details");
+    expect(kept.owner).toBe("Pranav");
+
+    const set = applyTaskPatch(base, { description: "new", owner: "Sam" }, now);
+    expect(set.description).toBe("new");
+    expect(set.owner).toBe("Sam");
+  });
 });

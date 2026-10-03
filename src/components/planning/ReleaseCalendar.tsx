@@ -140,20 +140,26 @@ export function ReleaseCalendar({
                     dayReleases.some((r) => r.id === selectedReleaseId));
                 const today = isCalendarDayToday(day);
                 const hasReleases = dayReleases.length > 0;
-                const CellTag = hasReleases ? "button" : "div";
                 const mutedOutOfMonth = !day.inMonth;
+                const dayLabelClass = cn(
+                  "mb-0.5 text-[10px] leading-none",
+                  mutedOutOfMonth && "text-muted/45",
+                  day.inMonth && "font-medium text-foreground",
+                  today && "font-semibold text-brand"
+                );
+                const dayLabelText = format(day.date, mutedOutOfMonth ? "d" : "MMM d");
 
+                // The cell is a div (release buttons live inside it, so it can't be a button);
+                // the day label is the keyboard-accessible control for selecting the day.
                 return (
-                  <CellTag
+                  <div
                     key={day.key}
-                    type={hasReleases ? "button" : undefined}
                     onClick={
                       hasReleases
                         ? () => onSelectDate(day.key, dayReleases)
                         : undefined
                     }
                     aria-current={today ? "date" : undefined}
-                    aria-pressed={hasReleases ? !!isSelectedDay : undefined}
                     className={cn(
                       "relative flex flex-col border-r border-border/60 p-1.5 text-left last:border-r-0",
                       mutedOutOfMonth && !hasReleases && "min-h-[2.25rem] bg-slate-50/30",
@@ -165,19 +171,28 @@ export function ReleaseCalendar({
                       isSelectedDay &&
                         "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent/70",
                       hasReleases &&
-                        "cursor-pointer transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent/30"
+                        "cursor-pointer transition-colors hover:bg-slate-50"
                     )}
                   >
-                    <span
-                      className={cn(
-                        "mb-0.5 text-[10px] leading-none",
-                        mutedOutOfMonth && "text-muted/45",
-                        day.inMonth && "font-medium text-foreground",
-                        today && "font-semibold text-brand"
-                      )}
-                    >
-                      {format(day.date, mutedOutOfMonth ? "d" : "MMM d")}
-                    </span>
+                    {hasReleases ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectDate(day.key, dayReleases);
+                        }}
+                        aria-pressed={!!isSelectedDay}
+                        aria-label={formatCalendarDayLabel(day.key)}
+                        className={cn(
+                          dayLabelClass,
+                          "self-start text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/30"
+                        )}
+                      >
+                        {dayLabelText}
+                      </button>
+                    ) : (
+                      <span className={dayLabelClass}>{dayLabelText}</span>
+                    )}
 
                     {hasReleases && (
                       <div className="space-y-1">
@@ -225,7 +240,7 @@ export function ReleaseCalendar({
                         })}
                       </div>
                     )}
-                  </CellTag>
+                  </div>
                 );
               })}
             </div>

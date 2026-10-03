@@ -1,3 +1,4 @@
+import { UserFacingError } from "@/lib/errors";
 import { google } from "googleapis";
 import { getAppUrl } from "@/lib/app-url";
 import {
@@ -5,7 +6,12 @@ import {
   writeScrumSheetTokens,
   type ScrumSheetTokens,
 } from "@/lib/scrum-sheet-store";
-import { parseSheetRows, planScrumSync, type ScrumSyncPlan } from "@/lib/scrum-sheet-sync";
+import {
+  hasMemberHeaderWithoutDates,
+  parseSheetRows,
+  planScrumSync,
+  type ScrumSyncPlan,
+} from "@/lib/scrum-sheet-sync";
 
 const SHEET_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
@@ -13,7 +19,9 @@ const SHEET_SCOPES = [
 ];
 
 /** Wide enough to cover a long-running daily standup tracker (Member + ~370 dates). */
-const SHEET_RANGE = "A1:ZZ1000";
+const SHEET_MAX_ROWS = 1000;
+const SHEET_MAX_COLS = 702; // column ZZ
+const SHEET_RANGE = `A1:ZZ${SHEET_MAX_ROWS}`;
 
 export function isScrumSheetConfigured(): boolean {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
@@ -49,7 +57,7 @@ export async function exchangeCodeForTokens(code: string): Promise<ScrumSheetTok
   const { tokens } = await client.getToken(code);
 
   if (!tokens.access_token || !tokens.refresh_token) {
-    throw new Error("Google did not return access/refresh tokens. Try reconnecting.");
+    throw new UserFacingError("Google did not return access/refresh tokens. Try reconnecting.");
   }
 
   client.setCredentials(tokens);
@@ -58,7 +66,7 @@ export async function exchangeCodeForTokens(code: string): Promise<ScrumSheetTok
   const email = profile.data.email;
 
   if (!email) {
-    throw new Error("Could not read the connected Google account's email.");
+    throw new UserFacingError("Could not read the connected Google account's email.");
   }
 
   const stored: ScrumSheetTokens = {
@@ -75,7 +83,7 @@ export async function exchangeCodeForTokens(code: string): Promise<ScrumSheetTok
 async function getAuthorizedClient() {
   const stored = await readScrumSheetTokens();
   if (!stored) {
-    throw new Error("Google Sheet not connected");
+    throw new UserFacingError("Google Sheet not connected");
   }
 
   const client = getOAuth2Client();
@@ -130,7 +138,7 @@ export function extractSpreadsheetId(urlOrId: string): string | null {
 export async function connectScrumSheet(urlOrId: string): Promise<{ spreadsheetId: string }> {
   const spreadsheetId = extractSpreadsheetId(urlOrId);
   if (!spreadsheetId) {
-    throw new Error("Couldn't find a spreadsheet id in that URL.");
+    throw new UserFacingError("Couldn't find a spreadsheet id in that URL.");
   }
 
   const client = await getAuthorizedClient();
@@ -139,7 +147,7 @@ export async function connectScrumSheet(urlOrId: string): Promise<{ spreadsheetI
   try {
     await sheets.spreadsheets.get({ spreadsheetId, fields: "spreadsheetId" });
   } catch {
-    throw new Error(
+    throw new UserFacingError(
       "Couldn't access that spreadsheet. Make sure the connected Google account has edit access to it."
     );
   }
@@ -166,7 +174,7 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
   const store = await readStore();
   const spreadsheetId = store.integrations?.scrumSheet?.spreadsheetId;
   if (!spreadsheetId) {
-    throw new Error("No Google Sheet connected yet.");
+    throw new UserFacingError("No Google Sheet connected yet.");
   }
 
   const client = await getAuthorizedClient();
@@ -181,8 +189,8 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
   const rows = (read.data.values ?? []) as string[][];
   const parsedSheet = parseSheetRows(rows);
 
-  if (rows.length > 1 && parsedSheet.dates.length === 0) {
-    throw new Error(
+  if (rows.length > 1 && parsedSheet.dates.length === 0 && !hasMemberHeaderWithoutDates(rows)) {
+    throw new UserFacingError(
       "Couldn't find a header row with dates in the sheet — nothing was changed. " +
         "Check that one row has 'Member' (or any text) in column A and dates across the rest of the row."
     );
@@ -200,6 +208,7 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
       attendance: s.scrumAttendance ?? [],
       holidayDates: new Set((s.scrumHolidays ?? []).map((h) => h.date)),
       rows,
+      limits: { maxRows: SHEET_MAX_ROWS, maxCols: SHEET_MAX_COLS },
     });
     return {
       ...s,

@@ -10,6 +10,7 @@ import {
   getReminderPresets,
   toDateTimeLocalValue,
 } from "@/lib/reminder-utils";
+import { requestReminderPermission } from "@/lib/use-task-reminder-notifications";
 
 export function ReminderPicker({
   value,
@@ -80,6 +81,7 @@ export function ReminderPicker({
   const label = formatReminderAt(value);
 
   function selectPreset(iso: string) {
+    requestReminderPermission();
     onChange(iso);
     setCustomValue(toDateTimeLocalValue(iso));
     setOpen(false);
@@ -87,6 +89,7 @@ export function ReminderPicker({
 
   function applyCustom() {
     if (!customValue) return;
+    requestReminderPermission();
     onChange(fromDateTimeLocalValue(customValue));
     setOpen(false);
   }

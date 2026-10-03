@@ -36,9 +36,15 @@ export async function updateTask(
   id: string,
   updates: Partial<Omit<Task, "id" | "createdAt">>
 ): Promise<Task> {
+  // JSON.stringify drops `undefined`, so an explicit `reminderAt: undefined` (clear) would never
+  // reach the server. The PATCH schema treats null as "clear".
+  const body: Record<string, unknown> = { id, ...updates };
+  for (const key of ["dueDate", "reminderAt", "description", "owner"] as const) {
+    if (key in updates && updates[key] === undefined) body[key] = null;
+  }
   const res = await apiFetch("/api/tasks", {
     method: "PATCH",
-    body: JSON.stringify({ id, ...updates }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error("Failed to update task");
   return res.json();
