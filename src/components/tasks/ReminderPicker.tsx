@@ -167,7 +167,7 @@ export function ReminderPicker({
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "inline-flex items-center gap-1.5 rounded-full border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
           compact ? "px-2 py-0.5 text-[11px] leading-4" : "px-2.5 py-1 text-xs",
           value
             ? "border-transparent bg-accent-soft text-accent hover:border-accent/30"

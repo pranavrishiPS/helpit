@@ -8,8 +8,8 @@ import {
   Link2,
   Pencil,
   Presentation,
+  ScanSearch,
   Sheet,
-  Sparkles,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -223,7 +223,7 @@ function ResourceDialog({
                   <p className="mt-1.5 text-[11px] text-muted">Changed manually — edit anytime</p>
                 ) : (
                   <Badge tone="info" className="mt-1.5">
-                    <Sparkles className="h-3 w-3" />
+                    <ScanSearch className="h-3 w-3" />
                     {TYPE_DETECTED_HINTS[type]}
                   </Badge>
                 ))}
@@ -330,7 +330,7 @@ function ResourceRow({
           target="_blank"
           rel="noopener noreferrer"
           title={resource.url}
-          className="min-w-0 flex-1 truncate rounded-sm text-sm font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="min-w-0 flex-1 truncate rounded-sm text-sm font-semibold text-foreground transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         >
           {resource.title}
         </a>

@@ -30,18 +30,25 @@ export const MODULE_ICONS: Record<ModuleId, LucideIcon> = {
 };
 
 /**
- * Per-module hue classes. Written out in full so Tailwind can detect them.
- * `solid` = filled chip (white icon), `soft` = tinted chip, `text` = icon color on soft.
+ * Module icon-chip classes. Deliberately the same neutral ink/paper treatment for
+ * every module (no per-module hues) — the icon shape identifies the module.
+ * `solid` = outlined paper chip with ink icon, `soft` = well fill, `text` = icon color on soft.
  */
+const NEUTRAL_MODULE_STYLE = {
+  solid: "bg-surface-2 text-foreground ring-1 ring-inset ring-border",
+  soft: "bg-surface-2",
+  text: "text-muted",
+} as const;
+
 export const MODULE_STYLES: Record<ModuleId, { solid: string; soft: string; text: string }> = {
-  home: { solid: "bg-brand-gradient", soft: "bg-accent-soft", text: "text-accent" },
-  tasks: { solid: "bg-mod-tasks", soft: "bg-mod-tasks/12", text: "text-mod-tasks" },
-  scrum: { solid: "bg-mod-scrum", soft: "bg-mod-scrum/12", text: "text-mod-scrum" },
-  slack: { solid: "bg-mod-slack", soft: "bg-mod-slack/12", text: "text-mod-slack" },
-  mail: { solid: "bg-mod-mail", soft: "bg-mod-mail/12", text: "text-mod-mail" },
-  planning: { solid: "bg-mod-planning", soft: "bg-mod-planning/12", text: "text-mod-planning" },
-  features: { solid: "bg-mod-features", soft: "bg-mod-features/12", text: "text-mod-features" },
-  resources: { solid: "bg-mod-resources", soft: "bg-mod-resources/12", text: "text-mod-resources" },
-  outings: { solid: "bg-mod-outings", soft: "bg-mod-outings/12", text: "text-mod-outings" },
-  settings: { solid: "bg-mod-settings", soft: "bg-mod-settings/12", text: "text-mod-settings" },
+  home: NEUTRAL_MODULE_STYLE,
+  tasks: NEUTRAL_MODULE_STYLE,
+  scrum: NEUTRAL_MODULE_STYLE,
+  slack: NEUTRAL_MODULE_STYLE,
+  mail: NEUTRAL_MODULE_STYLE,
+  planning: NEUTRAL_MODULE_STYLE,
+  features: NEUTRAL_MODULE_STYLE,
+  resources: NEUTRAL_MODULE_STYLE,
+  outings: NEUTRAL_MODULE_STYLE,
+  settings: NEUTRAL_MODULE_STYLE,
 };

@@ -13,8 +13,9 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #5B3BF0, #FF6B4A)",
-          color: "#FFFFFF",
+          // ImageResponse can't read CSS vars — literal values mirror --signal / --foreground.
+          background: "#E8590C",
+          color: "#1A1918",
           fontSize: 18,
           fontWeight: 700,
           borderRadius: 8,

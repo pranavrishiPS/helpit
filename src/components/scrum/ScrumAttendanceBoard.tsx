@@ -81,7 +81,7 @@ function StatusPills({
           onClick={() => onChange(status)}
           aria-pressed={value === status}
           className={cn(
-            "h-8 rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
+            "h-8 rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-1",
             value === status
               ? STATUS_PILL_CLASSES[status]
               : "border-border bg-card text-muted hover:bg-surface-2 hover:text-foreground"
@@ -321,7 +321,7 @@ export function ScrumAttendanceBoard({
                 onClick={() => setSelectedDate(date)}
                 aria-pressed={date === selectedDate}
                 className={cn(
-                  "h-7 shrink-0 rounded-full px-3 text-[11px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "h-7 shrink-0 rounded-full px-3 text-[11px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
                   date === selectedDate
                     ? "bg-accent text-white"
                     : "bg-surface-2 text-muted ring-1 ring-inset ring-border hover:text-foreground"
@@ -386,7 +386,7 @@ export function ScrumAttendanceBoard({
               setHolidayDate(selectedDate);
               setAddingHoliday(true);
             }}
-            className="mb-3 rounded-md text-xs font-medium text-muted transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="mb-3 rounded-md text-xs font-medium text-muted transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           >
             + Mark this date as a holiday (clears any attendance logged for it)
           </button>

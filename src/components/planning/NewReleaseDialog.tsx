@@ -129,7 +129,7 @@ export function NewReleaseDialog({ open, onClose, onCreated }: NewReleaseDialogP
               onClick={() => setPlatform(p)}
               aria-pressed={platform === p}
               className={cn(
-                "flex h-10 items-center justify-center gap-2 rounded-control border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+                "flex h-10 items-center justify-center gap-2 rounded-control border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2",
                 platform === p
                   ? p === "android"
                     ? "border-android bg-android-soft text-android-ink"

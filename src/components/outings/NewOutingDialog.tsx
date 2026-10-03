@@ -218,7 +218,7 @@ function OutingDialog({
                   <button
                     type="button"
                     onClick={() => addMembers(remainingSuggestions)}
-                    className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-accent hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                   >
                     Add all
                   </button>
@@ -229,7 +229,7 @@ function OutingDialog({
                       key={name}
                       type="button"
                       onClick={() => addMembers([name])}
-                      className="inline-flex h-7 items-center gap-1 rounded-full border border-dashed border-border-strong bg-card px-2.5 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="inline-flex h-7 items-center gap-1 rounded-full border border-dashed border-border-strong bg-card px-2.5 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                     >
                       <Plus className="h-3 w-3" aria-hidden="true" />
                       {name}
@@ -288,7 +288,7 @@ function OutingDialog({
                             )
                           }
                           aria-pressed={member.confirmed}
-                          className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                         >
                           <Badge
                             tone={member.confirmed ? "success" : "neutral"}
@@ -305,7 +305,7 @@ function OutingDialog({
                             prev.filter((_, i) => i !== index),
                           )
                         }
-                        className="grid h-7 w-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        className="grid h-7 w-7 place-items-center rounded-md text-muted transition-colors hover:bg-surface-3 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                         aria-label={`Remove ${member.name} from team`}
                       >
                         <X className="h-3.5 w-3.5" />

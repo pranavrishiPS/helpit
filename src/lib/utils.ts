@@ -105,7 +105,7 @@ export function priorityColor(priority: string): string {
     case "urgent":
       return "bg-danger text-white border-danger";
     case "high":
-      return "bg-pop-soft text-pop-ink border-pop/30";
+      return "bg-accent-soft text-accent border-accent/30";
     case "medium":
       return "bg-info-soft text-info border-info/20";
     default:
@@ -135,9 +135,9 @@ import type { ReleasePhase } from "./types";
 export function releasePhaseColor(phase?: ReleasePhase | string): string {
   switch (phase) {
     case "ux":
-      return "text-accent bg-accent-soft border-accent/25";
+      return "text-foreground bg-surface-3 border-border-strong";
     case "art":
-      return "text-pop-ink bg-pop-soft border-pop/30";
+      return "text-accent bg-accent-soft border-accent/25";
     case "animation":
       return "text-caution bg-caution-soft border-caution/25";
     case "dev":

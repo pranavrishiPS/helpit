@@ -152,7 +152,7 @@ export function MailTodos({
                     onClick={() => setPriority(p.id)}
                     aria-pressed={priority === p.id}
                     className={cn(
-                      "h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                      "h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
                       priority === p.id
                         ? p.color + " ring-1 ring-inset ring-current/25"
                         : "text-muted hover:bg-surface-2 hover:text-foreground"
@@ -288,7 +288,7 @@ function MailTaskRow({
       className={cn(
         "group flex items-start gap-3 border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-2/60",
         task.status === "done" && "opacity-70",
-        reminderDue && "bg-accent-soft/50 shadow-[inset_3px_0_0_var(--accent)] hover:bg-accent-soft/70"
+        reminderDue && "bg-accent-soft/50 shadow-[inset_3px_0_0_var(--signal)] hover:bg-accent-soft/70"
       )}
     >
       <button
@@ -358,7 +358,7 @@ function MailTaskRow({
       <button
         type="button"
         onClick={() => onDelete(task.id)}
-        className="-my-1 grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted opacity-100 transition-[opacity,background-color,color] hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+        className="-my-1 grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted opacity-100 transition-[opacity,background-color,color] hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
         aria-label="Delete task"
       >
         <Trash2 className="h-4 w-4" />

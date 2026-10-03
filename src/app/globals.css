@@ -1,38 +1,42 @@
 @import "tailwindcss";
 
-/* "Arcade Night" tokens — see docs/specs/visual-redesign.md §2 */
+/* "Ink & signal orange" tokens — see docs/specs/visual-redesign.md §2 */
 :root {
   color-scheme: light;
 
-  /* Neutrals — lavender-tinted, never pure gray */
-  --background: #F7F6FB;      /* app canvas */
+  /* Neutrals — warm paper + ink */
+  --background: #F6F4EF;      /* app canvas (paper) */
   --card: #FFFFFF;            /* cards, inputs, popovers, modals */
-  --surface-2: #F3F1F9;       /* wells, table heads, hover fill, section bands */
-  --surface-3: #E9E6F3;       /* pressed/selected neutral, progress tracks, skeletons */
-  --border: #E6E2F0;          /* card + divider lines (decorative) */
-  --border-strong: #D3CDE5;   /* hover borders, dashed drop zones */
-  --border-input: #8E87AB;    /* form control outline — 3.4:1 on white (WCAG 1.4.11) */
+  --surface-2: #F1EEE7;       /* wells, table heads, hover fill, section bands */
+  --surface-3: #E8E4DB;       /* pressed/selected neutral, progress tracks, skeletons */
+  --border: #E4E0D8;          /* card + divider lines (decorative) */
+  --border-strong: #D3CDC2;   /* hover borders, dashed drop zones */
+  --border-input: #8C857A;    /* form control outline — 3.6:1 on white (WCAG 1.4.11) */
 
-  --foreground: #1F1640;      /* body + headings (ink) */
-  --muted: #6B6485;           /* secondary text — 5.5:1 on white */
-  --subtle: #9A93B3;          /* placeholders, decorative icons, disabled. Never essential text */
+  --foreground: #1A1918;      /* body + headings (ink) */
+  --muted: #6F6A62;           /* secondary text — 5.4:1 white, 4.9:1 paper, 4.6:1 surface-2 */
+  --subtle: #A39E94;          /* placeholders, decorative icons, disabled. Never essential text */
 
-  --brand: #1F1640;           /* = ink; kept for back-compat (text-brand) */
-  --brand-hover: #140C33;
+  --brand: #1A1918;           /* = ink; kept for back-compat (text-brand) */
+  --brand-hover: #000000;
 
-  /* Primary + brand pop */
-  --accent: #5B3BF0;
-  --accent-hover: #4A2AD6;
-  --accent-soft: #EEEAFF;
-  --pop: #FF6B4A;             /* decorative fills only — text on it must be ink */
-  --pop-ink: #B3361B;
-  --pop-soft: #FFEDE8;
+  /* Accent. --accent is the text-safe orange (links, accent text, primary fills
+     with white text — 5.2:1 white, 4.7:1 paper). --signal is the bright orange
+     for non-text marks only (active nav bar, focus ring, dots, progress). */
+  --accent: #C2410C;
+  --accent-hover: #9A3412;
+  --accent-soft: #FDF0E8;     /* accent text on it 4.6:1 */
+  --signal: #E8590C;
+  --pop: var(--signal);       /* back-compat: decorative fills — text on it must be ink */
+  --pop-ink: var(--accent);
+  --pop-soft: var(--accent-soft);
 
-  /* Semantic */
-  --success: #0F7B45;  --success-hover: #0B6338;  --success-soft: #E3F6EA;
-  --caution: #B45309;  --caution-hover: #92400E;  --caution-soft: #FFF4DC;
-  --danger:  #C21F45;  --danger-hover:  #A3173A;  --danger-soft:  #FDECEF;
-  --info:    #0E7490;  --info-hover:    #0B5F76;  --info-soft:    #E0F5FA;
+  /* Semantic. Text on each -soft tint passes AA. */
+  --success: #2F7D4F;  --success-hover: #24613D;  --success-soft: #EEF6F0;  /* 5.0:1 white, 4.6:1 soft */
+  --caution: #8A5A12;  --caution-hover: #6F480E;  --caution-soft: #FBF3E4;  /* text shade of #B7791F — 5.9:1 white */
+  --caution-mark: #B7791F;                                                  /* non-text marks only */
+  --danger:  #B42318;  --danger-hover:  #912018;  --danger-soft:  #FCEDEB;  /* 6.6:1 white, 5.8:1 soft */
+  --info:    #3D5A80;  --info-hover:    #2F4766;  --info-soft:    #EDF1F6;
 
   /* Back-compat aliases — existing "warning" usages are all red/danger semantics */
   --warning: var(--danger);
@@ -40,30 +44,18 @@
   --accent-secondary: var(--info);
   --accent-secondary-hover: var(--info-hover);
 
-  /* Platforms */
-  --android: #15803D;  --android-soft: #DCF5E5;  --android-ink: #14532D;
-  --ios:     #2563EB;  --ios-soft:     #E0EAFF;  --ios-ink:     #1E3A8A;
+  /* Platforms — muted moss vs slate; always paired with the platform name */
+  --android: #4A6B3A;  --android-soft: #EFF3EC;  --android-ink: #34502A;
+  --ios:     #3D5A80;  --ios-soft:     #EDF1F6;  --ios-ink:     #2A4060;
 
-  /* Sidebar */
-  --sidebar: #1A1140;
-  --sidebar-2: #23174F;
-  --sidebar-foreground: #C9C2E8;
-  --sidebar-muted: #8F86B8;
+  /* Sidebar (ink) */
+  --sidebar: #1A1918;
+  --sidebar-2: #252321;
+  --sidebar-foreground: #DDD9D1;
+  --sidebar-muted: #9A948A;   /* 5.8:1 on --sidebar */
 
   /* Overlay scrim */
-  --overlay: rgb(20 12 51 / 0.5);
-
-  /* Module hues — icon-chip fills / indicators only. Not for text. */
-  --mod-home: #5B3BF0;
-  --mod-tasks: #5B3BF0;
-  --mod-scrum: #0891B2;
-  --mod-slack: #C026D3;
-  --mod-mail: #2563EB;
-  --mod-planning: #059669;
-  --mod-features: #E11D74;
-  --mod-resources: #B7791F;
-  --mod-outings: #E8590C;
-  --mod-settings: #6B6485;
+  --overlay: rgb(26 25 24 / 0.5);
 }
 
 @theme inline {
@@ -82,6 +74,8 @@
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
+  --color-signal: var(--signal);
+  --color-caution-mark: var(--caution-mark);
   --color-pop: var(--pop);
   --color-pop-ink: var(--pop-ink);
   --color-pop-soft: var(--pop-soft);
@@ -112,16 +106,6 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-muted: var(--sidebar-muted);
   --color-overlay: var(--overlay);
-  --color-mod-home: var(--mod-home);
-  --color-mod-tasks: var(--mod-tasks);
-  --color-mod-scrum: var(--mod-scrum);
-  --color-mod-slack: var(--mod-slack);
-  --color-mod-mail: var(--mod-mail);
-  --color-mod-planning: var(--mod-planning);
-  --color-mod-features: var(--mod-features);
-  --color-mod-resources: var(--mod-resources);
-  --color-mod-outings: var(--mod-outings);
-  --color-mod-settings: var(--mod-settings);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -135,11 +119,10 @@
   --radius-card: 1rem;         /* 16px — cards, stat tiles, tables, list containers */
   --radius-modal: 1.25rem;     /* 20px — modals, hero, login card */
 
-  --shadow-card: 0 1px 2px rgb(31 22 64 / 0.04), 0 1px 3px rgb(31 22 64 / 0.06);
-  --shadow-raised: 0 6px 16px -4px rgb(31 22 64 / 0.12), 0 2px 4px rgb(31 22 64 / 0.05);
-  --shadow-overlay: 0 24px 48px -12px rgb(31 22 64 / 0.30), 0 0 0 1px rgb(31 22 64 / 0.05);
-  --shadow-glow: 0 6px 18px -6px rgb(91 59 240 / 0.55);
-  --shadow-chip: 0 4px 10px -3px rgb(31 22 64 / 0.25);
+  /* Neutral ink shadows only — no coloured glows */
+  --shadow-card: 0 1px 2px rgb(26 25 24 / 0.04);
+  --shadow-raised: 0 4px 12px -4px rgb(26 25 24 / 0.10), 0 1px 2px rgb(26 25 24 / 0.04);
+  --shadow-overlay: 0 20px 40px -12px rgb(26 25 24 / 0.25), 0 0 0 1px rgb(26 25 24 / 0.05);
 
   --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 
@@ -154,29 +137,6 @@
   @keyframes sheet-up { from { transform: translateY(100%) } to { transform: none } }
   @keyframes drawer-in { from { transform: translateX(-100%) } to { transform: none } }
   @keyframes pop { 0% { transform: scale(0.8) } 60% { transform: scale(1.12) } 100% { transform: scale(1) } }
-}
-
-@utility bg-brand-gradient {
-  background-image: linear-gradient(135deg, var(--accent) 0%, #9B5CF6 55%, var(--pop) 100%);
-}
-
-@utility bg-hero {
-  background-image:
-    radial-gradient(120% 140% at 100% 0%, rgb(255 107 74 / 0.55) 0%, transparent 55%),
-    linear-gradient(135deg, #2A1B66 0%, var(--accent) 70%);
-}
-
-@utility sidebar-surface {
-  background-image:
-    radial-gradient(120% 50% at 0% 0%, rgb(124 92 255 / 0.35) 0%, transparent 60%),
-    linear-gradient(180deg, var(--sidebar-2) 0%, var(--sidebar) 100%);
-}
-
-@utility app-canvas {
-  background:
-    radial-gradient(900px 320px at 0% -80px, rgb(91 59 240 / 0.07), transparent 70%),
-    radial-gradient(700px 260px at 100% -80px, rgb(255 107 74 / 0.06), transparent 70%),
-    var(--background);
 }
 
 @utility no-scrollbar {
@@ -213,11 +173,11 @@
   }
 
   ::selection {
-    background: rgb(91 59 240 / 0.2);
+    background: rgb(232 89 12 / 0.18);
   }
 
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--signal);
     outline-offset: 2px;
   }
 

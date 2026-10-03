@@ -69,7 +69,7 @@ function TaskRow({
         overdue &&
           "border-danger/25 bg-danger-soft/50 shadow-[inset_3px_0_0_var(--danger)] hover:shadow-[inset_3px_0_0_var(--danger),var(--shadow-card)]",
         reminderDue &&
-          "border-accent/25 bg-accent-soft/50 shadow-[inset_3px_0_0_var(--accent)] hover:shadow-[inset_3px_0_0_var(--accent),var(--shadow-card)]"
+          "border-accent/25 bg-accent-soft/50 shadow-[inset_3px_0_0_var(--signal)] hover:shadow-[inset_3px_0_0_var(--signal),var(--shadow-card)]"
       )}
     >
       <button
@@ -124,7 +124,7 @@ function TaskRow({
         type="button"
         onClick={() => onDelete(task.id)}
         aria-label="Delete task"
-        className="-my-1 grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted opacity-100 transition-[opacity,background-color,color] hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+        className="-my-1 grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted opacity-100 transition-[opacity,background-color,color] hover:bg-danger-soft hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
       >
         <Trash2 className="h-4 w-4" />
       </button>

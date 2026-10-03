@@ -81,15 +81,15 @@ export function HomeDashboard() {
     <div>
       {error && <ErrorBanner message={error} onDismiss={clearError} />}
 
-      <section className="mb-6 rounded-modal bg-hero p-5 text-white shadow-raised sm:p-7">
-        <h1 className="text-balance font-display text-[28px] font-bold leading-[34px] tracking-[-0.02em] sm:text-[34px] sm:leading-10">
+      <section className="mb-6 rounded-modal border border-border bg-card p-5 shadow-card sm:p-7">
+        <h1 className="text-balance font-display text-[28px] font-bold leading-[34px] tracking-[-0.02em] text-foreground sm:text-[34px] sm:leading-10">
           {`${greeting}, ${store.profile.name}`}
         </h1>
-        <p className="mt-1 text-sm text-white/80">
+        <p className="mt-1 text-sm text-muted">
           {`${store.profile.role} · ${new Date().toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" })}`}
         </p>
         {stats.overdueCount > 0 && (
-          <p className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-sm ring-1 ring-white/25">
+          <p className="mt-4 inline-flex flex-wrap items-center gap-2 rounded-full bg-danger-soft px-3 py-1.5 text-sm text-danger ring-1 ring-inset ring-danger/20">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>
               <strong>{stats.overdueCount} overdue</strong> — tackle these first to unblock the team.
@@ -297,7 +297,7 @@ export function HomeDashboard() {
       </div>
 
       {nextOuting && (
-        <Card className="mt-6 bg-[linear-gradient(135deg,var(--pop-soft),var(--card)_60%)]">
+        <Card className="mt-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <ModuleChip module="outings" size="md" />

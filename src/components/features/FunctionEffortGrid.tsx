@@ -20,7 +20,7 @@ import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui";
 
 const effortInputClass =
-  "w-full rounded-md border border-transparent bg-surface-2 px-1 py-0.5 text-center text-[11px] font-semibold tabular-nums leading-tight outline-none transition-colors placeholder:text-subtle hover:border-input focus:border-accent focus:bg-card focus:ring-2 focus:ring-accent/15 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+  "w-full rounded-md border border-transparent bg-surface-2 px-1 py-0.5 text-center text-[11px] font-semibold tabular-nums leading-tight outline-none transition-colors placeholder:text-subtle hover:border-input focus:border-signal focus:bg-card focus:ring-2 focus:ring-signal/15 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 interface FunctionEffortGridProps {
   functionCosts?: ReleaseFunctionCost[];

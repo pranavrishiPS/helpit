@@ -205,7 +205,7 @@ function FeatureDialog({
 // Sequence colors so the milestone order reads at a glance.
 const MILESTONE_BARS = {
   start: "shadow-[inset_2px_0_0_var(--info)]",
-  scope: "shadow-[inset_2px_0_0_var(--accent)]",
+  scope: "shadow-[inset_2px_0_0_var(--signal)]",
   preprod: "shadow-[inset_2px_0_0_var(--caution)]",
   release: "shadow-[inset_2px_0_0_var(--success)]",
 } as const;
@@ -313,7 +313,7 @@ function FeatureCard({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            className="group flex w-full items-start justify-between gap-2 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="group flex w-full items-start justify-between gap-2 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           >
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
@@ -333,8 +333,8 @@ function FeatureCard({
             </span>
           </button>
 
-          <div className="mt-2.5 flex items-start gap-1.5">
-            <div className="grid min-w-0 flex-1 grid-cols-2 gap-1.5 sm:grid-cols-4">
+          <div className="@container mt-2.5 flex items-start gap-1.5">
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-1.5 @[40rem]:grid-cols-4">
               <MilestonePill
                 bar="start"
                 label="Start"

@@ -1,15 +1,17 @@
-# Visual redesign: "Arcade Night"
+# Visual redesign: "Ink & signal orange"
 
-Status: ready for Dev · Owner: UI · Scope: whole app (shell, all pages, shared UI)
+Status: implemented (colour + surface pass on top of the earlier "Arcade Night" layout) · Owner: UI · Scope: whole app (shell, all pages, shared UI)
 Visual only. No data, API, or behavior changes unless a line below says "(tiny API add)".
 
 ---
 
 ## 1. Direction
 
-**Arcade Night.** It's a deep indigo-plum night sidebar with an electric-violet primary and a warm coral "pop" accent. The violet-to-coral gradient is the brand mark. Each module gets its own hue, so you always know where you are. Headings use a characterful grotesque display font, and dense UI text stays in a clean sans. Surfaces are soft, lavender-tinted, and layered. Motion stays quiet: a hover lift, a press, and a little pop when you check something off.
+**Ink & signal orange.** Calm and editorial. A near-black ink sidebar, warm paper canvas, white cards with a thin warm-grey border, and one accent: a signal orange used sparingly. Surfaces are flat. Shadows are subtle and neutral (ink at low alpha). There are **no** gradients, glows, coloured shadows, purple, or per-module rainbow hues. Modules are told apart by icon shape and label, not colour; the active nav item is marked with the orange accent. Headings use Bricolage Grotesque, UI text stays in Geist. Motion stays quiet: a hover lift, a press, and a little pop when you check something off.
 
-The look should feel like a game studio (energy, color, personality) but work like a producer's cockpit: dense, scannable, AA contrast everywhere, and no decoration that costs space on 375px.
+The look should feel like a producer's cockpit: dense, scannable, AA contrast everywhere, and no decoration that costs space on 375px.
+
+**Two oranges.** `--signal` `#E8590C` fails AA as text and behind white text, so it is for non-text marks only (active-nav bar, focus ring, dots, progress fills, left/top indicator bars). `--accent` `#C2410C` is the text-safe orange for links, accent text, and primary button fills.
 
 **Dark mode: not in this pass.** The sidebar is already dark. A full dark theme needs dark versions of every soft tint, the calendar banners, and native date pickers, which roughly doubles the QA. Every color below is a CSS variable, so adding `@media (prefers-color-scheme: dark)` later only means overriding the `:root` values. For now, set `color-scheme: light`.
 
@@ -25,35 +27,37 @@ Replace the current `:root` and `@theme inline` blocks with the ones below. **Ba
 :root {
   color-scheme: light;
 
-  /* Neutrals — lavender-tinted, never pure gray */
-  --background: #F7F6FB;      /* app canvas */
+  /* Neutrals — warm paper + ink */
+  --background: #F6F4EF;      /* app canvas (paper) */
   --card: #FFFFFF;            /* cards, inputs, popovers, modals */
-  --surface-2: #F3F1F9;       /* wells, table heads, hover fill, section bands */
-  --surface-3: #E9E6F3;       /* pressed/selected neutral, progress tracks, skeletons */
-  --border: #E6E2F0;          /* card + divider lines (decorative) */
-  --border-strong: #D3CDE5;   /* hover borders, dashed drop zones */
-  --border-input: #8E87AB;    /* form control outline — 3.4:1 on white (WCAG 1.4.11) */
+  --surface-2: #F1EEE7;       /* wells, table heads, hover fill, section bands */
+  --surface-3: #E8E4DB;       /* pressed/selected neutral, progress tracks, skeletons */
+  --border: #E4E0D8;          /* card + divider lines (decorative) */
+  --border-strong: #D3CDC2;   /* hover borders, dashed drop zones */
+  --border-input: #8C857A;    /* form control outline — 3.6:1 on white (WCAG 1.4.11) */
 
-  --foreground: #1F1640;      /* body + headings (ink) */
-  --muted: #6B6485;           /* secondary text — 5.5:1 on white, 4.5:1 on surface-3 */
-  --subtle: #9A93B3;          /* placeholders, decorative icons, disabled. NEVER essential text */
+  --foreground: #1A1918;      /* body + headings (ink) */
+  --muted: #6F6A62;           /* secondary text — see §2.5 */
+  --subtle: #A39E94;          /* placeholders, decorative icons, disabled. NEVER essential text */
 
-  --brand: #1F1640;           /* = ink; kept for back-compat (text-brand) */
-  --brand-hover: #140C33;
+  --brand: #1A1918;           /* = ink; kept for back-compat (text-brand) */
+  --brand-hover: #000000;
 
-  /* Primary + brand pop */
-  --accent: #5B3BF0;          /* electric violet — primary buttons, links, focus. 6.4:1 white */
-  --accent-hover: #4A2AD6;
-  --accent-soft: #EEEAFF;     /* accent text on this = 5.4:1 */
-  --pop: #FF6B4A;             /* coral — decorative fills, gradient end. Text ON it must be ink */
-  --pop-ink: #B3361B;         /* coral text — 5.3:1 on pop-soft */
-  --pop-soft: #FFEDE8;
+  /* Accent */
+  --accent: #C2410C;          /* text-safe orange: links, accent text, primary fills (white text) */
+  --accent-hover: #9A3412;
+  --accent-soft: #FDF0E8;
+  --signal: #E8590C;          /* NON-TEXT marks only: active nav bar, focus ring, dots, progress */
+  --pop: var(--signal);       /* back-compat alias — text on it must be ink */
+  --pop-ink: var(--accent);
+  --pop-soft: var(--accent-soft);
 
-  /* Semantic (each "ink" color passes 4.5:1 on its own -soft tint AND as white-on-solid) */
-  --success: #0F7B45;  --success-hover: #0B6338;  --success-soft: #E3F6EA;
-  --caution: #B45309;  --caution-hover: #92400E;  --caution-soft: #FFF4DC;
-  --danger:  #C21F45;  --danger-hover:  #A3173A;  --danger-soft:  #FDECEF;
-  --info:    #0E7490;  --info-hover:    #0B5F76;  --info-soft:    #E0F5FA;
+  /* Semantic — each text colour passes 4.5:1 on white AND on its own -soft tint */
+  --success: #2F7D4F;  --success-hover: #24613D;  --success-soft: #EEF6F0;
+  --caution: #8A5A12;  --caution-hover: #6F480E;  --caution-soft: #FBF3E4;  /* text shade of #B7791F */
+  --caution-mark: #B7791F;    /* the brighter amber, non-text marks only */
+  --danger:  #B42318;  --danger-hover:  #912018;  --danger-soft:  #FCEDEB;  /* true red, not orange */
+  --info:    #3D5A80;  --info-hover:    #2F4766;  --info-soft:    #EDF1F6;  /* slate blue */
 
   /* Back-compat aliases — existing "warning" usages are all red/danger semantics */
   --warning: var(--danger);
@@ -61,32 +65,22 @@ Replace the current `:root` and `@theme inline` blocks with the ones below. **Ba
   --accent-secondary: var(--info);
   --accent-secondary-hover: var(--info-hover);
 
-  /* Platforms (Planning, Mail approvals, Dashboard) */
-  --android: #15803D;  --android-soft: #DCF5E5;  --android-ink: #14532D;
-  --ios:     #2563EB;  --ios-soft:     #E0EAFF;  --ios-ink:     #1E3A8A;
+  /* Platforms — muted moss vs slate, always shown next to the platform name */
+  --android: #4A6B3A;  --android-soft: #EFF3EC;  --android-ink: #34502A;
+  --ios:     #3D5A80;  --ios-soft:     #EDF1F6;  --ios-ink:     #2A4060;
 
-  /* Sidebar */
-  --sidebar: #1A1140;
-  --sidebar-2: #23174F;
-  --sidebar-foreground: #C9C2E8;   /* 10:1 */
-  --sidebar-muted: #8F86B8;        /* 5.2:1 */
+  /* Sidebar (flat ink) */
+  --sidebar: #1A1918;
+  --sidebar-2: #252321;
+  --sidebar-foreground: #DDD9D1;
+  --sidebar-muted: #9A948A;
 
   /* Overlay scrim */
-  --overlay: rgb(20 12 51 / 0.5);
-
-  /* Module hues — icon-chip fills / indicators only (white icon on each ≥ 3:1). Not for text. */
-  --mod-home: #5B3BF0;       /* rendered as brand gradient, see 4.11 */
-  --mod-tasks: #5B3BF0;      /* violet */
-  --mod-scrum: #0891B2;      /* cyan */
-  --mod-slack: #C026D3;      /* magenta */
-  --mod-mail: #2563EB;       /* blue */
-  --mod-planning: #059669;   /* emerald */
-  --mod-features: #E11D74;   /* rose */
-  --mod-resources: #B7791F;  /* amber */
-  --mod-outings: #E8590C;    /* tangerine */
-  --mod-settings: #6B6485;   /* ink-gray */
+  --overlay: rgb(26 25 24 / 0.5);
 }
 ```
+
+The `--mod-*` per-module hues are **removed**.
 
 ### 2.2 Tailwind theme mapping
 
@@ -107,6 +101,8 @@ Replace the current `:root` and `@theme inline` blocks with the ones below. **Ba
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
+  --color-signal: var(--signal);
+  --color-caution-mark: var(--caution-mark);
   --color-pop: var(--pop);
   --color-pop-ink: var(--pop-ink);
   --color-pop-soft: var(--pop-soft);
@@ -137,16 +133,6 @@ Replace the current `:root` and `@theme inline` blocks with the ones below. **Ba
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-muted: var(--sidebar-muted);
   --color-overlay: var(--overlay);
-  --color-mod-home: var(--mod-home);
-  --color-mod-tasks: var(--mod-tasks);
-  --color-mod-scrum: var(--mod-scrum);
-  --color-mod-slack: var(--mod-slack);
-  --color-mod-mail: var(--mod-mail);
-  --color-mod-planning: var(--mod-planning);
-  --color-mod-features: var(--mod-features);
-  --color-mod-resources: var(--mod-resources);
-  --color-mod-outings: var(--mod-outings);
-  --color-mod-settings: var(--mod-settings);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -159,11 +145,10 @@ Replace the current `:root` and `@theme inline` blocks with the ones below. **Ba
   --radius-card: 1rem;         /* 16px — cards, stat tiles, tables, list containers */
   --radius-modal: 1.25rem;     /* 20px — modals, hero, login card */
 
-  --shadow-card: 0 1px 2px rgb(31 22 64 / 0.04), 0 1px 3px rgb(31 22 64 / 0.06);
-  --shadow-raised: 0 6px 16px -4px rgb(31 22 64 / 0.12), 0 2px 4px rgb(31 22 64 / 0.05);
-  --shadow-overlay: 0 24px 48px -12px rgb(31 22 64 / 0.30), 0 0 0 1px rgb(31 22 64 / 0.05);
-  --shadow-glow: 0 6px 18px -6px rgb(91 59 240 / 0.55);       /* primary button */
-  --shadow-chip: 0 4px 10px -3px rgb(31 22 64 / 0.25);        /* module icon chips */
+  /* Neutral ink shadows only. shadow-glow and shadow-chip are removed. */
+  --shadow-card: 0 1px 2px rgb(26 25 24 / 0.04);
+  --shadow-raised: 0 4px 12px -4px rgb(26 25 24 / 0.10), 0 1px 2px rgb(26 25 24 / 0.04);
+  --shadow-overlay: 0 20px 40px -12px rgb(26 25 24 / 0.25), 0 0 0 1px rgb(26 25 24 / 0.05);
 
   --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 
@@ -184,33 +169,16 @@ Replace the current `:root` and `@theme inline` blocks with the ones below. **Ba
 ### 2.3 Global base + utilities (also in globals.css)
 
 ```css
-@utility bg-brand-gradient {
-  background-image: linear-gradient(135deg, var(--accent) 0%, #9B5CF6 55%, var(--pop) 100%);
-}
-@utility bg-hero {
-  background-image:
-    radial-gradient(120% 140% at 100% 0%, rgb(255 107 74 / 0.55) 0%, transparent 55%),
-    linear-gradient(135deg, #2A1B66 0%, var(--accent) 70%);
-}
-@utility sidebar-surface {
-  background-image:
-    radial-gradient(120% 50% at 0% 0%, rgb(124 92 255 / 0.35) 0%, transparent 60%),
-    linear-gradient(180deg, var(--sidebar-2) 0%, var(--sidebar) 100%);
-}
-@utility app-canvas {
-  background:
-    radial-gradient(900px 320px at 0% -80px, rgb(91 59 240 / 0.07), transparent 70%),
-    radial-gradient(700px 260px at 100% -80px, rgb(255 107 74 / 0.06), transparent 70%),
-    var(--background);
-}
+/* bg-brand-gradient, bg-hero, sidebar-surface and app-canvas are REMOVED.
+   Use flat bg-sidebar / bg-background / bg-card instead. */
 @utility no-scrollbar { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
 
 @layer base {
   html { accent-color: var(--accent); }
   body { background: var(--background); color: var(--foreground); font-family: var(--font-sans), system-ui, sans-serif; }
   h1, h2, h3 { font-family: var(--font-display), var(--font-sans), sans-serif; letter-spacing: -0.01em; }
-  ::selection { background: rgb(91 59 240 / 0.2); }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  ::selection { background: rgb(232 89 12 / 0.18); }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
   input[type="date"], input[type="datetime-local"] { color-scheme: light; }
 }
 
@@ -225,7 +193,28 @@ The `:focus-visible` outline is a safety net for the many ad-hoc buttons. Compon
 
 ### 2.4 Hex-value rule
 
-Components use tokens only. The only allowed literals are `text-white` on solid accent/success/danger/info/mod fills and inside the sidebar; the rgb values inside the `globals.css` utilities above; and `src/app/icon.tsx`, where `ImageResponse` can't read CSS variables. For icon.tsx, change it to background `linear-gradient(135deg,#5B3BF0,#FF6B4A)`, color `#FFFFFF`, and radius 8.
+Components use tokens only. The only allowed literals are `text-white` on solid accent/success/danger/info fills and inside the sidebar; the rgb values in `globals.css`; and `src/app/icon.tsx`, where `ImageResponse` can't read CSS variables. icon.tsx is a solid mark: background `#E8590C` (signal), ink `#1A1918` "H", radius 8. No gradients anywhere (the only `linear-gradient` left is the `scroll-fade-x` mask, which is not a visible colour).
+
+### 2.5 AA contrast check (WCAG 2.x, computed)
+
+| Pair | Ratio | Result |
+|---|---|---|
+| Ink `#1A1918` on white / paper | 17.6 / 16.0 | AA |
+| Muted `#6F6A62` on white | 5.4 | AA |
+| Muted on paper `#F6F4EF` | 4.9 | AA |
+| Muted on surface-2 `#F1EEE7` | 4.6 | AA |
+| Muted on surface-3 `#E8E4DB` | 4.2 | **fails** — don't put muted text on surface-3 (inactive Tabs count pill now uses ink) |
+| Accent `#C2410C` on white / paper / accent-soft | 5.2 / 4.7 / 4.6 | AA |
+| White on accent (primary button) | 5.2 | AA |
+| Signal `#E8590C` on white | 3.6 | non-text only (≥3:1 for UI marks, 1.4.11) |
+| Ink on signal (logo "H", solid `pop` badge) | 4.9 | AA |
+| Success `#2F7D4F` on white / success-soft | 5.0 / 4.6 | AA |
+| Caution `#B7791F` on white | 3.6 | fails as text → text uses `#8A5A12` (5.9 white, 5.4 on caution-soft) |
+| Danger `#B42318` on white / danger-soft | 6.6 / 5.8 | AA |
+| Info / iOS `#3D5A80` on white | 7.1 | AA |
+| Android `#4A6B3A` on white | 6.1 | AA |
+| Sidebar-muted `#9A948A` on sidebar `#1A1918` | 5.8 | AA |
+| Input border `#8C857A` on white | 3.6 | 1.4.11 |
 
 ---
 
@@ -265,7 +254,8 @@ const bricolage = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-br
 
 Shared rules for all components:
 - Transitions are `transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-[var(--ease-soft)]`.
-- Focus is `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card`.
+- Focus is `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-card`. Every ad-hoc `ring-accent` focus ring is `ring-signal`.
+- Non-text indicator bars (`shadow-[inset_3px_0_0_…]`, `before:bg-…`, top bars) use `var(--signal)`.
 - Minimum touch target on phones is 32px (`h-8 w-8`) for icon buttons.
 
 ### 4.1 Button (restyle + tiny API add)
@@ -283,7 +273,7 @@ export function buttonClasses({ variant = "primary", size = "md" } = {}): string
 | `size="sm"` | `h-8 px-3 text-xs` (icons `h-3.5 w-3.5`) |
 | `size="md"` | `h-10 px-4 text-sm` (icons `h-4 w-4`) |
 | `size="icon"` (new) | `h-8 w-8 p-0` (for the Plus-only add buttons) |
-| `primary` | `bg-accent text-white shadow-glow hover:bg-accent-hover` + `shadow-[inset_0_1px_0_rgb(255_255_255/0.18)]` combined with glow |
+| `primary` | `bg-accent text-white shadow-card hover:bg-accent-hover` (flat, no glow or inner highlight) |
 | `secondary` | `bg-card text-foreground border border-border-strong shadow-card hover:bg-surface-2 hover:border-input/60` |
 | `ghost` | `text-muted hover:bg-surface-2 hover:text-foreground` |
 | `danger` | `bg-danger-soft text-danger hover:bg-danger hover:text-white` |
@@ -335,10 +325,10 @@ Text stays sentence case. Status labels keep their current text, and the existin
 New optional props: `icon?: LucideIcon`, `module?: ModuleId`, `href?: string`, `tone?: "default"|"attention"` (`accent` stays as an alias for `attention`).
 
 - Container: Card plus `relative overflow-hidden p-4`. With `href`, wrap it in a `Link` with `interactive`.
-- Top row: label as an eyebrow (11px uppercase muted) on the left, and a 28px soft chip on the right: `rounded-lg bg-mod-x/12 text-mod-x` with the icon at `h-4 w-4`.
+- Top row: label as an eyebrow (11px uppercase muted) on the left, and a 28px neutral chip on the right: `rounded-lg bg-surface-2 text-muted` with the icon at `h-4 w-4`.
 - Value: `mt-2 font-display text-[30px] sm:text-[34px] leading-none font-bold tabular-nums text-foreground`. If the value is 0, use `text-muted`.
 - Hint: `mt-1.5 text-xs text-muted`.
-- `attention`: `border-accent/30 bg-[linear-gradient(180deg,var(--accent-soft)_0%,var(--card)_70%)]`, the value in `text-accent`, and a 6px pulsing dot next to the label (`bg-accent animate-pulse`).
+- `attention`: flat white card with `border-signal/40`, the value in `text-accent`, and a 6px pulsing dot next to the label (`bg-signal animate-pulse`). No gradient fill.
 
 ### 4.6 Input / Select / Textarea / Label (new, replaces 7 duplicated `inputClass` strings)
 
@@ -346,10 +336,10 @@ Export `fieldClasses` plus thin components `Input`, `Select`, `Textarea`, and `L
 
 | Part | Classes |
 |---|---|
-| Base | `w-full rounded-control border border-input bg-card px-3 text-sm text-foreground placeholder:text-subtle shadow-[inset_0_1px_1px_rgb(31_22_64/0.04)] outline-none transition` |
+| Base | `w-full rounded-control border border-input bg-card px-3 text-sm text-foreground placeholder:text-subtle outline-none transition` |
 | Height | Input/Select `h-10` (md) / `h-8 text-xs px-2.5` (`size="sm"`); Textarea `py-2 min-h-[4.5rem] resize-y` |
 | Hover | `hover:border-foreground/40` |
-| Focus | `focus:border-accent focus:ring-4 focus:ring-accent/15` |
+| Focus | `focus:border-signal focus:ring-4 focus:ring-signal/15` |
 | Invalid | `aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/15` |
 | Disabled / read-only display | `disabled:bg-surface-2 disabled:text-muted disabled:cursor-not-allowed` |
 | Select | `pr-8 cursor-pointer` (native arrow kept) |
@@ -368,7 +358,7 @@ These replace Tasks (`bg-brand` pills), Resources (small brand pills), and MailT
 - Wrapper: `max-w-full overflow-x-auto no-scrollbar`, and inside it `inline-flex gap-1 rounded-control bg-surface-2 p-1 ring-1 ring-inset ring-border`.
 - Item: `h-8 shrink-0 rounded-lg px-3 text-xs font-semibold text-muted hover:text-foreground` with `aria-pressed`.
 - Active: `bg-card text-foreground shadow-card`.
-- Count: `ml-1.5 rounded-full bg-surface-3 px-1.5 text-[11px] tabular-nums`. When the item is active, the count gets `bg-accent-soft text-accent`.
+- Count: `ml-1.5 rounded-full bg-surface-3 px-1.5 text-[11px] tabular-nums text-foreground` (muted on surface-3 fails AA). When the item is active, the count gets `bg-accent-soft text-accent`.
 
 ### 4.8 Table (new thin wrappers, or exported class constants)
 
@@ -378,7 +368,7 @@ These replace Tasks (`bg-brand` pills), Resources (small brand pills), and MailT
 | thead tr | `bg-surface-2 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted` |
 | th / td | `px-3 py-2.5`; numeric `text-right tabular-nums` (or center for checkmark columns) |
 | tbody tr | `border-t border-border transition-colors hover:bg-surface-2/60` |
-| Selected row | `bg-accent-soft shadow-[inset_3px_0_0_var(--accent)]` |
+| Selected row | `bg-accent-soft shadow-[inset_3px_0_0_var(--signal)]` |
 | Success row | `bg-success-soft/60` |
 
 ### 4.9 Modal (new `Modal` shell; 5 dialogs share it)
@@ -400,7 +390,7 @@ These dialogs share it: NewReleaseDialog, FeatureDialog, ResourceDialog, NewOuti
 New optional props: `module?: ModuleId` and `icon?: LucideIcon`.
 
 - Layout: `mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`.
-- Left: a ModuleChip lg (40px, `rounded-xl`, `shadow-chip`), then the title block.
+- Left: a ModuleChip lg (40px, `rounded-xl`, neutral), then the title block.
 - h1: display 24 → 28, 700, `text-foreground`, `text-balance`.
 - Description: `mt-0.5 text-sm text-muted`.
 - Action: `shrink-0`. On phones it goes full-width under the title when it's a single primary button (`w-full sm:w-auto` on the button).
@@ -409,23 +399,23 @@ New optional props: `module?: ModuleId` and `icon?: LucideIcon`.
 
 ```ts
 export type ModuleId = NavItem["id"];
-export const MODULE_STYLES: Record<ModuleId, { solid: string; soft: string; text: string }> = {
-  home:      { solid: "bg-brand-gradient", soft: "bg-accent-soft", text: "text-accent" },
-  tasks:     { solid: "bg-mod-tasks",     soft: "bg-mod-tasks/12",     text: "text-mod-tasks" },
-  scrum:     { solid: "bg-mod-scrum",     soft: "bg-mod-scrum/12",     text: "text-mod-scrum" },
-  // …slack, mail, planning, features, resources, outings, settings likewise
+const NEUTRAL_MODULE_STYLE = {
+  solid: "bg-surface-2 text-foreground ring-1 ring-inset ring-border",
+  soft: "bg-surface-2",
+  text: "text-muted",
 };
+export const MODULE_STYLES: Record<ModuleId, …> = { home: NEUTRAL_MODULE_STYLE, tasks: NEUTRAL_MODULE_STYLE, … };
 ```
 
-Write the class strings out in full (no string building) so Tailwind can detect them.
+Every module gets the same neutral treatment; no per-module hues. The record shape stays so callers don't change.
 
-ModuleChip sizes: sm 28px `rounded-lg` with a `h-4` icon; md 36px `rounded-xl` with a `h-[18px]` icon; lg 40px `rounded-xl` with a `h-5` icon. The `solid` variant is `text-white shadow-chip`. The `soft` variant uses the `text-mod-x` icon color. Icons are the same lucide icons as `AppShell` ICONS. Move that map into `modules.ts` so the shell, PageHeader, and Modal share it.
+ModuleChip sizes: sm 28px `rounded-lg` with a `h-4` icon; md 36px `rounded-xl` with a `h-[18px]` icon; lg 40px `rounded-xl` with a `h-5` icon. The `solid` variant is a paper chip with an ink icon and hairline ring (no shadow). The `soft` variant is a well with a muted icon. Icons are the same lucide icons as `AppShell` ICONS. Move that map into `modules.ts` so the shell, PageHeader, and Modal share it.
 
 ### 4.12 EmptyState (restyle + tiny API add)
 
 New optional props: `icon?: LucideIcon`, `action?: ReactNode`, `compact?: boolean`.
 
-- Default: `py-10`. Icon well is 48px `rounded-2xl bg-[linear-gradient(135deg,var(--accent-soft),var(--pop-soft))] text-accent` with a 22px icon and `ring-1 ring-inset ring-accent/10`.
+- Default: `py-10`. Icon well is 48px `rounded-2xl bg-surface-2 text-muted` with a 22px icon and `ring-1 ring-inset ring-border`.
 - Title: `mt-3 text-sm font-semibold text-foreground`.
 - Description: `mt-1 max-w-sm text-[13px] text-muted`.
 - Action: `mt-4`.
@@ -445,7 +435,7 @@ New optional props: `icon?: LucideIcon`, `action?: ReactNode`, `compact?: boolea
 ### 4.15 Checkbox (task complete / mail todo complete)
 
 - Shape: 20px `rounded-md border-2 border-input bg-card`. MailTodos keeps its circular 22px variant.
-- Hover: `border-accent bg-accent-soft`.
+- Hover: `border-signal bg-accent-soft`.
 - Done: `border-success bg-success text-white`, and the check icon gets `animate-pop`.
 - Done row: title `line-through text-muted`, and the row is `opacity-70` (instead of 55–60, which drops muted text under AA).
 
@@ -458,16 +448,16 @@ New optional props: `icon?: LucideIcon`, `action?: ReactNode`, `compact?: boolea
 ## 5. Shell (`src/components/layout/AppShell.tsx`)
 
 ### Sidebar (desktop, lg+)
-- `w-64 sidebar-surface text-sidebar-foreground`, with a right hairline `border-r border-white/5`.
-- **Brand block:** `px-5 pt-6 pb-5`. Logo chip is 36px `rounded-xl bg-brand-gradient shadow-chip` with a white Sparkles icon. "Helpit" is display 18 700 `text-white`. "Command center" is `text-[11px] text-sidebar-muted`. Drop the bottom border and let spacing separate it.
+- `w-64 bg-sidebar text-sidebar-foreground` (flat ink, no gradient), with a right hairline `border-r border-white/5`.
+- **Brand block:** `px-5 pt-6 pb-5`. Logo is a solid 36px `rounded-xl bg-signal` mark with an ink "H" in display bold (no Sparkles icon, no shadow). "Helpit" is display 18 700 `text-white`. "Command center" is `text-[11px] text-sidebar-muted`. Drop the bottom border and let spacing separate it.
 - **Nav item:** `group flex h-10 items-center gap-3 rounded-control px-2 text-sm font-medium`.
   - Icon chip: 28px `rounded-lg grid place-items-center`.
-  - Inactive: `text-sidebar-foreground/85 hover:bg-white/[0.06] hover:text-white`. The chip is transparent and the icon is `text-sidebar-muted group-hover:text-white`.
-  - Active: `bg-white/[0.10] text-white ring-1 ring-inset ring-white/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]`. The chip is filled with `MODULE_STYLES[id].solid` plus a white icon and `shadow-chip`. Home's chip is the brand gradient.
-  - Focus: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70`.
+  - Inactive: `text-sidebar-foreground/85 hover:bg-white/[0.05] hover:text-white`. The chip is transparent and the icon is `text-sidebar-muted group-hover:text-white`.
+  - Active: `relative bg-white/[0.07] text-white`, a 3px `bg-signal` bar on the left edge (`absolute inset-y-2 left-0 rounded-full`), and the icon in `text-signal`. No filled chip, no ring, no shadow.
+  - Focus: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal`.
   - Add `aria-current="page"` on the active item.
 - Spacing: `space-y-0.5 px-3 py-2`.
-- **Footer:** `m-3 rounded-card bg-white/[0.05] ring-1 ring-inset ring-white/10 p-3`. It shows "PlaySimple Games" in `text-xs text-sidebar-foreground`, then "v0.1 — building daily" in `text-[11px] text-sidebar-muted`, then Sign out as a full-width row button (`mt-2 h-8 rounded-lg text-xs text-sidebar-foreground hover:bg-white/10 hover:text-white` with a `LogOut h-3.5` icon).
+- **Footer:** `m-3 rounded-card bg-white/[0.04] ring-1 ring-inset ring-white/10 p-3`. It shows "PlaySimple Games" in `text-xs text-sidebar-foreground`, then "v0.1 — building daily" in `text-[11px] text-sidebar-muted`, then Sign out as a full-width row button (`mt-2 h-8 rounded-lg text-xs text-sidebar-foreground hover:bg-white/10 hover:text-white` with a `LogOut h-3.5` icon).
 - Replace every `text-slate-400/500/200` in the shell with `text-sidebar-muted` or `text-sidebar-foreground`.
 
 ### Mobile drawer (<lg)
@@ -481,7 +471,7 @@ New optional props: `icon?: LucideIcon`, `action?: ReactNode`, `compact?: boolea
 - The header must be inside the scroll container's sibling, as it is now. Keep `shrink-0`.
 
 ### Main
-- The scroll area gets `app-canvas`, padding `px-4 py-5 sm:p-6 lg:px-8 lg:py-7`, and `pb-[max(1.25rem,env(safe-area-inset-bottom))]`.
+- The scroll area gets flat `bg-background` (paper), padding `px-4 py-5 sm:p-6 lg:px-8 lg:py-7`, and `pb-[max(1.25rem,env(safe-area-inset-bottom))]`.
 - Content wrapper: `mx-auto w-full max-w-[1440px]`.
 
 ---
@@ -493,15 +483,15 @@ These functions decide most of the app's status colors. Re-point them like this:
 | Function / case | New classes |
 |---|---|
 | `priorityColor` urgent | Badge solid danger: `bg-danger text-white border-danger` |
-| high | `bg-pop-soft text-pop-ink border-pop/30` |
+| high | `bg-accent-soft text-accent border-accent/30` |
 | medium | `bg-info-soft text-info border-info/20` |
 | low / default | `bg-surface-2 text-muted border-border` |
 | `statusColor` done / live / completed | `text-success bg-success-soft` (currently accent blue, which reads as "in progress") |
 | in_progress / in_dev / qa | `text-info bg-info-soft` |
 | blocked | `text-danger bg-danger-soft` |
 | default | `text-muted bg-surface-2` |
-| `releasePhaseColor` ux | `text-accent bg-accent-soft border-accent/25` |
-| art | `text-pop-ink bg-pop-soft border-pop/30` |
+| `releasePhaseColor` ux | `text-foreground bg-surface-3 border-border-strong` (pop now = accent, so ux moved to neutral-strong to stay distinct from art) |
+| art | `text-accent bg-accent-soft border-accent/25` |
 | animation | `text-caution bg-caution-soft border-caution/25` |
 | dev | `text-info bg-info-soft border-info/25` |
 | qa | `text-success bg-success-soft border-success/25` |
@@ -567,30 +557,30 @@ Apply this everywhere. A `rg "(slate|gray|white|black|emerald|blue|sky|violet|in
 ## 9. Per-page checklist
 
 ### Global / shell
-- [ ] globals.css tokens, theme, utilities, base (§2). layout.tsx adds Bricolage (§3). icon.tsx gradient favicon.
+- [ ] globals.css tokens, theme, utilities, base (§2). layout.tsx adds Bricolage (§3). icon.tsx solid orange favicon with ink "H".
 - [ ] ui/index.tsx restyles plus new: `buttonClasses`, `CardHeader`, `CardLink`, `Badge tone`, `StatCard` props, `Input/Select/Textarea/Label`, `Tabs`, table styles, `Modal`, `ModuleChip`, `EmptyState` props, `Alert`, `Skeleton`, `SectionTitle`. Add `src/lib/modules.ts`.
 - [ ] AppShell per §5. SlackRateLimitToast per §4.13.
 - [ ] utils.ts color helpers per §6.
 - [ ] Replace every `<a><Button/></a>` and `<Link><Button/></Link>` with a styled link via `buttonClasses` (login, slack, MailInbox, settings ×2, ScrumSheetSync).
 
 ### Login (`src/app/login/page.tsx`)
-- [ ] Page background `bg-hero`, full bleed, with a centered card `max-w-sm rounded-modal p-8 shadow-overlay`.
-- [ ] Logo chip 48px `rounded-2xl bg-brand-gradient shadow-chip`. "Helpit" in display 28 700. The subtitle stays as is.
+- [ ] Page background flat `bg-background` (paper), with a centered card `max-w-sm rounded-modal border border-border p-8 shadow-raised`.
+- [ ] Logo: solid 48px `rounded-2xl bg-signal` mark with an ink "H" (display bold), same as the sidebar mark. "Helpit" in display 28 700. The subtitle stays as is.
 - [ ] Error becomes `Alert tone="danger"`. The Google button is an `<a>` with `buttonClasses({size:"md"})` and `w-full`.
 
 ### Home (`HomeDashboard.tsx`)
-- [ ] **Hero:** replace PageHeader with a hero card: `rounded-modal bg-hero text-white p-5 sm:p-7 shadow-raised`. The greeting is display 28→34 700. The role/date line is `text-white/80 text-sm`. When there are overdue tasks, the overdue alert sits inside the hero as a pill: `inline-flex mt-4 rounded-full bg-white/15 ring-1 ring-white/25 px-3 py-1.5 text-sm`, with an AlertCircle, the bold count, and the existing text.
+- [ ] **Hero:** a flat white card, not a coloured tile: `rounded-modal border border-border bg-card p-5 sm:p-7 shadow-card`. The greeting is display 28→34 700 `text-foreground`. The role/date line is `text-sm text-muted`. When there are overdue tasks, the overdue alert sits inside the hero as a pill: `inline-flex mt-4 rounded-full bg-danger-soft text-danger ring-1 ring-inset ring-danger/20 px-3 py-1.5 text-sm`, with an AlertCircle, the bold count, and the existing text.
 - [ ] **Stat tiles:** `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4`, each with a module icon and a link: Due today (tasks, CalendarCheck, `/tasks`, attention when >0), Open tasks (tasks, ListTodo, `/tasks`), Slack items (slack, MessageSquare, `/slack`), Mail items (mail, Mail, `/mail`), Due soon (tasks, CalendarClock, `/tasks`). On a 2-col phone grid the 5th tile spans 2 columns (`col-span-2 sm:col-span-1`) so there's no orphan.
 - [ ] **Card grid:** `lg:grid-cols-2 2xl:grid-cols-3 gap-4 sm:gap-5`. Every card uses `CardHeader` with a module chip: Due/Overdue (tasks; in the overdue case it uses the `danger` text color for the title count), Coming up (tasks), Slack (slack), Mail (mail), Releases in flight (planning, Rocket), Reminders (mail, BellRing).
 - [ ] Slack/Mail mini rows: `rounded-xl bg-surface-2/70 p-3 hover:bg-surface-2`, no border. The channel is `text-xs font-semibold text-foreground` (not `text-accent`).
 - [ ] Release rows: platform dot (8px `bg-android`/`bg-ios`), name in the platform color, date with `releasePlatformDateClass`, and status · phase as a Badge with `releasePhaseColor`. Separate rows with `divide-y divide-border`.
 - [ ] Empty text in cards becomes `EmptyState compact` with the same strings.
-- [ ] Next outing: Card with `bg-[linear-gradient(135deg,var(--pop-soft),var(--card)_60%)]` and an outings ModuleChip. "View outings" becomes a `buttonClasses({variant:"secondary",size:"sm"})` link instead of a Badge-in-Link.
+- [ ] Next outing: plain Card with an outings ModuleChip. "View outings" becomes a `buttonClasses({variant:"secondary",size:"sm"})` link instead of a Badge-in-Link.
 - [ ] Loading becomes a Skeleton (§4.14).
 
 ### Tasks (`tasks/page.tsx`, `TaskList.tsx`)
 - [ ] PageHeader `module="tasks"`. Filter becomes `Tabs`.
-- [ ] TaskRow: `rounded-xl border border-border bg-card p-3 hover:border-border-strong hover:shadow-card`. Overdue: `bg-danger-soft/50 border-danger/25 shadow-[inset_3px_0_0_var(--danger)]`. Reminder due: `bg-accent-soft/50 border-accent/25 shadow-[inset_3px_0_0_var(--accent)]`. Checkbox per §4.15. Priority Badge via `priorityColor`. Tags `rounded-chip bg-surface-2 px-1.5 text-[11px] text-muted`. Title `break-words`.
+- [ ] TaskRow: `rounded-xl border border-border bg-card p-3 hover:border-border-strong hover:shadow-card`. Overdue: `bg-danger-soft/50 border-danger/25 shadow-[inset_3px_0_0_var(--danger)]`. Reminder due: `bg-accent-soft/50 border-accent/25 shadow-[inset_3px_0_0_var(--signal)]`. Checkbox per §4.15. Priority Badge via `priorityColor`. Tags `rounded-chip bg-surface-2 px-1.5 text-[11px] text-muted`. Title `break-words`.
 - [ ] AddTaskForm: inputs become `Input`/`Select`. The expanded form is a `Card` with `border-accent/25 shadow-raised` (no `mt-4` when it's in the header action; it should drop under the header full-width on phones).
 - [ ] "No tasks here." becomes `EmptyState compact icon={ListTodo}`.
 
@@ -627,8 +617,8 @@ Apply this everywhere. A `rg "(slate|gray|white|black|emerald|blue|sky|violet|in
 - [ ] **Calendar header fix:** at about 1000px the month title truncates to "Oct…" because the legend and Today share the row. Make the title `shrink-0` with display 16 600. Move the legend to its own row (`basis-full order-last`) below `xl`.
 - [ ] Legend swatches: `bg-android-soft ring-1 ring-android/40`, `bg-ios-soft ring-1 ring-ios/40`, `bg-surface-3`.
 - [ ] Weekday header `bg-surface-2` at 11px. Week-number column `bg-surface-2/60` at 10px.
-- [ ] Day cells: `bg-card`. Out-of-month `bg-surface-2/40`. Hover (with releases) `bg-surface-2`. Selected `bg-accent-soft/60` with the existing left bar in `bg-accent`. Today `bg-pop-soft/50`, with the date label in a `rounded-full bg-accent px-1.5 text-white` pill.
-- [ ] `releaseBannerClass`: android `bg-android-soft text-android-ink shadow-[inset_3px_0_0_var(--android)]`, ios `bg-ios-soft text-ios-ink shadow-[inset_3px_0_0_var(--ios)]`, live `bg-surface-3 text-muted` with a 10px `Check` before the name, fallback `bg-accent-soft text-accent`. Banner radius `rounded-chip`. Selected `ring-2 ring-accent ring-offset-1`. Sprint lines are 10px (not 9).
+- [ ] Day cells: `bg-card`. Out-of-month `bg-surface-2/40`. Hover (with releases) `bg-surface-2`. Selected `bg-accent-soft/60` with the existing left bar in `bg-signal`. Today `bg-pop-soft/50`, with the date label in a `rounded-full bg-accent px-1.5 text-white` pill.
+- [ ] `releaseBannerClass`: android `bg-android-soft text-android-ink shadow-[inset_3px_0_0_var(--android)]`, ios `bg-ios-soft text-ios-ink shadow-[inset_3px_0_0_var(--ios)]`, live `bg-surface-3 text-muted` with a 10px `Check` before the name, fallback `bg-accent-soft text-accent`. Banner radius `rounded-chip`. Selected `ring-2 ring-signal ring-offset-1`. Sprint lines are 10px (not 9).
 - [ ] Unscheduled strip `bg-surface-2/60`, with the label as an eyebrow.
 - [ ] ReleaseCard detail panel: Card `p-4`. Name is h3 display 15 600 in the platform color. The phase `<select>` keeps `releasePhaseColor` but uses `rounded-full h-7 px-2.5 text-[11px] font-semibold`. Section wells are `rounded-xl bg-surface-2/70 p-3` (no border). Planned/Actual tiles are `bg-card rounded-lg border border-border` with a platform top bar in `border-t-android` or `border-t-ios`, and the label at 11px eyebrow (was 9px). Inputs become `Input size="sm"`. The sprint item list is `bg-card rounded-lg`. Remove buttons are ghost icon. The blockers box becomes `Alert tone="danger"`.
 - [ ] NewReleaseDialog becomes `Modal` (`module="planning"`). The platform toggle is a 2-up segmented control: selected Android `border-android bg-android-soft text-android-ink`, selected iOS `border-ios bg-ios-soft text-ios-ink`, unselected `bg-card border-border text-muted hover:bg-surface-2`. Each option has a 8px platform dot. Fields become `Input`/`Label`. The error becomes an inline danger error.
@@ -646,12 +636,12 @@ Apply this everywhere. A `rg "(slate|gray|white|black|emerald|blue|sky|violet|in
 - [ ] The list drops `max-w-lg`, which leaves dead space on desktop. Use `max-w-3xl` instead. The container is a §4.8-style card.
 - [ ] Row: `h-12 px-3 gap-3`. Replace the type text badge with a 28px soft type chip (icon plus `title` and `sr-only` label): doc=info `FileText`, figma=accent `Figma`, sheets=success `Sheet`, slides=caution `Presentation`, link=neutral `Link2`. The title is `text-sm font-semibold hover:text-accent`. The description shows on `sm+` (currently only `lg`) and is `max-w-[14rem] truncate text-xs text-muted`. Action icons are ghost `size="icon"`, with hover/focus reveal per §8.
 - [ ] Empty becomes `EmptyState icon={Link2}` with the existing copy.
-- [ ] ResourceDialog becomes `Modal` (`module="resources"`). The "detected" hint shows as a Badge info with a `Sparkles` icon.
+- [ ] ResourceDialog becomes `Modal` (`module="resources"`). The "detected" hint shows as a Badge info with a `ScanSearch` icon (Sparkles removed — reads as "AI").
 
 ### Outings (`outings/page.tsx` has uncommitted user edits; apply on top of them and don't revert anything; `NewOutingDialog.tsx`, `ExpenseDialog.tsx`)
 - [ ] PageHeader `module="outings"`. "Upcoming" and "Past outings" become `SectionTitle`.
-- [ ] OutingCard: upcoming cards get a top accent `shadow-[inset_0_3px_0_var(--mod-outings)]`. Past cards are `tone="muted"`. The title is h2 display 18 600. The team/pool badges are neutral with icons. The date and venue meta stay as is. Edit/expand are ghost icon buttons.
-- [ ] BudgetStrip: `rounded-xl bg-surface-2 p-3`. The track is `h-2 bg-surface-3`. The fill is `bg-[linear-gradient(90deg,var(--accent),var(--pop))]`, or `bg-danger` when over budget. Remaining is `text-success` (danger when over). Values are `font-semibold tabular-nums`.
+- [ ] OutingCard: upcoming cards get a top accent `shadow-[inset_0_3px_0_var(--signal)]`. Past cards are `tone="muted"`. The title is h2 display 18 600. The team/pool badges are neutral with icons. The date and venue meta stay as is. Edit/expand are ghost icon buttons.
+- [ ] BudgetStrip: `rounded-xl bg-surface-2 p-3`. The track is `h-2 bg-surface-3`. The fill is flat `bg-signal`, or `bg-danger` when over budget. Remaining is `text-success` (danger when over). Values are `font-semibold tabular-nums`.
 - [ ] CollapsibleSection: `rounded-xl border-border`. The header is `h-10 hover:bg-surface-2`. When open the header is `bg-surface-2/60`.
 - [ ] Expense rows: `rounded-lg bg-card border-border`. The type badge is outing=info and other=pop. The amount is `font-semibold tabular-nums`.
 - [ ] MemberChips: going/attended = Badge success with a `dot`, pending = caution, didn't go = neutral with line-through.
@@ -662,7 +652,7 @@ Apply this everywhere. A `rg "(slate|gray|white|black|emerald|blue|sky|violet|in
 - [ ] PageHeader `module="settings"`. Cards use `CardHeader` (Profile: `UserRound`; Integrations: `Plug`).
 - [ ] Profile inputs become `Input`/`Label`. They have no focus style today. Save message: success text, or danger on failure.
 - [ ] `data/store.json` code chip: `rounded-md bg-surface-2 px-1.5 py-0.5 font-mono text-[12px]`.
-- [ ] IntegrationRow: `rounded-xl border border-border p-4 hover:border-border-strong`. The icon uses a ModuleChip soft (slack or mail module color). The status pill becomes a Badge with a `dot`: Connected=success, Not connected=neutral, Needs setup=caution, Loading=neutral. Connect is a styled link.
+- [ ] IntegrationRow: `rounded-xl border border-border p-4 hover:border-border-strong`. The icon uses a ModuleChip soft (neutral). The status pill becomes a Badge with a `dot`: Connected=success, Not connected=neutral, Needs setup=caution, Loading=neutral. Connect is a styled link.
 - [ ] integrationMessage becomes `Alert tone="info"`.
 
 ---

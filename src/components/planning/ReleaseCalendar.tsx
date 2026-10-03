@@ -169,7 +169,7 @@ export function ReleaseCalendar({
                       today && !isSelectedDay && "bg-pop-soft/50",
                       isSelectedDay && "bg-accent-soft/60 hover:bg-accent-soft/60",
                       isSelectedDay &&
-                        "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent"
+                        "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-signal"
                     )}
                   >
                     {hasReleases ? (
@@ -183,7 +183,7 @@ export function ReleaseCalendar({
                         aria-label={formatCalendarDayLabel(day.key)}
                         className={cn(
                           dayLabelClass,
-                          "self-start rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          "self-start rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                         )}
                       >
                         {dayLabelText}
@@ -208,9 +208,9 @@ export function ReleaseCalendar({
                                 onSelectRelease(release);
                               }}
                               className={cn(
-                                "block w-full overflow-hidden rounded-chip py-1 pl-2 pr-1.5 text-left transition-[box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                                "block w-full overflow-hidden rounded-chip py-1 pl-2 pr-1.5 text-left transition-[box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
                                 releaseBannerClass(platform, release.status === "live"),
-                                isSelectedRelease && "ring-2 ring-accent ring-offset-1 ring-offset-card"
+                                isSelectedRelease && "ring-2 ring-signal ring-offset-1 ring-offset-card"
                               )}
                             >
                               <span className="flex items-center gap-1 truncate text-[11px] font-semibold leading-tight">
@@ -262,9 +262,9 @@ export function ReleaseCalendar({
                   type="button"
                   onClick={() => onSelectRelease(release)}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-chip py-0.5 pl-2 pr-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                    "inline-flex items-center gap-1 rounded-chip py-0.5 pl-2 pr-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
                     releaseBannerClass(platform, release.status === "live"),
-                    selected && "ring-2 ring-accent ring-offset-1 ring-offset-card"
+                    selected && "ring-2 ring-signal ring-offset-1 ring-offset-card"
                   )}
                 >
                   {release.name}

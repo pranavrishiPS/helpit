@@ -246,7 +246,7 @@ export default function SlackPage() {
                       href={item.threadUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="-ml-1.5 mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      className="-ml-1.5 mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                     >
                       Open in Slack
                       <ExternalLink className="h-3 w-3" />

@@ -199,7 +199,7 @@ export function ExpenseDialog({
                   onClick={() => setType(option.value)}
                   aria-pressed={type === option.value}
                   className={cn(
-                    "h-10 rounded-control border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+                    "h-10 rounded-control border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2",
                     type === option.value
                       ? "border-accent bg-accent-soft text-accent"
                       : "border-border bg-card text-muted hover:bg-surface-2"

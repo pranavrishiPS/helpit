@@ -145,7 +145,7 @@ export function PlotBacklogPanel({ items, onChange }: PlotBacklogPanelProps) {
                 draggable
                 onDragStart={() => handleDragStart(item.id)}
                 onDragEnd={handleDragEnd}
-                className="grid h-8 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-md text-subtle active:cursor-grabbing hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="grid h-8 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-md text-subtle active:cursor-grabbing hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                 aria-label={`Drag to reorder ${item.title}`}
               >
                 <GripVertical className="h-4 w-4" />
@@ -173,7 +173,7 @@ export function PlotBacklogPanel({ items, onChange }: PlotBacklogPanelProps) {
                 onClick={() => void handleRemove(item.id)}
                 className={cn(
                   "grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted transition-[opacity,background-color,color]",
-                  "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  "hover:bg-surface-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
                   "opacity-100 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                 )}
                 aria-label={`Remove ${item.title}`}

@@ -125,7 +125,7 @@ function BudgetStrip({ outing, past }: { outing: Outing; past: boolean }) {
           <div
             className={cn(
               "h-full rounded-full",
-              over ? "bg-danger" : "bg-[linear-gradient(90deg,var(--accent),var(--pop))]"
+              over ? "bg-danger" : "bg-signal"
             )}
             style={{ width: `${Math.min(usedPct, 100)}%` }}
           />
@@ -343,7 +343,7 @@ function CollapsibleSection({
         onClick={onToggle}
         aria-expanded={open}
         className={cn(
-          "flex h-10 w-full items-center justify-between px-3 text-sm transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+          "flex h-10 w-full items-center justify-between px-3 text-sm transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal",
           open && "border-b border-border bg-surface-2/60",
         )}
       >
@@ -388,13 +388,13 @@ function OutingCard({
   return (
     <Card
       tone={past ? "muted" : "default"}
-      className={cn(!past && "shadow-[inset_0_3px_0_var(--mod-outings),var(--shadow-card)]")}
+      className={cn(!past && "shadow-[inset_0_3px_0_var(--signal),var(--shadow-card)]")}
     >
       <div className="flex items-start gap-2">
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
-          className="min-w-0 flex-1 rounded-control text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="min-w-0 flex-1 rounded-control text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           aria-expanded={expanded}
         >
           <div className="flex flex-wrap items-center gap-2">

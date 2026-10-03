@@ -3,13 +3,13 @@ import { AlertCircle, ArrowRight, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { MODULE_ICONS, MODULE_STYLES, type ModuleId } from "@/lib/modules";
 
-// Shared UI primitives for the "Arcade Night" look (docs/specs/visual-redesign.md §4).
+// Shared UI primitives for the "Ink & signal orange" look (docs/specs/visual-redesign.md §4).
 // No hooks here so server components can render these too.
 
 const TRANSITION =
   "transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-150 ease-soft";
 const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-card";
 
 /* ------------------------------------------------------------------ */
 /* Module chip                                                         */
@@ -38,9 +38,7 @@ export function ModuleChip({
         size === "sm" && "h-7 w-7 rounded-lg",
         size === "md" && "h-9 w-9 rounded-xl",
         size === "lg" && "h-10 w-10 rounded-xl",
-        variant === "solid"
-          ? cn(styles.solid, "text-white shadow-chip")
-          : cn(styles.soft, styles.text),
+        variant === "solid" ? styles.solid : cn(styles.soft, styles.text),
         className
       )}
     >
@@ -310,15 +308,14 @@ export function StatCard({
       interactive={Boolean(href)}
       className={cn(
         "relative h-full overflow-hidden p-4 sm:p-4",
-        attention &&
-          "border-accent/30 bg-[linear-gradient(180deg,var(--accent-soft)_0%,var(--card)_70%)]",
+        attention && "border-signal/40",
         !href && className
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-muted">
           {attention && (
-            <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />
+            <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-signal" />
           )}
           <span className="truncate">{label}</span>
         </p>
@@ -327,7 +324,7 @@ export function StatCard({
             aria-hidden="true"
             className={cn(
               "grid h-7 w-7 shrink-0 place-items-center rounded-lg",
-              styles ? cn(styles.soft, styles.text) : "bg-accent-soft text-accent"
+              styles ? cn(styles.soft, styles.text) : "bg-surface-2 text-muted"
             )}
           >
             <Icon className="h-4 w-4" />
@@ -386,7 +383,7 @@ export function EmptyState({
         <span
           aria-hidden="true"
           className={cn(
-            "grid place-items-center rounded-2xl bg-[linear-gradient(135deg,var(--accent-soft),var(--pop-soft))] text-accent ring-1 ring-inset ring-accent/10",
+            "grid place-items-center rounded-2xl bg-surface-2 text-muted ring-1 ring-inset ring-border",
             compact ? "h-9 w-9" : "h-12 w-12"
           )}
         >
@@ -497,7 +494,7 @@ export function buttonClasses({
     size === "md" && "h-10 px-4 text-sm [&_svg]:h-4 [&_svg]:w-4",
     size === "icon" && "h-8 w-8 p-0 text-sm [&_svg]:h-4 [&_svg]:w-4",
     variant === "primary" &&
-      "bg-accent text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),var(--shadow-glow)] hover:bg-accent-hover",
+      "bg-accent text-white shadow-card hover:bg-accent-hover",
     variant === "secondary" &&
       "border border-border-strong bg-card text-foreground shadow-card hover:border-input/60 hover:bg-surface-2",
     variant === "ghost" && "text-muted hover:bg-surface-2 hover:text-foreground",
@@ -533,8 +530,8 @@ export function fieldClasses({
   kind = "input",
 }: { size?: "sm" | "md"; kind?: "input" | "select" | "textarea" } = {}): string {
   return cn(
-    "w-full rounded-control border border-input bg-card px-3 text-sm text-foreground shadow-[inset_0_1px_1px_rgb(31_22_64/0.04)] outline-none transition placeholder:text-subtle",
-    "hover:border-foreground/40 focus:border-accent focus:ring-4 focus:ring-accent/15",
+    "w-full rounded-control border border-input bg-card px-3 text-sm text-foreground outline-none transition placeholder:text-subtle",
+    "hover:border-foreground/40 focus:border-signal focus:ring-4 focus:ring-signal/15",
     "aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/15",
     "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted",
     kind === "textarea"
@@ -643,7 +640,7 @@ export function Tabs<T extends string>({
                 <span
                   className={cn(
                     "ml-1.5 rounded-full px-1.5 text-[11px] tabular-nums",
-                    active ? "bg-accent-soft text-accent" : "bg-surface-3"
+                    active ? "bg-accent-soft text-accent" : "bg-surface-3 text-foreground"
                   )}
                 >
                   {item.count}
@@ -667,7 +664,7 @@ export const tableClasses = {
     "bg-surface-2 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted",
   cell: "px-3 py-2.5",
   row: "border-t border-border transition-colors hover:bg-surface-2/60",
-  selectedRow: "bg-accent-soft shadow-[inset_3px_0_0_var(--accent)] hover:bg-accent-soft",
+  selectedRow: "bg-accent-soft shadow-[inset_3px_0_0_var(--signal)] hover:bg-accent-soft",
   successRow: "bg-success-soft/60 hover:bg-success-soft/80",
 } as const;
 
@@ -796,6 +793,6 @@ export function checkboxClasses({ done, round }: { done: boolean; round?: boolea
     round ? "h-[22px] w-[22px] rounded-full" : "h-5 w-5 rounded-md",
     done
       ? "border-success bg-success text-white"
-      : "border-input bg-card text-transparent hover:border-accent hover:bg-accent-soft"
+      : "border-input bg-card text-transparent hover:border-signal hover:bg-accent-soft"
   );
 }

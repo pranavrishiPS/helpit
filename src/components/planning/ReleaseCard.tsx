@@ -118,7 +118,7 @@ export function ReleaseCard({
         onUpdate({ phase: e.target.value as ReleasePhase });
       }}
       className={cn(
-        "h-7 shrink-0 cursor-pointer rounded-full border px-2.5 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        "h-7 shrink-0 cursor-pointer rounded-full border px-2.5 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-signal",
         releasePhaseColor(release.phase)
       )}
       aria-label="Release phase"
@@ -174,7 +174,7 @@ export function ReleaseCard({
             <button
               type="button"
               onClick={() => setExpanded((open) => !open)}
-              className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-center gap-2.5 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex min-w-0 flex-1 cursor-pointer flex-wrap items-center gap-2.5 rounded-control text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
               aria-expanded={isExpanded}
             >
               <ChevronDown

@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu, Sparkles, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/navigation";
-import { MODULE_ICONS, MODULE_STYLES } from "@/lib/modules";
+import { MODULE_ICONS } from "@/lib/modules";
 import { cn } from "@/lib/cn";
 import { Button, ModuleChip } from "@/components/ui";
 import { SlackSyncPoller } from "./SlackSyncPoller";
@@ -15,8 +15,11 @@ import { TaskReminderProvider } from "./TaskReminderProvider";
 function BrandBlock() {
   return (
     <div className="flex items-center gap-3">
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-gradient shadow-chip">
-        <Sparkles className="h-[18px] w-[18px] text-white" />
+      <div
+        aria-hidden="true"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-signal font-display text-lg font-bold leading-none text-foreground"
+      >
+        H
       </div>
       <div className="min-w-0">
         <p className="font-display text-lg font-bold leading-6 text-white">Helpit</p>
@@ -45,20 +48,24 @@ function SidebarNav({ onNavigate, large }: { onNavigate?: () => void; large?: bo
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group flex items-center gap-3 rounded-control px-2 text-sm font-medium transition-colors duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
+              "group relative flex items-center gap-3 rounded-control px-2 text-sm font-medium transition-colors duration-150",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
               large ? "h-11" : "h-10",
               active
-                ? "bg-white/[0.10] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.06)] ring-1 ring-inset ring-white/10"
-                : "text-sidebar-foreground/85 hover:bg-white/[0.06] hover:text-white"
+                ? "bg-white/[0.07] text-white"
+                : "text-sidebar-foreground/85 hover:bg-white/[0.05] hover:text-white"
             )}
           >
+            {active && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-signal"
+              />
+            )}
             <span
               className={cn(
                 "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors duration-150",
-                active
-                  ? cn(MODULE_STYLES[item.id].solid, "text-white shadow-chip")
-                  : "text-sidebar-muted group-hover:text-white"
+                active ? "text-signal" : "text-sidebar-muted group-hover:text-white"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -73,13 +80,13 @@ function SidebarNav({ onNavigate, large }: { onNavigate?: () => void; large?: bo
 
 function SidebarFooter({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <div className="m-3 rounded-card bg-white/[0.05] p-3 ring-1 ring-inset ring-white/10">
+    <div className="m-3 rounded-card bg-white/[0.04] p-3 ring-1 ring-inset ring-white/10">
       <p className="text-xs text-sidebar-foreground">PlaySimple Games</p>
       <p className="text-[11px] text-sidebar-muted">v0.1 — building daily</p>
       <button
         type="button"
         onClick={onSignOut}
-        className="mt-2 flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs text-sidebar-foreground transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        className="mt-2 flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs text-sidebar-foreground transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
       >
         <LogOut className="h-3.5 w-3.5" />
         Sign out
@@ -122,7 +129,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SlackRateLimitToast />
       <TaskReminderProvider />
 
-      <aside className="sidebar-surface hidden w-64 shrink-0 flex-col border-r border-white/5 text-sidebar-foreground lg:flex">
+      <aside className="hidden w-64 bg-sidebar shrink-0 flex-col border-r border-white/5 text-sidebar-foreground lg:flex">
         <div className="px-5 pb-5 pt-6">
           <BrandBlock />
         </div>
@@ -138,13 +145,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-label="Close menu"
             onClick={() => setNavOpen(false)}
           />
-          <aside className="sidebar-surface fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] animate-drawer-in flex-col text-sidebar-foreground shadow-overlay lg:hidden">
+          <aside className="fixed bg-sidebar inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] animate-drawer-in flex-col text-sidebar-foreground shadow-overlay lg:hidden">
             <div className="flex items-center justify-between px-5 pb-5 pt-6">
               <BrandBlock />
               <button
                 type="button"
                 onClick={() => setNavOpen(false)}
-                className="grid h-9 w-9 place-items-center rounded-control text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="grid h-9 w-9 place-items-center rounded-control text-sidebar-muted transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
@@ -174,7 +181,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <div className="relative flex min-h-0 flex-1">
-          <main className="app-canvas min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 lg:px-8 lg:py-7">
+          <main className="min-w-0 bg-background flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 lg:px-8 lg:py-7">
             <div className="mx-auto w-full max-w-[1440px]">{children}</div>
           </main>
         </div>
