@@ -125,20 +125,33 @@ function TaskRow({
   );
 }
 
-export function AddTaskForm({ onAdd }: { onAdd: (task: Partial<Task>) => void }) {
+/** onAdd resolves to false when the task could not be created (input is then kept). */
+export function AddTaskForm({
+  onAdd,
+}: {
+  onAdd: (task: Partial<Task>) => Promise<boolean | void> | void;
+}) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
-    onAdd({ title: title.trim(), priority, dueDate: dueDate || undefined });
-    setTitle("");
-    setDueDate("");
-    setPriority("medium");
-    setOpen(false);
+    if (!title.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const ok = await onAdd({ title: title.trim(), priority, dueDate: dueDate || undefined });
+      // Keep the form (and the user's text) open if the create failed.
+      if (ok === false) return;
+      setTitle("");
+      setDueDate("");
+      setPriority("medium");
+      setOpen(false);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (!open) {
@@ -179,7 +192,9 @@ export function AddTaskForm({ onAdd }: { onAdd: (task: Partial<Task>) => void })
           />
         </div>
         <div className="flex gap-2">
-          <Button type="submit">Add</Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Adding…" : "Add"}
+          </Button>
           <Button variant="ghost" onClick={() => setOpen(false)}>
             Cancel
           </Button>

@@ -49,30 +49,69 @@ export function isApiKeyExemptPath(pathname: string): boolean {
   return isPublicApiPath(pathname) || isSiteAuthPublicPath(pathname);
 }
 
-export function validateApiKey(request: NextRequest): NextResponse | null {
+/** Constant-time string comparison (Edge-safe): compares SHA-256 digests byte by byte. */
+export async function timingSafeEqualStrings(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [da, db] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  ]);
+  const ba = new Uint8Array(da);
+  const bb = new Uint8Array(db);
+  let diff = ba.length ^ bb.length;
+  for (let i = 0; i < ba.length; i++) diff |= ba[i] ^ (bb[i] ?? 0);
+  return diff === 0;
+}
+
+/**
+ * Server-side API-key gate for non-browser callers (scripts, curl). The browser never
+ * holds this key; it authenticates with the site-auth session cookie instead (the
+ * middleware skips this check for requests with a valid session).
+ */
+export async function validateApiKey(request: NextRequest): Promise<NextResponse | null> {
   if (!isApiAuthEnabled()) return null;
   if (isApiKeyExemptPath(request.nextUrl.pathname)) return null;
 
   const expected = process.env.HELPIT_API_KEY!.trim();
-  const provided = getApiKeyFromRequest(request);
+  const provided = getApiKeyFromRequest(request) ?? "";
 
-  if (provided !== expected) {
+  if (!(await timingSafeEqualStrings(provided, expected))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   return null;
 }
 
-export function getClientApiKey(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  return process.env.NEXT_PUBLIC_HELPIT_API_KEY?.trim() || undefined;
+export interface AuthGateState {
+  /** Running on Vercel / in a production runtime (not `next build`, dev or tests). */
+  production: boolean;
+  siteAuthEnabled: boolean;
+  /** Site-auth allow-list is set but its signing secret is missing. */
+  siteAuthMisconfigured: boolean;
+  apiKeyEnabled: boolean;
 }
 
-export function apiAuthHeaders(): HeadersInit {
-  const key = getClientApiKey();
-  if (!key) return { "Content-Type": "application/json" };
-  return {
-    "Content-Type": "application/json",
-    [API_KEY_HEADER]: key,
-  };
+export function isProductionRuntime(env: Record<string, string | undefined> = process.env): boolean {
+  // `next build` sets NODE_ENV=production but must never be blocked by the gate.
+  if (env.NEXT_PHASE === "phase-production-build") return false;
+  return env.VERCEL === "1" || env.NODE_ENV === "production";
 }
+
+/**
+ * Fail closed: in production, refuse to serve anything unless site auth
+ * (SITE_AUTH_ALLOWED_EMAILS + SITE_AUTH_SECRET) is configured. The browser only
+ * authenticates with the site-auth session, so HELPIT_API_KEY alone would lock every
+ * browser call out; it stays an optional extra key for scripts.
+ * Returns a message when the request must be refused, null otherwise.
+ */
+export function getAuthConfigError(state: AuthGateState): string | null {
+  if (!state.production) return null;
+  if (state.siteAuthMisconfigured) {
+    return "Auth not configured: SITE_AUTH_ALLOWED_EMAILS is set but SITE_AUTH_SECRET is missing.";
+  }
+  if (!state.siteAuthEnabled) {
+    return "Auth not configured: set SITE_AUTH_ALLOWED_EMAILS and SITE_AUTH_SECRET to serve Helpit in production (HELPIT_API_KEY alone is not enough; browsers sign in via site auth).";
+  }
+  return null;
+}
+

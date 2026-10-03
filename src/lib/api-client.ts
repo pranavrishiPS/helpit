@@ -1,4 +1,3 @@
-import { apiAuthHeaders } from "@/lib/auth";
 import type {
   DashboardStore,
   MailItem,
@@ -13,7 +12,8 @@ import type {
 } from "@/lib/types";
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  const headers = { ...apiAuthHeaders(), ...init?.headers };
+  // No API key here: the browser authenticates with the site-auth session cookie.
+  const headers = { "Content-Type": "application/json", ...init?.headers };
   return fetch(path, { ...init, headers });
 }
 

@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
 
   let isHoliday = false;
   const updated = await updateStore((s) => {
+    isHoliday = false; // reset: the updater re-runs on optimistic retries
     if ((s.scrumHolidays ?? []).some((h) => h.date === date)) {
       isHoliday = true;
       return s;
@@ -83,23 +84,28 @@ export async function PATCH(request: NextRequest) {
   let found = false;
   let notAllowed = false;
 
-  await updateStore((s) => ({
-    ...s,
-    scrumAttendance: (s.scrumAttendance ?? []).map((entry) => {
-      if (entry.id !== id) return entry;
-      found = true;
-      if (!isStatusAllowedOnDate(status, entry.date)) {
-        notAllowed = true;
-        return entry;
-      }
-      return {
-        ...entry,
-        status,
-        note: note === null ? undefined : note?.trim() || entry.note,
-        updatedAt: new Date().toISOString(),
-      };
-    }),
-  }));
+  await updateStore((s) => {
+    // reset: the updater re-runs on optimistic retries
+    found = false;
+    notAllowed = false;
+    return {
+      ...s,
+      scrumAttendance: (s.scrumAttendance ?? []).map((entry) => {
+        if (entry.id !== id) return entry;
+        found = true;
+        if (!isStatusAllowedOnDate(status, entry.date)) {
+          notAllowed = true;
+          return entry;
+        }
+        return {
+          ...entry,
+          status,
+          note: note === null ? undefined : note?.trim() || entry.note,
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    };
+  });
 
   if (!found) {
     return NextResponse.json({ error: "Entry not found" }, { status: 404 });
@@ -123,6 +129,7 @@ export async function DELETE(request: NextRequest) {
 
   let found = false;
   await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
     const next = (s.scrumAttendance ?? []).filter((entry) => {
       if (entry.id === parsed.data.id) {
         found = true;

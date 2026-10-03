@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, ErrorBanner } from "@/components/ui";
 import { useDashboard } from "@/lib/use-dashboard";
 import { sortFeatures } from "@/lib/feature-utils";
 import {
@@ -13,14 +13,14 @@ import { PlotBacklogPanel } from "@/components/features/PlotBacklogPanel";
 import { notifyStoreUpdated } from "@/lib/store-events";
 
 export default function FeaturesPage() {
-  const { store, loading, error, reload } = useDashboard();
+  const { store, loading, error, clearError, reload } = useDashboard();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   if (loading) {
     return <div className="text-sm text-muted">Loading features...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load features"}</div>;
   }
 
@@ -34,6 +34,7 @@ export default function FeaturesPage() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Feature tracker"
         description="In-progress features, upcoming sprint queue, milestones, and function effort"

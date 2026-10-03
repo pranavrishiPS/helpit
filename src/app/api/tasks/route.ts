@@ -90,6 +90,7 @@ export async function DELETE(request: NextRequest) {
 
   let found = false;
   await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
     const exists = s.tasks.some((t) => t.id === parsed.data.id);
     if (!exists) return s;
     found = true;

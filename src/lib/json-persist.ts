@@ -3,7 +3,7 @@ import path from "path";
 import lockfile from "proper-lockfile";
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const LOCK_OPTIONS = { retries: { retries: 5, minTimeout: 50, maxTimeout: 500 } };
+const LOCK_OPTIONS = { retries: { retries: 20, minTimeout: 50, maxTimeout: 500 } };
 
 /** Vercel’s function filesystem is ephemeral; persist JSON in Blob there. */
 export function usesBlobStore(): boolean {
@@ -36,6 +36,58 @@ async function writeBlobText(pathname: string, content: string): Promise<void> {
     allowOverwrite: true,
     contentType: "application/json",
   });
+}
+
+export interface JsonTextWithEtag {
+  text: string | null;
+  /** Blob ETag of the version that was read; null when there is no blob yet. */
+  etag: string | null;
+}
+
+/**
+ * Blob only: read the text and its ETag from one response, so the ETag always
+ * describes the exact bytes returned (a later ifMatch write fails if anyone wrote since).
+ */
+export async function readJsonTextWithEtag(filename: string): Promise<JsonTextWithEtag> {
+  const { get, BlobNotFoundError } = await import("@vercel/blob");
+  let result;
+  try {
+    result = await get(filename, { access: "private", useCache: false });
+  } catch (err) {
+    if (err instanceof BlobNotFoundError) return { text: null, etag: null };
+    throw err;
+  }
+  if (result == null) return { text: null, etag: null };
+  if (!result.stream) throw new Error(`[json-persist] Blob ${filename} returned no body`);
+  const text = await new Response(result.stream).text();
+  return { text: text.trim() ? text : null, etag: result.blob.etag ?? null };
+}
+
+/**
+ * Blob only: conditional write. With an etag, writes only if the blob is unchanged since
+ * that read; with null, only creates the blob if it doesn't exist yet.
+ * Returns false on a lost race (caller should re-read and retry); other errors throw.
+ */
+export async function writeJsonTextIfMatch(
+  filename: string,
+  content: string,
+  etag: string | null
+): Promise<boolean> {
+  const { put, BlobPreconditionFailedError } = await import("@vercel/blob");
+  try {
+    await put(filename, content, {
+      access: "private",
+      addRandomSuffix: false,
+      contentType: "application/json",
+      ...(etag ? { allowOverwrite: true, ifMatch: etag } : { allowOverwrite: false }),
+    });
+    return true;
+  } catch (err) {
+    if (err instanceof BlobPreconditionFailedError) return false;
+    // Create-only write hit an existing blob (someone created it first).
+    if (!etag && err instanceof Error && /already exists/i.test(err.message)) return false;
+    throw err;
+  }
 }
 
 export async function withJsonLock<T>(filename: string, fn: () => Promise<T>): Promise<T> {

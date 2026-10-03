@@ -88,6 +88,10 @@ export async function PATCH(request: NextRequest) {
   let dateError: string | null = null;
 
   await updateStore((s) => {
+    // reset: the updater re-runs on optimistic retries
+    updatedFeature = undefined;
+    notFound = false;
+    dateError = null;
     const features = s.features ?? [];
     const index = features.findIndex((f) => f.id === id);
     if (index === -1) {
@@ -192,6 +196,7 @@ export async function DELETE(request: NextRequest) {
 
   let found = false;
   await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
     const next = (s.features ?? []).filter((item) => {
       if (item.id === parsed.data.id) {
         found = true;

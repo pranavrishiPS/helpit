@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { promises as fs } from "fs";
-import { jsonExists, readJsonText } from "@/lib/json-persist";
+import { jsonExists, readJsonText, readJsonTextWithEtag, writeJsonTextIfMatch } from "@/lib/json-persist";
+
+const blob = vi.hoisted(() => {
+  class BlobNotFoundError extends Error {}
+  class BlobPreconditionFailedError extends Error {}
+  return { BlobNotFoundError, BlobPreconditionFailedError, get: vi.fn(), put: vi.fn() };
+});
+vi.mock("@vercel/blob", () => blob);
 
 function fsError(code: string): NodeJS.ErrnoException {
   return Object.assign(new Error(`${code}: simulated`), { code });
@@ -50,5 +57,61 @@ describe("json-persist (local filesystem)", () => {
       vi.spyOn(fs, "access").mockRejectedValueOnce(fsError("EACCES"));
       await expect(jsonExists("store.json")).rejects.toMatchObject({ code: "EACCES" });
     });
+  });
+});
+
+describe("json-persist (Blob conditional writes, mocked SDK)", () => {
+  beforeEach(() => {
+    // Mocked SDK only; VERCEL=1 selects the Blob branch without any real token.
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+    vi.stubEnv("VERCEL", "1");
+    blob.get.mockReset();
+    blob.put.mockReset();
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  const body = (text: string) => ({
+    statusCode: 200,
+    stream: new Response(text).body,
+    blob: { etag: '"abc"' },
+  });
+
+  it("readJsonTextWithEtag returns text and etag from one response", async () => {
+    blob.get.mockResolvedValueOnce(body('{"a":1}'));
+    await expect(readJsonTextWithEtag("store.json")).resolves.toEqual({ text: '{"a":1}', etag: '"abc"' });
+  });
+
+  it("readJsonTextWithEtag returns nulls for a missing blob and rethrows other errors", async () => {
+    blob.get.mockRejectedValueOnce(new blob.BlobNotFoundError());
+    await expect(readJsonTextWithEtag("store.json")).resolves.toEqual({ text: null, etag: null });
+    blob.get.mockRejectedValueOnce(new Error("network down"));
+    await expect(readJsonTextWithEtag("store.json")).rejects.toThrow(/network down/);
+  });
+
+  it("writeJsonTextIfMatch sends ifMatch + allowOverwrite when an etag is given", async () => {
+    blob.put.mockResolvedValueOnce({});
+    await expect(writeJsonTextIfMatch("store.json", "x", '"abc"')).resolves.toBe(true);
+    expect(blob.put).toHaveBeenCalledWith(
+      "store.json",
+      "x",
+      expect.objectContaining({ ifMatch: '"abc"', allowOverwrite: true })
+    );
+  });
+
+  it("writeJsonTextIfMatch creates without overwrite when there is no etag", async () => {
+    blob.put.mockResolvedValueOnce({});
+    await expect(writeJsonTextIfMatch("store.json", "x", null)).resolves.toBe(true);
+    const opts = blob.put.mock.calls[0][2];
+    expect(opts.allowOverwrite).toBe(false);
+    expect(opts.ifMatch).toBeUndefined();
+  });
+
+  it("writeJsonTextIfMatch returns false on precondition failure or create-race, throws otherwise", async () => {
+    blob.put.mockRejectedValueOnce(new blob.BlobPreconditionFailedError());
+    await expect(writeJsonTextIfMatch("store.json", "x", '"abc"')).resolves.toBe(false);
+    blob.put.mockRejectedValueOnce(new Error("This blob already exists"));
+    await expect(writeJsonTextIfMatch("store.json", "x", null)).resolves.toBe(false);
+    blob.put.mockRejectedValueOnce(new Error("boom"));
+    await expect(writeJsonTextIfMatch("store.json", "x", '"abc"')).rejects.toThrow(/boom/);
   });
 });

@@ -72,30 +72,33 @@ export async function PATCH(request: NextRequest) {
 
   let found = false;
 
-  await updateStore((s) => ({
-    ...s,
-    projectResources: (s.projectResources ?? []).map((item) => {
-      if (item.id !== id) return item;
-      found = true;
+  await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
+    return {
+      ...s,
+      projectResources: (s.projectResources ?? []).map((item) => {
+        if (item.id !== id) return item;
+        found = true;
 
-      const url =
-        updates.url != null
-          ? new URL(normalizeUrl(updates.url)).toString()
-          : item.url;
+        const url =
+          updates.url != null
+            ? new URL(normalizeUrl(updates.url)).toString()
+            : item.url;
 
-      return {
-        ...item,
-        ...updates,
-        url,
-        title: updates.title?.trim() ?? item.title,
-        description:
-          updates.description === null
-            ? undefined
-            : updates.description?.trim() ?? item.description,
-        updatedAt: new Date().toISOString(),
-      };
-    }),
-  }));
+        return {
+          ...item,
+          ...updates,
+          url,
+          title: updates.title?.trim() ?? item.title,
+          description:
+            updates.description === null
+              ? undefined
+              : updates.description?.trim() ?? item.description,
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    };
+  });
 
   if (!found) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
@@ -113,6 +116,7 @@ export async function DELETE(request: NextRequest) {
 
   let found = false;
   await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
     const next = (s.projectResources ?? []).filter((item) => {
       if (item.id === parsed.data.id) {
         found = true;

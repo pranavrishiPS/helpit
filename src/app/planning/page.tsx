@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { startOfMonth, isSameMonth, parseISO } from "date-fns";
-import { PageHeader, Card, Button } from "@/components/ui";
+import { PageHeader, Card, Button, ErrorBanner } from "@/components/ui";
 import { useDashboard } from "@/lib/use-dashboard";
 import { ReleaseCard } from "@/components/planning/ReleaseCard";
 import {
@@ -17,11 +17,12 @@ import { findDefaultRelease, getReleaseCalendarDate } from "@/lib/release-calend
 import type { Release } from "@/lib/types";
 
 export default function PlanningPage() {
-  const { store, loading, error, reload } = useDashboard();
+  const { store, loading, error, clearError, reload } = useDashboard();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | undefined>();
   const [selectedDateKey, setSelectedDateKey] = useState<string | undefined>();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const releases = useMemo(() => store?.releases ?? [], [store?.releases]);
 
@@ -43,7 +44,14 @@ export default function PlanningPage() {
     id: string,
     updates: Parameters<typeof updateRelease>[1]
   ) {
-    await updateRelease(id, updates);
+    setActionError(null);
+    try {
+      await updateRelease(id, updates);
+    } catch (err) {
+      // Nothing was saved; the card still shows the stored values.
+      setActionError(err instanceof Error ? err.message : "Failed to update release");
+      return;
+    }
     await reload();
     notifyStoreUpdated();
 
@@ -122,7 +130,7 @@ export default function PlanningPage() {
     return <div className="text-sm text-muted">Loading planning...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load planning"}</div>;
   }
 
@@ -134,6 +142,8 @@ export default function PlanningPage() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
+      {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Planning"
         description="Mon–Fri release calendar"

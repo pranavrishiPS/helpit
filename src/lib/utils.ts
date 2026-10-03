@@ -162,14 +162,14 @@ export function getTasksTabTasks(tasks: Task[]): Task[] {
 }
 
 export function getTodayTasks(tasks: Task[]): Task[] {
-  const today = new Date().toISOString().split("T")[0];
+  const today = format(new Date(), "yyyy-MM-dd"); // local calendar date, not UTC
   return tasks.filter(
     (t) => t.status !== "done" && t.dueDate && t.dueDate <= today
   );
 }
 
 export function getUpcomingTasks(tasks: Task[]): Task[] {
-  const today = new Date().toISOString().split("T")[0];
+  const today = format(new Date(), "yyyy-MM-dd"); // local calendar date, not UTC
   return tasks
     .filter((t) => t.status !== "done" && t.dueDate && t.dueDate > today)
     .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));

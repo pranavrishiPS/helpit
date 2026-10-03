@@ -1,7 +1,7 @@
 "use client";
 
 import { useDashboard } from "@/lib/use-dashboard";
-import { PageHeader, StatCard, Card, Badge } from "@/components/ui";
+import { PageHeader, StatCard, Card, Badge, ErrorBanner } from "@/components/ui";
 import { TaskList, AddTaskForm } from "@/components/tasks/TaskList";
 import {
   summarizeDashboard,
@@ -27,13 +27,13 @@ import Link from "next/link";
 import { ArrowRight, AlertCircle } from "lucide-react";
 
 export function HomeDashboard() {
-  const { store, loading, error, updateTask, deleteTask, addTask } = useDashboard();
+  const { store, loading, error, clearError, updateTask, deleteTask, addTask } = useDashboard();
 
   if (loading) {
     return <div className="text-sm text-muted">Loading dashboard...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load dashboard"}</div>;
   }
 
@@ -57,6 +57,7 @@ export function HomeDashboard() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title={`${greeting}, ${store.profile.name}`}
         description={`${store.profile.role} · ${new Date().toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" })}`}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import type { Outing, OutingAttendee } from "@/lib/types";
 import { Button } from "@/components/ui";
@@ -29,6 +29,12 @@ function OutingDialog({
   memberSuggestions?: string[];
 }) {
   const isEdit = !!outing;
+  // Latest outing without making it an effect dependency: store reloads hand us a
+  // new object each time and must not wipe what the user is typing.
+  const outingRef = useRef(outing);
+  useEffect(() => {
+    outingRef.current = outing;
+  }, [outing]);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [destination, setDestination] = useState("");
@@ -60,6 +66,7 @@ function OutingDialog({
 
   useEffect(() => {
     if (!open) return;
+    const outing = outingRef.current;
     if (outing) {
       setTitle(outing.title);
       setDate(outing.date ?? "");
@@ -77,7 +84,8 @@ function OutingDialog({
     }
     setNewMember("");
     setError(null);
-  }, [open, outing]);
+    // Seed only when the dialog opens or targets a different outing.
+  }, [open, outing?.id]);
 
   function handleClose() {
     onClose();

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { format } from "date-fns";
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from "lucide-react";
 import type { Feature } from "@/lib/types";
 import { Badge, Button, Card, EmptyState } from "@/components/ui";
@@ -29,6 +30,11 @@ function FeatureDialog({
   feature?: Feature;
 }) {
   const isEdit = !!feature;
+  // Latest feature without making it an effect dependency (see seeding effect).
+  const featureRef = useRef(feature);
+  useEffect(() => {
+    featureRef.current = feature;
+  }, [feature]);
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [scopeClosureDate, setScopeClosureDate] = useState("");
@@ -48,6 +54,7 @@ function FeatureDialog({
 
   useEffect(() => {
     if (!open) return;
+    const feature = featureRef.current;
     if (feature) {
       setTitle(feature.title);
       setStartDate(feature.startDate ?? "");
@@ -56,13 +63,15 @@ function FeatureDialog({
       setReleaseDate(feature.releaseDate ?? "");
     } else {
       setTitle("");
-      setStartDate(new Date().toISOString().split("T")[0]);
+      setStartDate(format(new Date(), "yyyy-MM-dd"));
       setScopeClosureDate("");
       setPreProductionClosureDate("");
       setReleaseDate("");
     }
     setError(null);
-  }, [open, feature]);
+    // Seed only when the dialog opens or targets a different feature, so store
+    // reloads don't wipe unsaved edits.
+  }, [open, feature?.id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -263,23 +272,33 @@ function FeatureCard({
   const [expanded, setExpanded] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDateChange(
     field: "startDate" | "scopeClosureDate" | "preProductionClosureDate" | "releaseDate",
     value: string
   ) {
-    await updateFeature(feature.id, { [field]: value || null });
-    onChanged();
-    notifyStoreUpdated();
+    setError(null);
+    try {
+      await updateFeature(feature.id, { [field]: value || null });
+      onChanged();
+      notifyStoreUpdated();
+    } catch (err) {
+      // Inputs are controlled by the stored value, so a failed save reverts the field.
+      setError(err instanceof Error ? err.message : "Failed to update feature");
+    }
   }
 
   async function handleDelete() {
     if (!window.confirm(`Delete "${feature.title}"? This cannot be undone.`)) return;
     setDeleting(true);
+    setError(null);
     try {
       await deleteFeature(feature.id);
       onChanged();
       notifyStoreUpdated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete feature");
     } finally {
       setDeleting(false);
     }
@@ -288,11 +307,16 @@ function FeatureCard({
   async function handleFunctionCostsSave(
     costs: NonNullable<Feature["functionCosts"]>
   ) {
-    await updateFeature(feature.id, {
-      functionCosts: costs.length > 0 ? costs : [],
-    });
-    onChanged();
-    notifyStoreUpdated();
+    setError(null);
+    try {
+      await updateFeature(feature.id, {
+        functionCosts: costs.length > 0 ? costs : [],
+      });
+      onChanged();
+      notifyStoreUpdated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save function effort");
+    }
   }
 
   const totalEst = sumEffortDays(feature.functionCosts, "effortDays");
@@ -360,6 +384,7 @@ function FeatureCard({
               <Pencil className="h-4 w-4" />
             </button>
           </div>
+          {error && <p className="mt-2 text-xs text-warning">{error}</p>}
         </div>
 
         {expanded && (

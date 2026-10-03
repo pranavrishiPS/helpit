@@ -13,14 +13,17 @@ export async function PATCH(request: NextRequest) {
   const { id, completed } = parsed.data;
   let found = false;
 
-  await updateStore((s) => ({
-    ...s,
-    slackItems: s.slackItems.map((item) => {
-      if (item.id !== id) return item;
-      found = true;
-      return { ...item, completed };
-    }),
-  }));
+  await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
+    return {
+      ...s,
+      slackItems: s.slackItems.map((item) => {
+        if (item.id !== id) return item;
+        found = true;
+        return { ...item, completed };
+      }),
+    };
+  });
 
   if (!found) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });

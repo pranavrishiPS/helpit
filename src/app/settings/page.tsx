@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { PageHeader, Card, Button } from "@/components/ui";
+import { PageHeader, Card, Button, ErrorBanner } from "@/components/ui";
 import { Bot, MessageSquare, Mail, Link2, RefreshCw } from "lucide-react";
 import { useDashboard } from "@/lib/use-dashboard";
 import {
@@ -33,7 +33,7 @@ interface SlackStatus {
 
 function SettingsContent() {
   const searchParams = useSearchParams();
-  const { store, loading, error, reload } = useDashboard();
+  const { store, loading, error, clearError, reload } = useDashboard();
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
   const [slack, setSlack] = useState<SlackStatus | null>(null);
   const [disconnectingSlack, setDisconnectingSlack] = useState(false);
@@ -43,6 +43,8 @@ function SettingsContent() {
   const [profileForm, setProfileForm] = useState({ name: "", role: "", company: "" });
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [integrationMessage, setIntegrationMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [profileDirty, setProfileDirty] = useState(false);
 
   async function loadIntegrations() {
     const [gmailRes, slackRes] = await Promise.all([
@@ -81,19 +83,28 @@ function SettingsContent() {
     }
   }, [searchParams, reload]);
 
+  // Seed from the store, but never over unsaved edits (store reloads fire on any mutation).
   useEffect(() => {
-    if (store?.profile) {
+    if (store?.profile && !profileDirty) {
       setProfileForm(store.profile);
     }
-  }, [store?.profile]);
+  }, [store?.profile, profileDirty]);
+
+  function editProfile(patch: Partial<typeof profileForm>) {
+    setProfileDirty(true);
+    setProfileForm((p) => ({ ...p, ...patch }));
+  }
 
   async function disconnectSlackHandler() {
     setDisconnectingSlack(true);
+    setActionError(null);
     try {
       await disconnectSlack();
       await loadIntegrations();
       await reload();
       notifyStoreUpdated();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to disconnect Slack");
     } finally {
       setDisconnectingSlack(false);
     }
@@ -101,11 +112,14 @@ function SettingsContent() {
 
   async function disconnectGmailHandler() {
     setDisconnectingGmail(true);
+    setActionError(null);
     try {
       await disconnectGmail();
       await loadIntegrations();
       await reload();
       notifyStoreUpdated();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to disconnect Gmail");
     } finally {
       setDisconnectingGmail(false);
     }
@@ -113,11 +127,19 @@ function SettingsContent() {
 
   async function handleGmailSync() {
     setSyncingGmail(true);
+    setActionError(null);
     try {
-      await syncGmail();
+      const result = await syncGmail();
+      if (!result.ok) {
+        setActionError(result.error ?? "Gmail sync failed");
+        await loadIntegrations();
+        return;
+      }
       await loadIntegrations();
       await reload();
       notifyStoreUpdated();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Gmail sync failed");
     } finally {
       setSyncingGmail(false);
     }
@@ -129,6 +151,7 @@ function SettingsContent() {
     try {
       await updateProfile(profileForm);
       await reload();
+      setProfileDirty(false);
       notifyStoreUpdated();
       setProfileMessage("Profile saved.");
     } catch {
@@ -142,12 +165,14 @@ function SettingsContent() {
     return <div className="text-sm text-muted">Loading settings...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load settings"}</div>;
   }
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
+      {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Settings"
         description="Profile, integrations, and assistant configuration"
@@ -171,7 +196,7 @@ function SettingsContent() {
                 id="profile-name"
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2"
                 value={profileForm.name}
-                onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
+                onChange={(e) => editProfile({ name: e.target.value })}
               />
             </div>
             <div>
@@ -182,7 +207,7 @@ function SettingsContent() {
                 id="profile-role"
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2"
                 value={profileForm.role}
-                onChange={(e) => setProfileForm((p) => ({ ...p, role: e.target.value }))}
+                onChange={(e) => editProfile({ role: e.target.value })}
               />
             </div>
             <div className="sm:col-span-2">
@@ -193,7 +218,7 @@ function SettingsContent() {
                 id="profile-company"
                 className="mt-1 w-full rounded-lg border border-border px-3 py-2"
                 value={profileForm.company}
-                onChange={(e) => setProfileForm((p) => ({ ...p, company: e.target.value }))}
+                onChange={(e) => editProfile({ company: e.target.value })}
               />
             </div>
           </div>

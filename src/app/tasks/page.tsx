@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, Card } from "@/components/ui";
+import { PageHeader, Card, ErrorBanner } from "@/components/ui";
 import { TaskList, AddTaskForm } from "@/components/tasks/TaskList";
 import { useDashboard } from "@/lib/use-dashboard";
 import { getTasksTabTasks } from "@/lib/utils";
 
 export default function TasksPage() {
-  const { store, loading, error, updateTask, deleteTask, addTask } = useDashboard();
+  const { store, loading, error, clearError, updateTask, deleteTask, addTask } = useDashboard();
   const [filter, setFilter] = useState<"all" | "open" | "done">("open");
 
   if (loading) {
     return <div className="text-sm text-muted">Loading tasks...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load tasks"}</div>;
   }
 
@@ -33,6 +33,7 @@ export default function TasksPage() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Tasks"
         description="Todos, deadlines, and follow-ups across all modules"

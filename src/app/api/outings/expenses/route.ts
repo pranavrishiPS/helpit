@@ -30,18 +30,21 @@ export async function POST(request: NextRequest) {
   };
 
   let found = false;
-  await updateStore((s) => ({
-    ...s,
-    outings: s.outings.map((outing) => {
-      if (outing.id !== outingId) return outing;
-      found = true;
-      return {
-        ...outing,
-        expenses: [...(outing.expenses ?? []), expense],
-        updatedAt: new Date().toISOString(),
-      };
-    }),
-  }));
+  await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
+    return {
+      ...s,
+      outings: s.outings.map((outing) => {
+        if (outing.id !== outingId) return outing;
+        found = true;
+        return {
+          ...outing,
+          expenses: [...(outing.expenses ?? []), expense],
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    };
+  });
 
   if (!found) {
     return NextResponse.json({ error: "Outing not found" }, { status: 404 });
@@ -62,31 +65,36 @@ export async function PATCH(request: NextRequest) {
   let outingFound = false;
   let expenseFound = false;
 
-  await updateStore((s) => ({
-    ...s,
-    outings: s.outings.map((outing) => {
-      if (outing.id !== outingId) return outing;
-      outingFound = true;
-      return {
-        ...outing,
-        expenses: (outing.expenses ?? []).map((expense) => {
-          if (expense.id !== id) return expense;
-          expenseFound = true;
-          return {
-            ...expense,
-            title: title?.trim() ?? expense.title,
-            amount: amount ?? expense.amount,
-            type: type ?? expense.type,
-            date: date === null ? undefined : date ?? expense.date,
-            notes: notes === null ? undefined : notes?.trim() ?? expense.notes,
-            attendeeCount:
-              attendeeCount === null ? undefined : attendeeCount ?? expense.attendeeCount,
-          };
-        }),
-        updatedAt: new Date().toISOString(),
-      };
-    }),
-  }));
+  await updateStore((s) => {
+    // reset: the updater re-runs on optimistic retries
+    outingFound = false;
+    expenseFound = false;
+    return {
+      ...s,
+      outings: s.outings.map((outing) => {
+        if (outing.id !== outingId) return outing;
+        outingFound = true;
+        return {
+          ...outing,
+          expenses: (outing.expenses ?? []).map((expense) => {
+            if (expense.id !== id) return expense;
+            expenseFound = true;
+            return {
+              ...expense,
+              title: title?.trim() ?? expense.title,
+              amount: amount ?? expense.amount,
+              type: type ?? expense.type,
+              date: date === null ? undefined : date ?? expense.date,
+              notes: notes === null ? undefined : notes?.trim() ?? expense.notes,
+              attendeeCount:
+                attendeeCount === null ? undefined : attendeeCount ?? expense.attendeeCount,
+            };
+          }),
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    };
+  });
 
   if (!outingFound) {
     return NextResponse.json({ error: "Outing not found" }, { status: 404 });
@@ -111,6 +119,9 @@ export async function DELETE(request: NextRequest) {
   let expenseFound = false;
 
   await updateStore((s) => {
+    // reset: the updater re-runs on optimistic retries
+    outingFound = false;
+    expenseFound = false;
     const outings = s.outings.map((outing) => {
       if (outing.id !== outingId) return outing;
       outingFound = true;

@@ -13,14 +13,17 @@ export async function PATCH(request: NextRequest) {
   const { id, status } = parsed.data;
   let found = false;
 
-  await updateStore((s) => ({
-    ...s,
-    mailItems: s.mailItems.map((item) => {
-      if (item.id !== id) return item;
-      found = true;
-      return { ...item, status };
-    }),
-  }));
+  await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
+    return {
+      ...s,
+      mailItems: s.mailItems.map((item) => {
+        if (item.id !== id) return item;
+        found = true;
+        return { ...item, status };
+      }),
+    };
+  });
 
   if (!found) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });

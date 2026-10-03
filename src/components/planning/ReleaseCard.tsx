@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { AlertTriangle, ChevronDown, Plus, X } from "lucide-react";
 import type { Release, ReleasePhase, ReleaseStatus } from "@/lib/types";
 import { Badge, Card, Button } from "@/components/ui";
@@ -112,7 +113,7 @@ export function ReleaseCard({
           onUpdate({
             status: "live",
             actualDate:
-              release.actualDate ?? new Date().toISOString().split("T")[0],
+              release.actualDate ?? format(new Date(), "yyyy-MM-dd"),
           });
           return;
         }

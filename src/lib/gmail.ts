@@ -168,54 +168,41 @@ function mapGmailMessage(
   };
 }
 
-export async function syncGmailInbox(): Promise<{
-  synced: number;
-  added: number;
-  updated: number;
-  email: string;
-}> {
-  const { client, stored } = await getAuthorizedClient();
-  const gmail = google.gmail({ version: "v1", auth: client });
-
-  const list = await gmail.users.messages.list({
-    userId: "me",
-    maxResults: 40,
-    q: "in:inbox newer_than:30d",
-  });
-
-  const messageIds = list.data.messages?.map((m) => m.id).filter(Boolean) ?? [];
-  const fetched: MailItem[] = [];
-
-  for (const id of messageIds) {
-    if (!id) continue;
-    const msg = await gmail.users.messages.get({
-      userId: "me",
-      id,
-      format: "metadata",
-      metadataHeaders: ["Subject", "From", "Date"],
-    });
-    fetched.push(mapGmailMessage(id, msg.data));
+/**
+ * Merge freshly fetched Gmail items into the current mail list.
+ * Pure: call it with the *fresh* store's mailItems (inside updateStore) so edits
+ * made during the network phase of a sync are never clobbered.
+ *
+ * - Re-fetched items keep the user's id, category, followUpDate and drafted/done status.
+ * - Gmail items missing from the fetch (older than the window, archived) are kept when
+ *   the user has handled them (drafted/done) or set a followUpDate; everything else
+ *   (unread / needs_reply, which the sync assigns automatically) is pruned.
+ * - Manual items are always kept.
+ */
+export function mergeGmailItems(
+  existingItems: MailItem[],
+  fetched: MailItem[]
+): { mailItems: MailItem[]; added: number; updated: number } {
+  const fetchedByGmailId = new Map<string, MailItem>();
+  for (const item of fetched) {
+    if (item.gmailId) fetchedByGmailId.set(item.gmailId, item);
   }
 
-  const { readStore, updateStore } = await import("@/lib/db");
-  const store = await readStore();
   const existingByGmailId = new Map(
-    store.mailItems
-      .filter((m) => m.gmailId)
-      .map((m) => [m.gmailId!, m])
+    existingItems.filter((m) => m.gmailId).map((m) => [m.gmailId!, m])
   );
 
   let added = 0;
   let updated = 0;
-  const manualItems = store.mailItems.filter((m) => m.source !== "gmail" && !m.gmailId);
-  const mergedGmail: MailItem[] = [];
+  const merged: MailItem[] = [];
 
-  for (const item of fetched) {
+  for (const item of fetchedByGmailId.values()) {
     const existing = existingByGmailId.get(item.gmailId!);
     if (existing) {
       const preserveStatus =
         existing.status === "drafted" || existing.status === "done";
-      mergedGmail.push({
+      merged.push({
+        ...existing,
         ...item,
         id: existing.id,
         status: preserveStatus ? existing.status : item.status,
@@ -224,29 +211,106 @@ export async function syncGmailInbox(): Promise<{
       });
       updated++;
     } else {
-      mergedGmail.push(item);
+      merged.push(item);
       added++;
     }
   }
 
-  const mailItems = [...mergedGmail, ...manualItems].sort(
+  for (const existing of existingItems) {
+    if (existing.gmailId && fetchedByGmailId.has(existing.gmailId)) continue;
+    const isManual = existing.source !== "gmail" && !existing.gmailId;
+    // needs_reply is NOT kept: the sync labels every read message that way, so keeping it
+    // would never prune aged-out mail.
+    const isHandled =
+      existing.status === "drafted" || existing.status === "done" || !!existing.followUpDate;
+    if (isManual || isHandled) merged.push(existing);
+  }
+
+  const mailItems = merged.sort(
     (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
   );
+  return { mailItems, added, updated };
+}
 
+const GMAIL_PAGE_SIZE = 50;
+const GMAIL_MAX_PAGES = 5;
+const GMAIL_GET_BATCH = 10;
+
+export async function syncGmailInbox(): Promise<{
+  synced: number;
+  added: number;
+  updated: number;
+  failed: number;
+  email: string;
+}> {
+  const { client, stored } = await getAuthorizedClient();
+  const gmail = google.gmail({ version: "v1", auth: client });
+
+  const messageIds: string[] = [];
+  let pageToken: string | undefined;
+  for (let page = 0; page < GMAIL_MAX_PAGES; page++) {
+    const list = await gmail.users.messages.list({
+      userId: "me",
+      maxResults: GMAIL_PAGE_SIZE,
+      q: "in:inbox newer_than:30d",
+      pageToken,
+    });
+    for (const m of list.data.messages ?? []) {
+      if (m.id) messageIds.push(m.id);
+    }
+    pageToken = list.data.nextPageToken ?? undefined;
+    if (!pageToken) break;
+  }
+
+  const fetched: MailItem[] = [];
+  let failed = 0;
+  for (let i = 0; i < messageIds.length; i += GMAIL_GET_BATCH) {
+    const batch = messageIds.slice(i, i + GMAIL_GET_BATCH);
+    const results = await Promise.allSettled(
+      batch.map((id) =>
+        gmail.users.messages.get({
+          userId: "me",
+          id,
+          format: "metadata",
+          metadataHeaders: ["Subject", "From", "Date"],
+        })
+      )
+    );
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        fetched.push(mapGmailMessage(batch[idx], result.value.data));
+      } else {
+        failed++;
+      }
+    });
+  }
+
+  const { updateStore } = await import("@/lib/db");
   const now = new Date().toISOString();
-  await updateStore((s) => ({
-    ...s,
-    mailItems,
-    integrations: {
-      ...s.integrations,
-      gmail: {
-        connected: true,
-        email: stored.email,
-        lastSyncedAt: now,
-        lastSyncError: undefined,
+  let added = 0;
+  let updated = 0;
+  // Merge against the fresh store inside the lock, not a snapshot taken before the network calls.
+  await updateStore((s) => {
+    const merged = mergeGmailItems(s.mailItems, fetched);
+    added = merged.added;
+    updated = merged.updated;
+    return {
+      ...s,
+      mailItems: merged.mailItems,
+      integrations: {
+        ...s.integrations,
+        gmail: {
+          connected: true,
+          email: stored.email,
+          lastSyncedAt: now,
+          lastSyncError:
+            failed > 0
+              ? `${failed} message${failed === 1 ? "" : "s"} could not be fetched`
+              : undefined,
+        },
       },
-    },
-  }));
+    };
+  });
 
   stored.lastSyncedAt = now;
   await writeGmailTokens(stored);
@@ -255,6 +319,7 @@ export async function syncGmailInbox(): Promise<{
     synced: fetched.length,
     added,
     updated,
+    failed,
     email: stored.email,
   };
 }

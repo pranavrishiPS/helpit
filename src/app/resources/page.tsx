@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { PageHeader, Button } from "@/components/ui";
+import { PageHeader, Button, ErrorBanner } from "@/components/ui";
 import { useDashboard } from "@/lib/use-dashboard";
 import type { ProjectResourceType } from "@/lib/types";
 import { AddResourceDialog, ResourceList } from "@/components/resources/ResourceList";
@@ -20,7 +20,7 @@ const TABS: { id: Filter; label: string }[] = [
 ];
 
 export default function ResourcesPage() {
-  const { store, loading, error, reload } = useDashboard();
+  const { store, loading, error, clearError, reload } = useDashboard();
   const [filter, setFilter] = useState<Filter>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -28,7 +28,7 @@ export default function ResourcesPage() {
     return <div className="text-sm text-muted">Loading resources...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load resources"}</div>;
   }
 
@@ -47,6 +47,7 @@ export default function ResourcesPage() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Resources"
         description="Docs, Figma, Sheets, Slides, and project links in one place"

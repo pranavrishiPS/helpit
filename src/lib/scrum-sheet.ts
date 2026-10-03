@@ -5,13 +5,7 @@ import {
   writeScrumSheetTokens,
   type ScrumSheetTokens,
 } from "@/lib/scrum-sheet-store";
-import {
-  buildSheetRows,
-  mergeScrumWithSheet,
-  parseSheetRows,
-  removeDisallowedCells,
-  removeHolidayCells,
-} from "@/lib/scrum-sheet-sync";
+import { parseSheetRows, planScrumSync, type ScrumSyncPlan } from "@/lib/scrum-sheet-sync";
 
 const SHEET_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
@@ -194,43 +188,44 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
     );
   }
 
-  // Holidays carry no attendance: ignore sheet statuses on those dates and drop any app entries there.
-  const holidayDates = new Set((store.scrumHolidays ?? []).map((h) => h.date));
-  const merged = mergeScrumWithSheet(
-    store.scrumMembers ?? [],
-    (store.scrumAttendance ?? []).filter((e) => !holidayDates.has(e.date)),
-    removeDisallowedCells(removeHolidayCells(parsedSheet, holidayDates))
-  );
-
-  const outputRows = buildSheetRows(
-    merged.members,
-    [...new Set([...parsedSheet.dates, ...merged.entries.map((e) => e.date)])],
-    merged.entries,
-    holidayDates
-  );
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: "A1",
-    valueInputOption: "RAW",
-    requestBody: { values: outputRows },
-  });
-
+  // Recompute the merge from FRESH store state inside the store lock, so attendance
+  // edited while we were talking to Google isn't overwritten by a stale snapshot.
+  // The store is committed before the sheet is touched: if the sheet write fails, the
+  // app state is already consistent and the next sync simply retries the (idempotent) write.
   const now = new Date().toISOString();
-  await updateStore((s) => ({
-    ...s,
-    scrumMembers: merged.members,
-    scrumAttendance: merged.entries,
-    integrations: {
-      ...s.integrations,
-      scrumSheet: {
-        ...s.integrations?.scrumSheet,
-        connected: true,
-        lastSyncedAt: now,
-        lastSyncError: undefined,
+  let plan: ScrumSyncPlan | undefined;
+  await updateStore((s) => {
+    plan = planScrumSync({
+      members: s.scrumMembers ?? [],
+      attendance: s.scrumAttendance ?? [],
+      holidayDates: new Set((s.scrumHolidays ?? []).map((h) => h.date)),
+      rows,
+    });
+    return {
+      ...s,
+      scrumMembers: plan.merged.members,
+      scrumAttendance: plan.merged.entries,
+      integrations: {
+        ...s.integrations,
+        scrumSheet: {
+          ...s.integrations?.scrumSheet,
+          connected: true,
+          lastSyncedAt: now,
+          lastSyncError: undefined,
+        },
       },
-    },
-  }));
+    };
+  });
+  if (!plan) throw new Error("Scrum sync produced no plan.");
+  const { merged, updates } = plan as ScrumSyncPlan;
+
+  // Only cells we own are written, at their real positions (header may sit below a notes row).
+  if (updates.length > 0) {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      requestBody: { valueInputOption: "RAW", data: updates },
+    });
+  }
 
   return { membersSynced: merged.members.length, entriesSynced: merged.entries.length };
 }

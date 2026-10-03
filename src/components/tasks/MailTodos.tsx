@@ -35,7 +35,7 @@ export function MailTodos({
   onDelete,
 }: {
   tasks: Task[];
-  onAdd: (task: Partial<Task>) => void;
+  onAdd: (task: Partial<Task>) => Promise<boolean | void> | void;
   onUpdate: (task: Task) => void;
   onDelete: (id: string) => void;
 }) {
@@ -44,6 +44,7 @@ export function MailTodos({
   const [expanded, setExpanded] = useState(false);
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [reminderAt, setReminderAt] = useState<string | undefined>();
+  const [submitting, setSubmitting] = useState(false);
 
   const filtered = useMemo(() => {
     const list = tasks.filter((t) => {
@@ -89,17 +90,24 @@ export function MailTodos({
     setExpanded(false);
   }
 
-  function submit(e?: React.FormEvent) {
+  async function submit(e?: React.FormEvent) {
     e?.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || submitting) return;
 
-    onAdd({
-      title: title.trim(),
-      priority,
-      reminderAt,
-      dueDate: reminderAt ? reminderToDueDate(reminderAt) : undefined,
-    });
-    resetComposer();
+    setSubmitting(true);
+    try {
+      const ok = await onAdd({
+        title: title.trim(),
+        priority,
+        reminderAt,
+        dueDate: reminderAt ? reminderToDueDate(reminderAt) : undefined,
+      });
+      // Keep the composer (and the user's text) if the create failed.
+      if (ok === false) return;
+      resetComposer();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -164,7 +172,7 @@ export function MailTodos({
               </button>
               <button
                 type="submit"
-                disabled={!title.trim()}
+                disabled={!title.trim() || submitting}
                 className="rounded-lg bg-accent px-4 py-1.5 text-xs font-medium text-white shadow-sm shadow-accent/25 hover:bg-accent-hover disabled:opacity-40"
               >
                 Add task

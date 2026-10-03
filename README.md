@@ -40,12 +40,10 @@ npm test         # Vitest unit tests
 
 ## Security
 
-For localhost, API routes are open by default. When exposing Helpit beyond your machine:
+Locally (dev/test/`next build`) everything is open by default. **In production (Vercel or `NODE_ENV=production`, including `next start`) Helpit fails closed**: it returns 503 "Auth not configured" unless site sign-in is configured. `HELPIT_API_KEY` alone is not accepted, because the browser authenticates with the site-auth session and never sends the key.
 
-```env
-HELPIT_API_KEY=your-secret-key
-NEXT_PUBLIC_HELPIT_API_KEY=your-secret-key
-```
+- **Site sign-in (for the browser) — required in production** — set `SITE_AUTH_ALLOWED_EMAILS` and `SITE_AUTH_SECRET`. Only Google accounts with a verified email on the allow-list get a session cookie. `SITE_AUTH_SECRET` is required; it does not fall back to `GOOGLE_CLIENT_SECRET`. Setting the allow-list without the secret is treated as misconfigured (503 in production).
+- **`HELPIT_API_KEY` (server-only, optional)** — for non-browser callers (scripts, curl) via the `x-helpit-api-key` header or `Authorization: Bearer`. Compared in constant time. Requests with a valid site-auth session skip this check, so setting it never locks the browser out. Do **not** create a `NEXT_PUBLIC_` copy: it would be bundled into browser JS.
 
 OAuth flows use CSRF `state` cookies. Callback routes stay public.
 
@@ -76,7 +74,7 @@ After deploy:
 
 1. Set `NEXT_PUBLIC_APP_URL` (and Gmail/Slack redirect URIs) to the production URL.
 2. Add the same callback URLs in Google Cloud and the Slack app.
-3. Set `HELPIT_API_KEY` and `NEXT_PUBLIC_HELPIT_API_KEY` so APIs are not public.
+3. Set `SITE_AUTH_ALLOWED_EMAILS` and `SITE_AUTH_SECRET` (required; optionally also the server-only `HELPIT_API_KEY` for scripts) — production returns 503 without site auth.
 
 ### Deploy flow
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { SlackItem } from "@/lib/types";
-import { PageHeader, Card, Badge, Button } from "@/components/ui";
+import { PageHeader, Card, Badge, Button, ErrorBanner } from "@/components/ui";
 import { formatDueDate, priorityColor } from "@/lib/utils";
 import { Check, MessageSquare, RefreshCw, ExternalLink, Timer } from "lucide-react";
 import { useDashboard } from "@/lib/use-dashboard";
@@ -22,11 +22,12 @@ interface SlackStatus {
 }
 
 export default function SlackPage() {
-  const { store, loading, error, reload } = useDashboard();
+  const { store, loading, error, clearError, reload } = useDashboard();
   const [status, setStatus] = useState<SlackStatus | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncCountdown, setSyncCountdown] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -56,19 +57,33 @@ export default function SlackPage() {
   }, [status?.connected, status?.autoSyncAvailable, status?.lastSyncedAt]);
 
   async function markDone(id: string) {
-    await updateSlackItem(id, true);
+    setActionError(null);
+    try {
+      await updateSlackItem(id, true);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to mark item done");
+      return;
+    }
     await reload();
     notifyStoreUpdated();
   }
 
   async function syncNow() {
     setSyncing(true);
+    setActionError(null);
     try {
       const res = await syncSlack();
-      await handleSlackSyncResponse(res);
+      const result = await handleSlackSyncResponse(res);
+      if (!result.ok) {
+        setActionError(result.error ?? "Slack sync failed");
+        await loadStatus();
+        return;
+      }
       await reload();
       await loadStatus();
       notifyStoreUpdated();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Slack sync failed");
     } finally {
       setSyncing(false);
     }
@@ -78,7 +93,7 @@ export default function SlackPage() {
     return <div className="text-sm text-muted">Loading Slack...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load Slack"}</div>;
   }
 
@@ -88,6 +103,8 @@ export default function SlackPage() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
+      {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Slack"
         description={

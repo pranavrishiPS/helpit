@@ -32,5 +32,8 @@ export async function exchangeLoginCode(code: string): Promise<string> {
   const profile = await oauth2.userinfo.get();
   const email = profile.data.email;
   if (!email) throw new Error("Could not read the signed-in account's email.");
+  if (profile.data.verified_email !== true) {
+    throw new Error("The signed-in Google account's email is not verified.");
+  }
   return email;
 }

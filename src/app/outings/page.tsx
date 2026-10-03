@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import type { Outing, OutingAttendee, OutingExpense } from "@/lib/types";
-import { PageHeader, Card, Badge, Button } from "@/components/ui";
+import { PageHeader, Card, Badge, Button, ErrorBanner } from "@/components/ui";
 import {
   formatCurrency,
   getOutingSpent,
@@ -65,7 +65,7 @@ function sortOutings(outings: Outing[]): {
 
 function formatOutingDate(date?: string): string {
   if (!date) return "Date TBD";
-  const d = new Date(date);
+  const d = parseISO(date); // local parse; new Date("YYYY-MM-DD") is UTC midnight
   const dayMonth = d.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
@@ -143,14 +143,18 @@ function ExpenseList({
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<OutingExpense | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(expense: OutingExpense) {
     if (!window.confirm(`Delete “${expense.title}”?`)) return;
     setDeletingId(expense.id);
+    setError(null);
     try {
       await deleteOutingExpense(outing.id, expense.id);
       onChanged();
       notifyStoreUpdated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete expense");
     } finally {
       setDeletingId(null);
     }
@@ -164,6 +168,7 @@ function ExpenseList({
 
   return (
     <div className="space-y-3">
+      {error && <p className="text-xs text-warning">{error}</p>}
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setAdding(true)}>
           <Plus className="mr-1.5 h-4 w-4" />
@@ -485,7 +490,7 @@ function OutingCard({
 }
 
 export default function OutingsPage() {
-  const { store, loading, error, reload } = useDashboard();
+  const { store, loading, error, clearError, reload } = useDashboard();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { upcoming, past } = useMemo(
     () => sortOutings(store?.outings ?? []),
@@ -500,7 +505,7 @@ export default function OutingsPage() {
     return <div className="text-sm text-muted">Loading outings...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return (
       <div className="text-sm text-warning">
         {error ?? "Failed to load outings"}
@@ -510,6 +515,7 @@ export default function OutingsPage() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
       <PageHeader
         title="Team Outings"
         description="Track budget, attendance, and other spend"

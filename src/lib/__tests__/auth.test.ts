@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import * as authModule from "@/lib/auth";
 import {
-  apiAuthHeaders,
   getApiKeyFromRequest,
-  getClientApiKey,
+  getAuthConfigError,
   isApiAuthEnabled,
   isApiKeyExemptPath,
+  isProductionRuntime,
   isPublicApiPath,
   isSiteAuthPublicPath,
+  timingSafeEqualStrings,
   validateApiKey,
 } from "@/lib/auth";
 
@@ -17,11 +19,10 @@ function request(path: string, headers: Record<string, string> = {}): NextReques
 
 describe("auth", () => {
   const originalServerKey = process.env.HELPIT_API_KEY;
-  const originalClientKey = process.env.NEXT_PUBLIC_HELPIT_API_KEY;
 
   afterEach(() => {
-    process.env.HELPIT_API_KEY = originalServerKey;
-    process.env.NEXT_PUBLIC_HELPIT_API_KEY = originalClientKey;
+    if (originalServerKey === undefined) delete process.env.HELPIT_API_KEY;
+    else process.env.HELPIT_API_KEY = originalServerKey;
   });
 
   describe("isApiAuthEnabled", () => {
@@ -104,43 +105,122 @@ describe("auth", () => {
   });
 
   describe("validateApiKey", () => {
-    it("lets Google site sign-in through without a key when auth is enabled", () => {
+    it("lets Google site sign-in through without a key when auth is enabled", async () => {
       process.env.HELPIT_API_KEY = "secret";
-      expect(validateApiKey(request("/api/auth/google/login"))).toBeNull();
-      expect(validateApiKey(request("/api/auth/google/callback"))).toBeNull();
+      expect(await validateApiKey(request("/api/auth/google/login"))).toBeNull();
+      expect(await validateApiKey(request("/api/auth/google/callback"))).toBeNull();
     });
 
-    it("allows every request through when auth is disabled", () => {
+    it("allows every request through when auth is disabled", async () => {
       delete process.env.HELPIT_API_KEY;
-      expect(validateApiKey(request("/api/tasks"))).toBeNull();
+      expect(await validateApiKey(request("/api/tasks"))).toBeNull();
     });
 
-    it("allows public OAuth paths through even when auth is enabled", () => {
+    it("allows public OAuth paths through even when auth is enabled", async () => {
       process.env.HELPIT_API_KEY = "secret";
-      expect(validateApiKey(request("/api/gmail/callback"))).toBeNull();
+      expect(await validateApiKey(request("/api/gmail/callback"))).toBeNull();
     });
 
-    it("rejects protected requests missing or with the wrong key", () => {
+    it("rejects protected requests missing or with the wrong key", async () => {
       process.env.HELPIT_API_KEY = "secret";
-      const withoutKey = validateApiKey(request("/api/tasks"));
-      const wrongKey = validateApiKey(request("/api/tasks", { "x-helpit-api-key": "wrong" }));
+      const withoutKey = await validateApiKey(request("/api/tasks"));
+      const wrongKey = await validateApiKey(
+        request("/api/tasks", { "x-helpit-api-key": "wrong" })
+      );
+      const prefixKey = await validateApiKey(
+        request("/api/tasks", { "x-helpit-api-key": "secre" })
+      );
+      const longerKey = await validateApiKey(
+        request("/api/tasks", { "x-helpit-api-key": "secret-extra" })
+      );
 
       expect(withoutKey?.status).toBe(401);
       expect(wrongKey?.status).toBe(401);
+      expect(prefixKey?.status).toBe(401);
+      expect(longerKey?.status).toBe(401);
     });
 
-    it("allows protected requests with the correct key", () => {
+    it("allows protected requests with the correct key (header or Bearer)", async () => {
       process.env.HELPIT_API_KEY = "secret";
-      const req = request("/api/tasks", { "x-helpit-api-key": "secret" });
-      expect(validateApiKey(req)).toBeNull();
+      const viaHeader = request("/api/tasks", { "x-helpit-api-key": "secret" });
+      const viaBearer = request("/api/tasks", { authorization: "Bearer secret" });
+      expect(await validateApiKey(viaHeader)).toBeNull();
+      expect(await validateApiKey(viaBearer)).toBeNull();
     });
   });
 
-  describe("getClientApiKey / apiAuthHeaders", () => {
-    it("has no client key and defaults headers in a server (non-browser) environment", () => {
-      process.env.NEXT_PUBLIC_HELPIT_API_KEY = "client-secret";
-      expect(getClientApiKey()).toBeUndefined();
-      expect(apiAuthHeaders()).toEqual({ "Content-Type": "application/json" });
+  describe("timingSafeEqualStrings", () => {
+    it("matches equal strings and rejects different ones", async () => {
+      expect(await timingSafeEqualStrings("secret", "secret")).toBe(true);
+      expect(await timingSafeEqualStrings("secret", "secreT")).toBe(false);
+      expect(await timingSafeEqualStrings("secret", "")).toBe(false);
+      expect(await timingSafeEqualStrings("", "")).toBe(true);
+    });
+  });
+
+  describe("no public client key", () => {
+    it("no longer exports browser API-key helpers", () => {
+      const mod = authModule as Record<string, unknown>;
+      expect(mod.getClientApiKey).toBeUndefined();
+      expect(mod.apiAuthHeaders).toBeUndefined();
+    });
+  });
+
+  describe("isProductionRuntime", () => {
+    it("is true on Vercel or NODE_ENV=production", () => {
+      expect(isProductionRuntime({ VERCEL: "1" })).toBe(true);
+      expect(isProductionRuntime({ NODE_ENV: "production" })).toBe(true);
+    });
+
+    it("is false for dev/test and for next build", () => {
+      expect(isProductionRuntime({ NODE_ENV: "development" })).toBe(false);
+      expect(isProductionRuntime({ NODE_ENV: "test" })).toBe(false);
+      expect(
+        isProductionRuntime({
+          NODE_ENV: "production",
+          VERCEL: "1",
+          NEXT_PHASE: "phase-production-build",
+        })
+      ).toBe(false);
+    });
+  });
+
+  describe("getAuthConfigError (fail closed)", () => {
+    const base = {
+      production: true,
+      siteAuthEnabled: false,
+      siteAuthMisconfigured: false,
+      apiKeyEnabled: false,
+    };
+
+    it("refuses production with no gate configured", () => {
+      expect(getAuthConfigError(base)).toMatch(/Auth not configured/);
+    });
+
+    it("refuses production when site auth has an allow-list but no secret", () => {
+      expect(
+        getAuthConfigError({ ...base, siteAuthMisconfigured: true, apiKeyEnabled: true })
+      ).toMatch(/SITE_AUTH_SECRET/);
+    });
+
+    it("serves production when site auth is configured (with or without an API key)", () => {
+      expect(getAuthConfigError({ ...base, siteAuthEnabled: true })).toBeNull();
+      expect(
+        getAuthConfigError({ ...base, siteAuthEnabled: true, apiKeyEnabled: true })
+      ).toBeNull();
+    });
+
+    it("refuses production with only HELPIT_API_KEY (browser can't send it)", () => {
+      expect(getAuthConfigError({ ...base, apiKeyEnabled: true })).toMatch(
+        /SITE_AUTH_ALLOWED_EMAILS and SITE_AUTH_SECRET/
+      );
+    });
+
+    it("never blocks non-production (dev, test, build)", () => {
+      expect(getAuthConfigError({ ...base, production: false })).toBeNull();
+      expect(
+        getAuthConfigError({ ...base, production: false, siteAuthMisconfigured: true })
+      ).toBeNull();
     });
   });
 });

@@ -6,8 +6,11 @@ import {
   backupJson,
   jsonExists,
   readJsonText,
+  readJsonTextWithEtag,
+  usesBlobStore,
   withJsonLock,
   writeJsonText,
+  writeJsonTextIfMatch,
 } from "./json-persist";
 
 const STORE_FILE = "store.json";
@@ -390,8 +393,9 @@ async function writeStoreUnlocked(store: DashboardStore): Promise<DashboardStore
   return updated;
 }
 
-async function readStoreUnlocked(): Promise<DashboardStore> {
-  let raw = await readJsonText(STORE_FILE);
+async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStore> {
+  // preRead (Blob update loop) is the text already fetched together with its ETag.
+  let raw = preRead !== undefined ? preRead : await readJsonText(STORE_FILE);
   if (raw == null) {
     await ensureStore();
     raw = await readJsonText(STORE_FILE);
@@ -410,8 +414,11 @@ async function readStoreUnlocked(): Promise<DashboardStore> {
     await backupJson(STORE_FILE, backupName).catch((backupErr) => {
       console.error(`[db] failed to back up corrupt store.json to ${backupName}:`, backupErr);
     });
-    await writeJsonText(STORE_FILE, JSON.stringify(defaultStore, null, 2));
-    parsed = structuredClone(defaultStore) as LegacyStore;
+    // Blob update loop (preRead) writes the result itself, conditionally on the ETag.
+    if (preRead === undefined) {
+      await writeJsonText(STORE_FILE, JSON.stringify(defaultStore, null, 2));
+    }
+    parsed =structuredClone(defaultStore) as LegacyStore;
   }
 
   const migrated = migrateLegacyReminders(parsed);
@@ -447,7 +454,7 @@ async function readStoreUnlocked(): Promise<DashboardStore> {
       outings: withScrumStatusFixed.outings.map(normalizeOuting),
       lastUpdated: new Date().toISOString(),
     };
-    await writeStoreUnlocked(updated);
+    if (preRead === undefined) await writeStoreUnlocked(updated);
     return updated;
   }
 
@@ -461,9 +468,45 @@ export async function readStore(): Promise<DashboardStore> {
   return withStoreLock(readStoreUnlocked);
 }
 
+const BLOB_UPDATE_MAX_ATTEMPTS = 8;
+
+/**
+ * Blob mode has no cross-instance lock, so updateStore is optimistic: read store + ETag,
+ * apply the updater, write only if the ETag is unchanged, else re-read and re-apply.
+ */
+async function updateStoreOptimistic(
+  updater: (store: DashboardStore) => DashboardStore
+): Promise<DashboardStore> {
+  for (let attempt = 1; attempt <= BLOB_UPDATE_MAX_ATTEMPTS; attempt++) {
+    const { text, etag } = await readJsonTextWithEtag(STORE_FILE);
+    let base: string | null = text;
+    if (text == null) {
+      if (await jsonExists(STORE_FILE)) {
+        throw new Error("[db] store.json exists but could not be read; refusing to overwrite it");
+      }
+      base = JSON.stringify(defaultStore); // first-ever write: create-only (etag null)
+    }
+    const store = await readStoreUnlocked(base);
+    const updated = {
+      ...syncSprintApprovalsFromReleases(updater(store)),
+      lastUpdated: new Date().toISOString(),
+    };
+    if (await writeJsonTextIfMatch(STORE_FILE, JSON.stringify(updated, null, 2), etag)) {
+      return updated;
+    }
+    if (attempt < BLOB_UPDATE_MAX_ATTEMPTS) {
+      await new Promise((r) => setTimeout(r, Math.random() * 50 * attempt + 10));
+    }
+  }
+  throw new Error(
+    `[db] could not save store.json after ${BLOB_UPDATE_MAX_ATTEMPTS} attempts because it kept changing concurrently; please retry.`
+  );
+}
+
 export async function updateStore(
   updater: (store: DashboardStore) => DashboardStore
 ): Promise<DashboardStore> {
+  if (usesBlobStore()) return updateStoreOptimistic(updater);
   return withStoreLock(async () => {
     const store = await readStoreUnlocked();
     const updated = syncSprintApprovalsFromReleases(updater(store));

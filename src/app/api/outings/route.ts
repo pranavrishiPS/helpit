@@ -109,49 +109,52 @@ export async function PATCH(request: NextRequest) {
   let found = false;
 
   try {
-    await updateStore((s) => ({
-      ...s,
-      outings: s.outings.map((outing) => {
-        if (outing.id !== id) return outing;
-        found = true;
+    await updateStore((s) => {
+      found = false; // reset: the updater re-runs on optimistic retries
+      return {
+        ...s,
+        outings: s.outings.map((outing) => {
+          if (outing.id !== id) return outing;
+          found = true;
 
-        const attendees = parsed.data.attendees
-          ? normalizeAttendees(parsed.data.attendees)
-          : members != null
-            ? mergeAttendees(members, outing.attendees)
-            : outing.attendees;
-        const perPersonInput =
-          budgetPerPerson === null
-            ? undefined
-            : budgetPerPerson ?? outing.budgetPerPerson;
-        const poolInputsChanged =
-          parsed.data.attendees != null ||
-          members != null ||
-          budgetPerPerson !== undefined ||
-          budget != null;
+          const attendees = parsed.data.attendees
+            ? normalizeAttendees(parsed.data.attendees)
+            : members != null
+              ? mergeAttendees(members, outing.attendees)
+              : outing.attendees;
+          const perPersonInput =
+            budgetPerPerson === null
+              ? undefined
+              : budgetPerPerson ?? outing.budgetPerPerson;
+          const poolInputsChanged =
+            parsed.data.attendees != null ||
+            members != null ||
+            budgetPerPerson !== undefined ||
+            budget != null;
 
-        // Only recalculate the pool when the team or budget was edited
-        const resolved = poolInputsChanged
-          ? resolveOutingBudget(budget ?? outing.budget, perPersonInput, attendees.length)
-          : { totalBudget: outing.budget, perPerson: outing.budgetPerPerson };
-        if (!resolved) {
-          throw new Error("INVALID_BUDGET");
-        }
+          // Only recalculate the pool when the team or budget was edited
+          const resolved = poolInputsChanged
+            ? resolveOutingBudget(budget ?? outing.budget, perPersonInput, attendees.length)
+            : { totalBudget: outing.budget, perPerson: outing.budgetPerPerson };
+          if (!resolved) {
+            throw new Error("INVALID_BUDGET");
+          }
 
-        return {
-          ...outing,
-          title: title?.trim() ?? outing.title,
-          destination:
-            destination === null ? undefined : destination?.trim() ?? outing.destination,
-          date: date === null ? undefined : date ?? outing.date,
-          budget: resolved.totalBudget,
-          budgetPerPerson: resolved.perPerson,
-          attendees,
-          notes: notes === null ? undefined : notes?.trim() ?? outing.notes,
-          updatedAt: new Date().toISOString(),
-        };
-      }),
-    }));
+          return {
+            ...outing,
+            title: title?.trim() ?? outing.title,
+            destination:
+              destination === null ? undefined : destination?.trim() ?? outing.destination,
+            date: date === null ? undefined : date ?? outing.date,
+            budget: resolved.totalBudget,
+            budgetPerPerson: resolved.perPerson,
+            attendees,
+            notes: notes === null ? undefined : notes?.trim() ?? outing.notes,
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      };
+    });
   } catch (err) {
     if (err instanceof Error && err.message === "INVALID_BUDGET") {
       return NextResponse.json({ error: "Could not determine outing budget" }, { status: 400 });

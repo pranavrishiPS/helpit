@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockFiles = vi.hoisted(() => new Map<string, string>());
+const mockEtags = vi.hoisted(() => new Map<string, number>());
 
 vi.mock("@/lib/json-persist", () => ({
   withJsonLock: vi.fn(async (_filename: string, fn: () => Promise<unknown>) => fn()),
@@ -18,6 +19,18 @@ vi.mock("@/lib/json-persist", () => ({
   }),
   usesBlobStore: vi.fn(() => false),
   jsonExists: vi.fn(async (filename: string) => mockFiles.has(filename)),
+  // Blob-mode primitives: the etag is a version counter kept in mockEtags.
+  readJsonTextWithEtag: vi.fn(async (filename: string) => ({
+    text: mockFiles.get(filename) ?? null,
+    etag: mockFiles.has(filename) ? String(mockEtags.get(filename) ?? 0) : null,
+  })),
+  writeJsonTextIfMatch: vi.fn(async (filename: string, content: string, etag: string | null) => {
+    const current = mockFiles.has(filename) ? String(mockEtags.get(filename) ?? 0) : null;
+    if (current !== etag) return false;
+    mockFiles.set(filename, content);
+    mockEtags.set(filename, (mockEtags.get(filename) ?? 0) + 1);
+    return true;
+  }),
 }));
 
 import * as jsonPersist from "@/lib/json-persist";
@@ -45,6 +58,7 @@ describe("db", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFiles.clear();
+    mockEtags.clear();
   });
 
   it("creates and returns the default seed store when none exists", async () => {
@@ -209,5 +223,86 @@ describe("db", () => {
 
     const persisted = JSON.parse(mockFiles.get("store.json")!);
     expect(persisted.profile.name).toBe("Alex");
+  });
+
+  describe("updateStore in Blob mode (optimistic concurrency)", () => {
+    beforeEach(() => {
+      vi.mocked(jsonPersist.usesBlobStore).mockReturnValue(true);
+    });
+    afterEach(() => {
+      vi.mocked(jsonPersist.usesBlobStore).mockReturnValue(false);
+      vi.restoreAllMocks();
+    });
+
+    it("writes with the etag it read and does not use the local lock", async () => {
+      seedStore();
+      const updated = await updateStore((s) => ({ ...s, profile: { ...s.profile, name: "Alex" } }));
+
+      expect(updated.profile.name).toBe("Alex");
+      expect(jsonPersist.writeJsonTextIfMatch).toHaveBeenCalledWith("store.json", expect.any(String), "0");
+      expect(jsonPersist.withJsonLock).not.toHaveBeenCalled();
+      expect(JSON.parse(mockFiles.get("store.json")!).profile.name).toBe("Alex");
+    });
+
+    it("on a lost race re-reads fresh data and re-applies the updater (no lost update)", async () => {
+      seedStore({ tasks: [] });
+      const task = (id: string) => ({
+        id,
+        title: id,
+        status: "todo",
+        priority: "medium",
+        source: "manual",
+        tags: [],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      });
+      // A concurrent writer lands its change just before our first write.
+      vi.mocked(jsonPersist.writeJsonTextIfMatch).mockImplementationOnce(async () => {
+        const other = JSON.parse(mockFiles.get("store.json")!);
+        other.tasks.push(task("other"));
+        mockFiles.set("store.json", JSON.stringify(other));
+        mockEtags.set("store.json", 1);
+        return false;
+      });
+      const updater = vi.fn((s: Awaited<ReturnType<typeof readStore>>) => ({
+        ...s,
+        tasks: [...s.tasks, task("mine") as (typeof s.tasks)[number]],
+      }));
+
+      await updateStore(updater);
+
+      expect(updater).toHaveBeenCalledTimes(2);
+      expect(updater.mock.calls[1][0].tasks.map((t) => t.id)).toEqual(["other"]);
+      const persisted = JSON.parse(mockFiles.get("store.json")!);
+      expect(persisted.tasks.map((t: { id: string }) => t.id)).toEqual(["other", "mine"]);
+    });
+
+    it("gives up with a clear error after the attempt cap", async () => {
+      seedStore();
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      for (let i = 0; i < 8; i++) {
+        vi.mocked(jsonPersist.writeJsonTextIfMatch).mockResolvedValueOnce(false);
+      }
+
+      await expect(updateStore((s) => s)).rejects.toThrow(/after 8 attempts.*concurrently/);
+      expect(jsonPersist.writeJsonTextIfMatch).toHaveBeenCalledTimes(8);
+    });
+
+    it("creates the store on first write (no blob yet, null etag)", async () => {
+      const updated = await updateStore((s) => ({ ...s, profile: { ...s.profile, name: "Alex" } }));
+
+      expect(updated.profile.name).toBe("Alex");
+      expect(jsonPersist.writeJsonTextIfMatch).toHaveBeenCalledWith("store.json", expect.any(String), null);
+      expect(JSON.parse(mockFiles.get("store.json")!).profile.name).toBe("Alex");
+    });
+
+    it("refuses to overwrite a store that exists but reads as empty", async () => {
+      mockFiles.set("store.json", "");
+      vi.mocked(jsonPersist.readJsonTextWithEtag).mockResolvedValueOnce({ text: null, etag: "0" });
+
+      await expect(updateStore((s) => s)).rejects.toThrow(/refusing to overwrite/);
+      expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
+      expect(mockFiles.get("store.json")).toBe("");
+    });
   });
 });

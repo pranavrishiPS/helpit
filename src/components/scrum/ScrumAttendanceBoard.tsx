@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { format, parseISO, addDays } from "date-fns";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { format, parseISO, addDays, isValid } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import type { ScrumAttendanceEntry, ScrumHoliday, ScrumStatus } from "@/lib/types";
 import { Button, Card, EmptyState } from "@/components/ui";
@@ -30,6 +30,7 @@ import {
   upsertScrumAttendance,
 } from "@/lib/api-client";
 import { notifyStoreUpdated } from "@/lib/store-events";
+import { isScrumDraftDirty, scrumEntriesSignature } from "@/lib/scrum-draft";
 
 const STATUS_PILL_CLASSES: Record<ScrumStatus, string> = {
   on_time: "border-accent bg-accent/10 text-accent",
@@ -140,7 +141,30 @@ export function ScrumAttendanceBoard({
   );
   const calendarWeeks = useMemo(() => buildWorkWeeks(selectedMonth), [selectedMonth]);
 
+  // Latest drafts for the seeding effect, which must not re-run on every keystroke.
+  const draftRef = useRef(draft);
+  const draftNotesRef = useRef(draftNotes);
   useEffect(() => {
+    draftRef.current = draft;
+    draftNotesRef.current = draftNotes;
+  }, [draft, draftNotes]);
+
+  // Seed drafts from saved entries when the date changes, or when the saved entries
+  // for this date change while there are no unsaved edits. Store reloads (poller,
+  // other mutations) hand us a new entries array and must not wipe the team's drafts.
+  const seededRef = useRef<{ date: string; entries: ScrumAttendanceEntry[] } | null>(null);
+  useEffect(() => {
+    const prev = seededRef.current;
+    seededRef.current = { date: selectedDate, entries: dayEntries };
+    if (prev && prev.date === selectedDate) {
+      if (scrumEntriesSignature(prev.entries) === scrumEntriesSignature(dayEntries)) return;
+      // Keep the draft only if it differs from both the old and the new saved state
+      // (after our own save it equals the new saved state, so it is re-seeded).
+      const hasUnsaved =
+        isScrumDraftDirty(draftRef.current, draftNotesRef.current, prev.entries) &&
+        isScrumDraftDirty(draftRef.current, draftNotesRef.current, dayEntries);
+      if (hasUnsaved) return;
+    }
     const next: Record<string, ScrumStatus> = {};
     const nextNotes: Record<string, string> = {};
     for (const entry of dayEntries) {
@@ -150,10 +174,12 @@ export function ScrumAttendanceBoard({
     setDraft(next);
     setDraftNotes(nextNotes);
     setError(null);
-  }, [dayEntries]);
+  }, [dayEntries, selectedDate]);
 
   function shiftDate(days: number) {
-    setSelectedDate(format(addDays(parseISO(selectedDate), days), "yyyy-MM-dd"));
+    const current = parseISO(selectedDate);
+    if (!isValid(current)) return;
+    setSelectedDate(format(addDays(current, days), "yyyy-MM-dd"));
   }
 
   async function handleSave() {
@@ -222,10 +248,10 @@ export function ScrumAttendanceBoard({
     }
   }
 
-  const dirty = useMemo(() => {
-    if (Object.keys(draft).length !== dayEntries.length) return true;
-    return dayEntries.some((e) => draft[e.member] !== e.status);
-  }, [draft, dayEntries]);
+  const dirty = useMemo(
+    () => isScrumDraftDirty(draft, draftNotes, dayEntries),
+    [draft, draftNotes, dayEntries]
+  );
 
   return (
     <div className="space-y-5">
@@ -243,7 +269,12 @@ export function ScrumAttendanceBoard({
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                // Clearing the input yields "" — keep the current date instead of an invalid one.
+                if (e.target.value && isValid(parseISO(e.target.value))) {
+                  setSelectedDate(e.target.value);
+                }
+              }}
               className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm outline-none focus:border-accent"
             />
             <button

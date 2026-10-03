@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
   let duplicate = false;
 
   const updated = await updateStore((s) => {
+    duplicate = false; // reset: the updater re-runs on optimistic retries
     const existing = s.scrumMembers ?? [];
     if (existing.some((m) => m.toLowerCase() === name.toLowerCase())) {
       duplicate = true;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReleaseFunctionCost, ReleaseFunctionRole } from "@/lib/types";
 import {
   RELEASE_FUNCTION_LABELS,
@@ -40,8 +40,17 @@ export function FunctionEffortGrid({
   const editable = !!onSave && !readOnly;
   const [effortDrafts, setEffortDrafts] = useState(() => buildEffortDrafts(functionCosts));
 
+  // Re-seed from the store only if the user has no unsaved edits: a reload (poller,
+  // another mutation) must not wipe a half-typed value.
+  const seededCostsRef = useRef(functionCosts);
   useEffect(() => {
-    setEffortDrafts(buildEffortDrafts(functionCosts));
+    const seededDrafts = buildEffortDrafts(seededCostsRef.current);
+    seededCostsRef.current = functionCosts;
+    setEffortDrafts((prev) =>
+      JSON.stringify(sanitizeEffortDrafts(prev)) === JSON.stringify(seededDrafts)
+        ? buildEffortDrafts(functionCosts)
+        : prev
+    );
   }, [functionCosts]);
 
   function persistFunctionCosts(

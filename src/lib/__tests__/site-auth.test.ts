@@ -3,12 +3,33 @@ import {
   createSessionToken,
   isEmailAllowed,
   isSiteAuthEnabled,
+  isSiteAuthMisconfigured,
   verifySessionToken,
 } from "@/lib/site-auth";
+import { exchangeLoginCode } from "@/lib/site-auth-google";
+
+const userinfoGet = vi.hoisted(() => vi.fn());
+vi.mock("googleapis", () => ({
+  google: {
+    auth: {
+      OAuth2: class {
+        getToken = async () => ({ tokens: {} });
+        setCredentials() {}
+      },
+    },
+    oauth2: () => ({ userinfo: { get: userinfoGet } }),
+  },
+}));
+
+function restore(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
 
 describe("site-auth", () => {
   const originalAllowed = process.env.SITE_AUTH_ALLOWED_EMAILS;
   const originalSecret = process.env.SITE_AUTH_SECRET;
+  const originalGoogleSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   beforeEach(() => {
     process.env.SITE_AUTH_ALLOWED_EMAILS = "pranavrishi@playsimple.in";
@@ -16,8 +37,9 @@ describe("site-auth", () => {
   });
 
   afterEach(() => {
-    process.env.SITE_AUTH_ALLOWED_EMAILS = originalAllowed;
-    process.env.SITE_AUTH_SECRET = originalSecret;
+    restore("SITE_AUTH_ALLOWED_EMAILS", originalAllowed);
+    restore("SITE_AUTH_SECRET", originalSecret);
+    restore("GOOGLE_CLIENT_SECRET", originalGoogleSecret);
     vi.useRealTimers();
   });
 
@@ -35,6 +57,25 @@ describe("site-auth", () => {
       process.env.SITE_AUTH_SECRET = "";
       delete process.env.GOOGLE_CLIENT_SECRET;
       expect(isSiteAuthEnabled()).toBe(false);
+    });
+
+    it("does not fall back to GOOGLE_CLIENT_SECRET as the signing secret", async () => {
+      process.env.SITE_AUTH_SECRET = "";
+      process.env.GOOGLE_CLIENT_SECRET = "google-secret";
+      expect(isSiteAuthEnabled()).toBe(false);
+      expect(isSiteAuthMisconfigured()).toBe(true);
+      await expect(createSessionToken("pranavrishi@playsimple.in")).rejects.toThrow();
+      expect(await verifySessionToken("abc.def")).toBeNull();
+    });
+  });
+
+  describe("isSiteAuthMisconfigured", () => {
+    it("is true only when an allow-list is set without a secret", () => {
+      expect(isSiteAuthMisconfigured()).toBe(false);
+      process.env.SITE_AUTH_SECRET = "";
+      expect(isSiteAuthMisconfigured()).toBe(true);
+      process.env.SITE_AUTH_ALLOWED_EMAILS = "";
+      expect(isSiteAuthMisconfigured()).toBe(false);
     });
   });
 
@@ -91,6 +132,26 @@ describe("site-auth", () => {
       expect(await verifySessionToken(undefined)).toBeNull();
       expect(await verifySessionToken("")).toBeNull();
       expect(await verifySessionToken("not-a-real-token")).toBeNull();
+      expect(await verifySessionToken("!!!.???")).toBeNull();
+    });
+  });
+
+  describe("exchangeLoginCode (Google userinfo)", () => {
+    it("returns the email when verified_email is true", async () => {
+      userinfoGet.mockResolvedValue({ data: { email: "a@x.com", verified_email: true } });
+      expect(await exchangeLoginCode("code")).toBe("a@x.com");
+    });
+
+    it("rejects an unverified email", async () => {
+      userinfoGet.mockResolvedValue({ data: { email: "a@x.com", verified_email: false } });
+      await expect(exchangeLoginCode("code")).rejects.toThrow(/not verified/);
+    });
+
+    it("rejects when verified_email is missing or not strictly true", async () => {
+      userinfoGet.mockResolvedValue({ data: { email: "a@x.com" } });
+      await expect(exchangeLoginCode("code")).rejects.toThrow(/not verified/);
+      userinfoGet.mockResolvedValue({ data: { email: "a@x.com", verified_email: "true" } });
+      await expect(exchangeLoginCode("code")).rejects.toThrow(/not verified/);
     });
   });
 });

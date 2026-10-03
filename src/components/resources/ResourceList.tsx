@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Pencil, Trash2, X } from "lucide-react";
 import type { ProjectResource, ProjectResourceType } from "@/lib/types";
 import { Badge, Button, Card } from "@/components/ui";
@@ -55,6 +55,11 @@ function ResourceDialog({
   resource?: ProjectResource;
 }) {
   const isEdit = !!resource;
+  // Latest resource without making it an effect dependency (see seeding effect).
+  const resourceRef = useRef(resource);
+  useEffect(() => {
+    resourceRef.current = resource;
+  }, [resource]);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [type, setType] = useState<ProjectResourceType>("link");
@@ -74,6 +79,7 @@ function ResourceDialog({
 
   useEffect(() => {
     if (!open) return;
+    const resource = resourceRef.current;
     if (resource) {
       const detected = detectProjectResourceType(resource.url);
       setTitle(resource.title);
@@ -89,7 +95,9 @@ function ResourceDialog({
       setDescription("");
     }
     setError(null);
-  }, [open, resource]);
+    // Seed only when the dialog opens or targets a different resource, so store
+    // reloads don't wipe unsaved edits.
+  }, [open, resource?.id]);
 
   function handleUrlChange(nextUrl: string) {
     setUrl(nextUrl);
@@ -281,13 +289,17 @@ function ResourceRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
     setDeleting(true);
+    setError(null);
     try {
       await deleteProjectResource(resource.id);
       onChanged();
       notifyStoreUpdated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete link");
     } finally {
       setDeleting(false);
     }
@@ -350,6 +362,7 @@ function ResourceRow({
           </button>
         </div>
       </li>
+      {error && <li className="px-2.5 py-1 text-xs text-warning">{error}</li>}
 
       <ResourceDialog
         open={editing}

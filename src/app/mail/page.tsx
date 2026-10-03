@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, ErrorBanner } from "@/components/ui";
 import { MailTodos } from "@/components/tasks/MailTodos";
 import { MailInbox } from "@/components/tasks/MailInbox";
 import { MailApprovals } from "@/components/tasks/MailApprovals";
@@ -18,10 +18,11 @@ import type { MailItem, SprintApprovalParty } from "@/lib/types";
 import { getMailTabTasks } from "@/lib/utils";
 
 export default function MailPage() {
-  const { store, loading, error, updateTask, deleteTask, addTask, reload } = useDashboard();
+  const { store, loading, error, clearError, updateTask, deleteTask, addTask, reload } = useDashboard();
   const [gmailConnected, setGmailConnected] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<string>();
   const [syncing, setSyncing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadGmailStatus = useCallback(async () => {
     try {
@@ -37,23 +38,36 @@ export default function MailPage() {
     loadGmailStatus();
   }, [loadGmailStatus]);
 
-  async function handleAddTask(partial: Parameters<typeof addTask>[0]) {
-    await addTask({ ...partial, source: "mail" });
+  function handleAddTask(partial: Parameters<typeof addTask>[0]) {
+    return addTask({ ...partial, source: "mail" });
   }
 
   async function handleMailStatus(id: string, status: MailItem["status"]) {
-    await updateMailItem(id, status);
+    setActionError(null);
+    try {
+      await updateMailItem(id, status);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to update mail item");
+      return;
+    }
     await reload();
     notifyStoreUpdated();
   }
 
   async function handleGmailSync() {
     setSyncing(true);
+    setActionError(null);
     try {
-      await syncGmail();
+      const result = await syncGmail();
+      if (!result.ok) {
+        setActionError(result.error ?? "Gmail sync failed");
+        return;
+      }
       await reload();
       await loadGmailStatus();
       notifyStoreUpdated();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Gmail sync failed");
     } finally {
       setSyncing(false);
     }
@@ -64,13 +78,25 @@ export default function MailPage() {
     party: SprintApprovalParty,
     approved: boolean
   ) {
-    await updateSprintApproval(id, party, approved);
+    setActionError(null);
+    try {
+      await updateSprintApproval(id, party, approved);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to update approval");
+      return;
+    }
     await reload();
     notifyStoreUpdated();
   }
 
   async function handleMailSent(id: string, mailSent: boolean) {
-    await updateSprintApprovalMailSent(id, mailSent);
+    setActionError(null);
+    try {
+      await updateSprintApprovalMailSent(id, mailSent);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to update approval");
+      return;
+    }
     await reload();
     notifyStoreUpdated();
   }
@@ -79,7 +105,7 @@ export default function MailPage() {
     return <div className="text-sm text-muted">Loading...</div>;
   }
 
-  if (error || !store) {
+  if (!store) {
     return <div className="text-sm text-warning">{error ?? "Failed to load mail"}</div>;
   }
 
@@ -88,6 +114,8 @@ export default function MailPage() {
 
   return (
     <div>
+      {error && <ErrorBanner message={error} onDismiss={clearError} />}
+      {actionError && <ErrorBanner message={actionError} onDismiss={() => setActionError(null)} />}
       <PageHeader
         title="Mail"
         description="Gmail inbox, sprint costing approvals, and personal reminders"

@@ -99,6 +99,38 @@ export function EmptyState({
   );
 }
 
+/** Non-blocking error message; keeps the page (and any unsaved drafts) mounted. */
+export function ErrorBanner({
+  message,
+  onDismiss,
+  className,
+}: {
+  message: string;
+  onDismiss?: () => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "mb-4 flex items-start justify-between gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-warning",
+        className
+      )}
+    >
+      <span className="min-w-0">{message}</span>
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 text-xs font-medium hover:underline"
+        >
+          Dismiss
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function Button({
   children,
   onClick,

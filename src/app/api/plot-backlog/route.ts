@@ -87,6 +87,7 @@ export async function DELETE(request: NextRequest) {
 
   let found = false;
   await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
     const next = (s.plotBacklog ?? []).filter((item) => {
       if (item.id === parsed.data.id) {
         found = true;

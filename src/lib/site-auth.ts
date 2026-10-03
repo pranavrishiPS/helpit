@@ -8,8 +8,10 @@ export const SITE_AUTH_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+// Deliberately SITE_AUTH_SECRET only: never reuse another credential (e.g. the Google
+// client secret) as the session signing key.
 function getSecret(): string {
-  return (process.env.SITE_AUTH_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim();
+  return (process.env.SITE_AUTH_SECRET ?? "").trim();
 }
 
 function getAllowedEmails(): string[] {
@@ -21,6 +23,11 @@ function getAllowedEmails(): string[] {
 
 export function isSiteAuthEnabled(): boolean {
   return getAllowedEmails().length > 0 && !!getSecret();
+}
+
+/** Allow-list set but no signing secret: must fail closed, not silently disable the gate. */
+export function isSiteAuthMisconfigured(): boolean {
+  return getAllowedEmails().length > 0 && !getSecret();
 }
 
 export function isEmailAllowed(email: string): boolean {
@@ -59,6 +66,7 @@ async function sign(value: string): Promise<string> {
 }
 
 export async function createSessionToken(email: string): Promise<string> {
+  if (!getSecret()) throw new Error("SITE_AUTH_SECRET is not set.");
   const expiresAt = Date.now() + SITE_AUTH_MAX_AGE_SECONDS * 1000;
   const payload = `${email}|${expiresAt}`;
   const payloadB64 = bytesToBase64Url(encoder.encode(payload));
@@ -67,18 +75,24 @@ export async function createSessionToken(email: string): Promise<string> {
 
 /** Returns the authenticated email if the token is valid, unexpired, and still allow-listed. */
 export async function verifySessionToken(token: string | undefined | null): Promise<string | null> {
-  if (!token) return null;
+  if (!token || !getSecret()) return null;
   const [payloadB64, signature] = token.split(".");
   if (!payloadB64 || !signature) return null;
 
-  const payload = decoder.decode(base64UrlToBytes(payloadB64));
-  const key = await getKey();
-  const valid = await crypto.subtle.verify(
-    "HMAC",
-    key,
-    base64UrlToBytes(signature).buffer as ArrayBuffer,
-    encoder.encode(payload)
-  );
+  let payload: string;
+  let valid: boolean;
+  try {
+    payload = decoder.decode(base64UrlToBytes(payloadB64));
+    const key = await getKey();
+    valid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      base64UrlToBytes(signature).buffer as ArrayBuffer,
+      encoder.encode(payload)
+    );
+  } catch {
+    return null;
+  }
   if (!valid) return null;
 
   const [email, expiresAtRaw] = payload.split("|");

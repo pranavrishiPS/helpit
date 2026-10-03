@@ -15,27 +15,30 @@ export async function PATCH(request: NextRequest) {
   const { id, party, approved, mailSent } = parsed.data;
   let found = false;
 
-  await updateStore((s) => ({
-    ...s,
-    sprintApprovals: (s.sprintApprovals ?? []).map((item) => {
-      if (item.id !== id) return item;
-      found = true;
+  await updateStore((s) => {
+    found = false; // reset: the updater re-runs on optimistic retries
+    return {
+      ...s,
+      sprintApprovals: (s.sprintApprovals ?? []).map((item) => {
+        if (item.id !== id) return item;
+        found = true;
 
-      if (mailSent != null) {
+        if (mailSent != null) {
+          return {
+            ...item,
+            sentAt: mailSent ? new Date().toISOString() : undefined,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+
         return {
           ...item,
-          sentAt: mailSent ? new Date().toISOString() : undefined,
+          approvals: { ...item.approvals, [party!]: approved! },
           updatedAt: new Date().toISOString(),
         };
-      }
-
-      return {
-        ...item,
-        approvals: { ...item.approvals, [party!]: approved! },
-        updatedAt: new Date().toISOString(),
-      };
-    }),
-  }));
+      }),
+    };
+  });
 
   if (!found) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });

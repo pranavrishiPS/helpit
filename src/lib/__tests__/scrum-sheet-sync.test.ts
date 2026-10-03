@@ -3,7 +3,10 @@ import {
   buildSheetRows,
   formatSheetDate,
   mergeScrumWithSheet,
+  columnLetter,
   parseSheetDate,
+  planScrumSync,
+  planSheetWrite,
   parseSheetRows,
   parseStatusLabel,
   removeDisallowedCells,
@@ -241,5 +244,139 @@ describe("removeDisallowedCells", () => {
       { member: "Pranav", date: "2026-09-30", status: "late" },
       { member: "Pranav", date: "2026-10-01", status: "first_half_off" },
     ]);
+  });
+});
+
+describe("parseSheetDate strictness", () => {
+  it("rejects loose strings that Date() would turn into bogus dates", () => {
+    expect(parseSheetDate("Total 5")).toBeUndefined();
+    expect(parseSheetDate("Week 12")).toBeUndefined();
+    expect(parseSheetDate("Oct 1")).toBeUndefined();
+    expect(parseSheetDate("03/04/26")).toBeUndefined();
+    expect(parseSheetDate("Notes")).toBeUndefined();
+  });
+
+  it("accepts d-MMM-yy and dd-MMM-yyyy, and rejects impossible dates", () => {
+    expect(parseSheetDate("1-Oct-26")).toBe("2026-10-01");
+    expect(parseSheetDate("01-October-2026")).toBe("2026-10-01");
+    expect(parseSheetDate("31-Feb-26")).toBeUndefined();
+    expect(parseSheetDate("2026-02-30")).toBeUndefined();
+    expect(parseSheetDate("5-Foo-26")).toBeUndefined();
+  });
+});
+
+describe("columnLetter", () => {
+  it("converts indexes to A1 letters", () => {
+    expect(columnLetter(0)).toBe("A");
+    expect(columnLetter(25)).toBe("Z");
+    expect(columnLetter(26)).toBe("AA");
+  });
+});
+
+describe("planSheetWrite", () => {
+  const notesSheet = [
+    [null, null, null, "All WFH"],
+    ["Member", "30-Jul-26", "31-Jul-26"],
+    ["Pranav", "On time", "Late"],
+  ] as unknown as string[][];
+
+  it("writes at the original header row (not A1) and adds no duplicate member rows", () => {
+    const entries = [
+      entry({ member: "Pranav", date: "2026-07-30", status: "leave" }),
+      entry({ member: "Pranav", date: "2026-07-31", status: "late" }),
+    ];
+    const updates = planSheetWrite(notesSheet, ["Pranav"], ["2026-07-30", "2026-07-31"], entries);
+    // Only the changed cell, on sheet row 3 (header is row 2, below the notes row).
+    expect(updates).toEqual([{ range: "B3", values: [["Leave"]] }]);
+  });
+
+  it("appends new members below the last row and new dates after the last column", () => {
+    const updates = planSheetWrite(
+      notesSheet,
+      ["Pranav", "New Hire"],
+      ["2026-07-30", "2026-07-31", "2026-08-01"],
+      [
+        entry({ member: "Pranav", date: "2026-07-30", status: "on_time" }),
+        entry({ member: "Pranav", date: "2026-07-31", status: "late" }),
+        entry({ member: "New Hire", date: "2026-08-01", status: "on_time" }),
+      ]
+    );
+    expect(updates).toEqual([
+      { range: "D2", values: [["1-Aug-26"]] },
+      { range: "A4", values: [["New Hire"]] },
+      { range: "D4", values: [["On time"]] },
+    ]);
+    // Nothing targets the notes row or A1.
+    expect(updates.every((u) => !/^[A-Z]+1(:|$)/.test(u.range))).toBe(true);
+  });
+
+  it("returns no updates when the sheet already matches", () => {
+    const entries = [
+      entry({ member: "Pranav", date: "2026-07-30", status: "on_time" }),
+      entry({ member: "Pranav", date: "2026-07-31", status: "late" }),
+    ];
+    expect(planSheetWrite(notesSheet, ["Pranav"], ["2026-07-30", "2026-07-31"], entries)).toEqual([]);
+  });
+
+  it("preserves unrecognized cell text and never touches non-date columns", () => {
+    const rows = [
+      ["Member", "30-Jul-26", "31-Jul-26", "Total", "Notes"],
+      ["Pranav", "WFH", "Late", "=COUNTA(B2:C2)", "check in"],
+    ];
+    const updates = planSheetWrite(
+      rows,
+      ["Pranav"],
+      ["2026-07-30", "2026-07-31", "2026-08-01"],
+      [
+        entry({ member: "Pranav", date: "2026-07-30", status: "on_time" }), // app-only over raw "WFH"
+        entry({ member: "Pranav", date: "2026-07-31", status: "late" }),
+        entry({ member: "Pranav", date: "2026-08-01", status: "on_time" }),
+      ]
+    );
+    // WFH kept; Total/Notes (cols D, E) untouched; new date appended after them (col F).
+    expect(updates).toEqual([
+      { range: "F1", values: [["1-Aug-26"]] },
+      { range: "F2", values: [["On time"]] },
+    ]);
+  });
+
+  it("writes the holiday label on owned cells but keeps unrecognized text", () => {
+    const rows = [
+      ["Member", "30-Jul-26", "31-Jul-26"],
+      ["Pranav", "On time", "WFH"],
+    ];
+    const updates = planSheetWrite(rows, ["Pranav"], ["2026-07-30", "2026-07-31"], [], new Set(["2026-07-30", "2026-07-31"]));
+    expect(updates).toEqual([{ range: "B2", values: [["Holiday"]] }]);
+  });
+
+  it("builds a fresh header at A1 for an empty sheet", () => {
+    const updates = planSheetWrite([], ["Pranav"], ["2026-07-30"], [entry({ member: "Pranav", date: "2026-07-30" })]);
+    expect(updates).toEqual([
+      { range: "A1:B1", values: [["Member", "30-Jul-26"]] },
+      { range: "A2:B2", values: [["Pranav", "On time"]] },
+    ]);
+  });
+});
+
+describe("planScrumSync", () => {
+  const rows = [
+    ["Member", "30-Jul-26"],
+    ["Pranav", "Late"],
+  ];
+
+  it("merges against the state it is given, so a concurrent edit is not clobbered", () => {
+    // Stale snapshot had no entry for Vrushali; fresh state (an edit made mid-sync) does.
+    const fresh = [entry({ member: "Vrushali", date: "2026-07-31", status: "leave" })];
+    const plan = planScrumSync({
+      members: ["Pranav", "Vrushali"],
+      attendance: fresh,
+      holidayDates: new Set(),
+      rows,
+    });
+    expect(plan.merged.entries).toContainEqual(fresh[0]);
+    expect(plan.merged.entries.find((e) => e.member === "Pranav")?.status).toBe("late");
+    expect(plan.updates).toContainEqual({ range: "C1", values: [["31-Jul-26"]] });
+    expect(plan.updates).toContainEqual({ range: "A3", values: [["Vrushali"]] });
+    expect(plan.updates).toContainEqual({ range: "C3", values: [["Leave"]] });
   });
 });
