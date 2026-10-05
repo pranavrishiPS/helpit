@@ -29,7 +29,7 @@ vi.mock("@/lib/gmail-store", () => ({
 
 vi.mock("@/lib/db", () => ({ updateStore: updateStoreMock, readStore: readStoreMock }));
 
-import { buildApprovalThreadQuery, mergeGmailItems, syncGmailInbox } from "@/lib/gmail";
+import { INBOX_QUERY, buildApprovalThreadQuery, mergeGmailItems, syncGmailInbox } from "@/lib/gmail";
 
 function mail(overrides: Partial<MailItem> & { id: string }): MailItem {
   return {
@@ -53,6 +53,14 @@ function gmailItem(gid: string, overrides: Partial<MailItem> = {}): MailItem {
 }
 
 describe("mergeGmailItems", () => {
+  it("drops support mail, including handled items from older syncs", () => {
+    const oldSupport = gmailItem("s1", { subject: "[Support] Crash", status: "done" });
+    const fresh = gmailItem("s2", { subject: "Hi", from: "support@vendor.com" });
+    const keep = gmailItem("k", { subject: "Leave Notification" });
+    const { mailItems } = mergeGmailItems([oldSupport], [fresh, keep]);
+    expect(mailItems.map((m) => m.gmailId)).toEqual(["k"]);
+  });
+
   it("keeps a handled item that fell outside the fetch window", () => {
     const old = gmailItem("old", { status: "drafted", followUpDate: "2026-10-10" });
     const { mailItems } = mergeGmailItems([old], [gmailItem("new")]);
@@ -243,7 +251,7 @@ describe("syncGmailInbox", () => {
     await syncGmailInbox();
 
     expect(listMock).toHaveBeenCalledTimes(1);
-    expect(listMock.mock.calls[0][0].q).toBe("in:inbox newer_than:30d");
+    expect(listMock.mock.calls[0][0].q).toBe(INBOX_QUERY);
   });
 
   it("does not fail the inbox sync when a thread search errors", async () => {
@@ -277,5 +285,12 @@ describe("buildApprovalThreadQuery", () => {
     expect(buildApprovalThreadQuery(' iOS "Release"\ 1.80 ')).toBe(
       'subject:"iOS Release 1.80 Thread" newer_than:365d'
     );
+  });
+});
+
+describe("INBOX_QUERY", () => {
+  it("excludes support senders", () => {
+    expect(INBOX_QUERY).toContain("in:inbox newer_than:30d");
+    expect(INBOX_QUERY).toContain("-from:support");
   });
 });

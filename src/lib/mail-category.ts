@@ -5,8 +5,8 @@ import type { MailItem } from "@/lib/types";
 
 export type MailCategory = MailItem["category"];
 
+/** Categories shown on the Mail tab. Support mail is detected but skipped (read in Gmail). */
 export const MAIL_CATEGORIES: { id: MailCategory; label: string }[] = [
-  { id: "support", label: "Support" },
   { id: "leave", label: "Leaves/WFH" },
   { id: "meeting", label: "Meetings" },
   { id: "other", label: "Others" },
@@ -38,6 +38,9 @@ const SUPPORT_SUBJECT_KEYWORDS = [
   "freshdesk",
   "player issue",
   "bug report",
+  // Freshdesk tickets forwarded by the cryptogram@ group
+  "feedback on cryptogram",
+  "need some help on cryptogram",
 ];
 
 /** Keyword-based category for a message. Rules are checked meeting → leave → support. */

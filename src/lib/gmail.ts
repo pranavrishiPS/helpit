@@ -207,7 +207,10 @@ export function mergeGmailItems(
     if (isManual || isHandled) merged.push(existing);
   }
 
-  const mailItems = merged.sort(
+  // Support mail is read in Gmail directly: never keep it, including items from older syncs.
+  const mailItems = merged
+    .filter((m) => categorizeMail(m.subject, m.from) !== "support")
+    .sort(
     (a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
   );
   return { mailItems, added, updated };
@@ -216,6 +219,11 @@ export function mergeGmailItems(
 const GMAIL_PAGE_SIZE = 50;
 const GMAIL_MAX_PAGES = 5;
 const GMAIL_GET_BATCH = 10;
+/** Inbox window; support senders are excluded up front so they cost no fetch calls. */
+export const INBOX_QUERY =
+  "in:inbox newer_than:30d -from:support -from:helpdesk -from:zendesk -from:freshdesk" +
+  ' -"Freshdesk Tickets" -subject:"Feedback on Cryptogram" -subject:"Need some help on Cryptogram"';
+
 /** Max messages fetched per build thread search. */
 const GMAIL_THREAD_MAX_RESULTS = 50;
 
@@ -323,7 +331,7 @@ export async function syncGmailInbox(): Promise<{
     const list = await gmail.users.messages.list({
       userId: "me",
       maxResults: GMAIL_PAGE_SIZE,
-      q: "in:inbox newer_than:30d",
+      q: INBOX_QUERY,
       pageToken,
     });
     for (const m of list.data.messages ?? []) {
@@ -334,7 +342,8 @@ export async function syncGmailInbox(): Promise<{
   }
 
   const inbox = await fetchMessages(gmail, messageIds);
-  const fetched = inbox.items;
+  // The query skips most support mail before fetching; this catches what it misses.
+  const fetched = inbox.items.filter((m) => m.category !== "support");
   let failed = inbox.failed;
 
   // Build threads may be archived or older than the inbox window: search all mail for the

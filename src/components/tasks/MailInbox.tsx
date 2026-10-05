@@ -51,12 +51,20 @@ export function MailInbox({
   const [showDone, setShowDone] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const showPlaceholder = items.length === 0;
+  // Support mail is read in Gmail itself, not here; drop any left over from older syncs.
+  const inboxItems = useMemo(
+    () => items.filter((m) => resolveMailCategory(m) !== "support"),
+    [items]
+  );
+  const showPlaceholder = inboxItems.length === 0;
 
-  const openThreads = useMemo(() => toThreads(items.filter((m) => m.status !== "done")), [items]);
+  const openThreads = useMemo(
+    () => toThreads(inboxItems.filter((m) => m.status !== "done")),
+    [inboxItems]
+  );
   const threads = useMemo(
-    () => (showDone ? toThreads(items) : openThreads),
-    [items, openThreads, showDone]
+    () => (showDone ? toThreads(inboxItems) : openThreads),
+    [inboxItems, openThreads, showDone]
   );
 
   const counts = useMemo(() => {

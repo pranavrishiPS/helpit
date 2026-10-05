@@ -43,6 +43,8 @@ describe("categorizeMail", () => {
   });
 
   it("detects support mail", () => {
+    expect(categorizeMail("Fwd: Feedback on Cryptogram", "cryptogram@playsimple.in")).toBe("support");
+    expect(categorizeMail("Fwd: Need some help on Cryptogram", "cryptogram@playsimple.in")).toBe("support");
     expect(categorizeMail("[Support] Crash on level 12", "a@b.com")).toBe("support");
     expect(categorizeMail("New ticket #4411", "a@b.com")).toBe("support");
     expect(categorizeMail("Player issue: lost coins", "a@b.com")).toBe("support");
@@ -74,8 +76,8 @@ describe("resolveMailCategory", () => {
     );
   });
 
-  it("covers every category id", () => {
-    expect(MAIL_CATEGORIES.map((c) => c.id)).toEqual(["support", "leave", "meeting", "other"]);
+  it("lists the shown categories (support is hidden)", () => {
+    expect(MAIL_CATEGORIES.map((c) => c.id)).toEqual(["leave", "meeting", "other"]);
   });
 });
 
