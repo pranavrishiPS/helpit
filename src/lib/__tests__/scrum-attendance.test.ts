@@ -56,7 +56,31 @@ describe("computeScrumInsights", () => {
 
     expect(vrushali.leave).toBe(1);
     expect(vrushali.totalDays).toBe(1);
-    expect(vrushali.onTimeRate).toBe(0);
+    expect(vrushali.attendedDays).toBe(0);
+    expect(vrushali.onTimeRate).toBeNull();
+  });
+
+  it("returns a null on-time rate for a member on leave every tracked day", () => {
+    const entries = [
+      entry({ member: "Pranav", date: "2026-08-01", status: "leave" }),
+      entry({ member: "Pranav", date: "2026-08-02", status: "leave" }),
+    ];
+    const [pranav] = computeScrumInsights(["Pranav"], entries);
+    expect(pranav.totalDays).toBe(2);
+    expect(pranav.attendedDays).toBe(0);
+    expect(pranav.onTimeRate).toBeNull();
+  });
+
+  it("computes the rate out of attended days only in a mixed month", () => {
+    const entries = [
+      entry({ member: "Pranav", date: "2026-08-01", status: "on_time" }),
+      entry({ member: "Pranav", date: "2026-08-02", status: "late" }),
+      entry({ member: "Pranav", date: "2026-08-03", status: "leave" }),
+    ];
+    const [pranav] = computeScrumInsights(["Pranav"], entries);
+    expect(pranav.totalDays).toBe(3);
+    expect(pranav.attendedDays).toBe(2);
+    expect(pranav.onTimeRate).toBe(50);
   });
 
   it("excludes 'leave' status entries from the on-time rate", () => {
@@ -85,6 +109,7 @@ describe("computeScrumInsights", () => {
     const [pranav] = computeScrumInsights(["Pranav"], entries);
     expect(pranav.firstHalfOff).toBe(1);
     expect(pranav.totalDays).toBe(2);
+    expect(pranav.attendedDays).toBe(1);
     expect(pranav.onTimeRate).toBe(100);
   });
 
@@ -98,7 +123,8 @@ describe("computeScrumInsights", () => {
         leave: 0,
         firstHalfOff: 0,
         totalDays: 0,
-        onTimeRate: 0,
+        attendedDays: 0,
+        onTimeRate: null,
       },
     ]);
   });

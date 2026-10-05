@@ -136,7 +136,14 @@ export function ScrumAttendanceBoard({
   }, [entries, monthKey]);
   const monthEntries = useMemo(() => entriesForMonth(entries, monthKey), [entries, monthKey]);
   const insights = useMemo(
-    () => computeScrumInsights(members, monthEntries).sort((a, b) => b.onTimeRate - a.onTimeRate),
+    // Members with no attended scrums (null rate) sort after everyone with a rate.
+    () =>
+      computeScrumInsights(members, monthEntries).sort((a, b) => {
+        if (a.onTimeRate === null || b.onTimeRate === null) {
+          return (a.onTimeRate === null ? 1 : 0) - (b.onTimeRate === null ? 1 : 0);
+        }
+        return b.onTimeRate - a.onTimeRate;
+      }),
     [members, monthEntries]
   );
 
@@ -493,11 +500,14 @@ export function ScrumAttendanceBoard({
                     )}
                   >
                     <td className={cn(tableClasses.cell, "font-semibold text-foreground")}>{row.member}</td>
-                    <td className={cn(tableClasses.cell, "text-right font-semibold tabular-nums text-success")}>
-                      {row.totalDays > 0 ? `${row.onTimeRate}%` : "—"}
+                    <td
+                      className={cn(tableClasses.cell, "text-right font-semibold tabular-nums text-success")}
+                      title={row.onTimeRate === null ? "No scrums attended" : undefined}
+                    >
+                      {row.onTimeRate === null ? "—" : `${row.onTimeRate}%`}
                     </td>
                     <td className={cn(tableClasses.cell, "text-right tabular-nums text-muted")}>
-                      {row.late}/{row.totalDays}
+                      {row.attendedDays > 0 ? `${row.late}/${row.attendedDays}` : "—"}
                     </td>
                     <td className={cn(tableClasses.cell, "text-right tabular-nums text-muted")}>
                       {row.leave}/{row.totalDays}

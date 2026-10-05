@@ -37,8 +37,13 @@ export interface ScrumMemberInsight {
   firstHalfOff: number;
   /** on_time + late + leave + first_half_off — the total tracked days this insight is out of. "Other" is excluded. */
   totalDays: number;
-  /** Percentage of on_time/late days the member was on time, 0-100. "Leave", "1st half off" and "other" days are excluded. */
-  onTimeRate: number;
+  /** on_time + late — scrums the member actually attended. Denominator for the on-time rate and the Late column. */
+  attendedDays: number;
+  /**
+   * Percentage of attended (on_time/late) days the member was on time, 0-100.
+   * "Leave", "1st half off" and "other" days are excluded. null when attendedDays is 0.
+   */
+  onTimeRate: number | null;
 }
 
 /** Insights for every member with either a roster entry or at least one logged record. */
@@ -63,7 +68,8 @@ export function computeScrumInsights(
       leave,
       firstHalfOff,
       totalDays: onTime + late + leave + firstHalfOff,
-      onTimeRate: attendedDays > 0 ? Math.round((onTime / attendedDays) * 100) : 0,
+      attendedDays,
+      onTimeRate: attendedDays > 0 ? Math.round((onTime / attendedDays) * 100) : null,
     };
   });
 }
