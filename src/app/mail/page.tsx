@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { PageHeader, ErrorBanner, PageSkeleton, SectionTitle } from "@/components/ui";
+import { Button, PageHeader, ErrorBanner, PageSkeleton, SectionTitle } from "@/components/ui";
+import { RefreshCw } from "lucide-react";
 import { MailTodos } from "@/components/tasks/MailTodos";
 import { MailInbox } from "@/components/tasks/MailInbox";
 import { MailApprovals } from "@/components/tasks/MailApprovals";
@@ -129,6 +130,27 @@ export default function MailPage() {
         title="Mail"
         module="mail"
         description="Gmail inbox, sprint costing approvals, and personal reminders"
+        action={
+          gmailConnected ? (
+            <div className="flex items-center gap-3">
+              {lastSyncedAt && (
+                <span className="text-xs text-muted">
+                  Synced {new Date(lastSyncedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                </span>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleGmailSync}
+                disabled={syncing}
+                title="Syncs the inbox and sprint approvals"
+              >
+                <RefreshCw className={syncing ? "animate-spin" : ""} />
+                {syncing ? "Syncing…" : "Sync Gmail"}
+              </Button>
+            </div>
+          ) : undefined
+        }
       />
 
       <section className="mb-8">
@@ -139,7 +161,6 @@ export default function MailPage() {
           onSync={handleGmailSync}
           syncing={syncing}
           connected={gmailConnected}
-          lastSyncedAt={lastSyncedAt}
         />
       </section>
 

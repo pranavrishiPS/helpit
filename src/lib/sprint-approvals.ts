@@ -241,6 +241,18 @@ export function applyMailApprovals(
   return changed ? next : approvals;
 }
 
+/**
+ * True when mail could still change this row: a party is unticked and not overridden, or
+ * the sent date is missing and not overridden. Used to skip Gmail thread searches.
+ */
+export function needsMailCheck(approval: SprintApproval): boolean {
+  const pendingParty = PARTIES.some(
+    (party) => !approval.approvals[party] && approval.overrides?.[party] == null
+  );
+  const pendingSent = !approval.sentAt && approval.sentOverride == null;
+  return pendingParty || pendingSent;
+}
+
 /** Store-level wrapper; returns the same store when nothing changed. */
 export function applyMailApprovalsToStore(store: DashboardStore): DashboardStore {
   const current = store.sprintApprovals ?? [];

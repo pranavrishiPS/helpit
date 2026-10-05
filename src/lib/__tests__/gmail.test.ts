@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MailItem } from "@/lib/types";
+import type { MailItem, SprintApproval } from "@/lib/types";
 
 const listMock = vi.fn();
 const getMock = vi.fn();
 const updateStoreMock = vi.fn();
+const readStoreMock = vi.fn();
 
 vi.mock("googleapis", () => ({
   google: {
@@ -26,9 +27,9 @@ vi.mock("@/lib/gmail-store", () => ({
   writeGmailTokens: vi.fn(async () => {}),
 }));
 
-vi.mock("@/lib/db", () => ({ updateStore: updateStoreMock }));
+vi.mock("@/lib/db", () => ({ updateStore: updateStoreMock, readStore: readStoreMock }));
 
-import { mergeGmailItems, syncGmailInbox } from "@/lib/gmail";
+import { buildApprovalThreadQuery, mergeGmailItems, syncGmailInbox } from "@/lib/gmail";
 
 function mail(overrides: Partial<MailItem> & { id: string }): MailItem {
   return {
@@ -127,6 +128,8 @@ describe("syncGmailInbox", () => {
     listMock.mockReset();
     getMock.mockReset();
     updateStoreMock.mockReset();
+    readStoreMock.mockReset();
+    readStoreMock.mockResolvedValue({ sprintApprovals: [] });
   });
 
   it("skips messages that fail to fetch and follows nextPageToken", async () => {
@@ -152,5 +155,127 @@ describe("syncGmailInbox", () => {
     expect(result).toMatchObject({ synced: 2, added: 2, failed: 1 });
     expect(saved?.mailItems.map((m) => m.gmailId).sort()).toEqual(["1", "3"]);
     expect(saved?.integrations.gmail.lastSyncError).toMatch(/1 message/);
+  });
+
+  const header = (subject: string, from: string) => ({
+    payload: {
+      headers: [
+        { name: "Subject", value: subject },
+        { name: "From", value: from },
+      ],
+    },
+  });
+
+  function approval(overrides: Partial<SprintApproval> & { id: string; title: string }): SprintApproval {
+    return {
+      approvals: { gm: false, dev: false, qa: false },
+      createdAt: "2026-09-01T00:00:00.000Z",
+      updatedAt: "2026-09-01T00:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  type Saved = {
+    mailItems: MailItem[];
+    sprintApprovals: SprintApproval[];
+    integrations: { gmail: { lastSyncError?: string } };
+  };
+
+  function captureSave(fresh: Omit<Saved, "integrations">) {
+    const out: { saved?: Saved } = {};
+    updateStoreMock.mockImplementation(async (fn: (s: unknown) => Saved) => {
+      out.saved = fn({ ...fresh, integrations: {} });
+    });
+    return out;
+  }
+
+  it("ticks approvals from archived thread mail without adding it to mailItems", async () => {
+    const pending = approval({ id: "a1", title: "Android Build 1.192" });
+    readStoreMock.mockResolvedValue({ sprintApprovals: [pending] });
+    listMock.mockImplementation(async ({ q }: { q: string }) =>
+      q.startsWith("in:inbox")
+        ? { data: { messages: [{ id: "in1" }] } }
+        : { data: { messages: [{ id: "in1" }, { id: "t1" }] } }
+    );
+    getMock.mockImplementation(async ({ id }: { id: string }) => ({
+      data:
+        id === "t1"
+          ? {
+              ...header("Re: Android Build 1.192 Thread", "Amit <amitsrivastava@playsimple.in>"),
+              snippet: "Approved",
+              internalDate: String(Date.parse("2026-06-01T00:00:00.000Z")),
+            }
+          : { ...header("Hello", "x@y.com"), snippet: "hi" },
+    }));
+    const out = captureSave({ mailItems: [], sprintApprovals: [pending] });
+
+    const result = await syncGmailInbox();
+
+    expect(listMock.mock.calls[1][0].q).toBe(buildApprovalThreadQuery("Android Build 1.192"));
+    // in1 was already fetched for the inbox, so only t1 is fetched again.
+    expect(getMock.mock.calls.map((c) => c[0].id)).toEqual(["in1", "t1"]);
+    expect(result.synced).toBe(1);
+    expect(out.saved?.mailItems.map((m) => m.gmailId)).toEqual(["in1"]);
+    expect(out.saved?.sprintApprovals[0]).toMatchObject({
+      approvals: { gm: true, dev: false, qa: false },
+      sentAt: "2026-06-01T00:00:00.000Z",
+      autoSent: true,
+    });
+  });
+
+  it("does not search threads for fully approved rows", async () => {
+    const done = approval({
+      id: "a1",
+      title: "iOS Release 1.80",
+      sentAt: "2026-09-01T00:00:00.000Z",
+      approvals: { gm: true, dev: true, qa: true },
+    });
+    const overridden = approval({
+      id: "a2",
+      title: "Android Build 1.193",
+      sentOverride: false,
+      overrides: { gm: false, dev: false, qa: false },
+    });
+    readStoreMock.mockResolvedValue({ sprintApprovals: [done, overridden] });
+    listMock.mockResolvedValue({ data: { messages: [] } });
+    captureSave({ mailItems: [], sprintApprovals: [done, overridden] });
+
+    await syncGmailInbox();
+
+    expect(listMock).toHaveBeenCalledTimes(1);
+    expect(listMock.mock.calls[0][0].q).toBe("in:inbox newer_than:30d");
+  });
+
+  it("does not fail the inbox sync when a thread search errors", async () => {
+    const pending = approval({ id: "a1", title: "Android Build 1.192" });
+    readStoreMock.mockResolvedValue({ sprintApprovals: [pending] });
+    listMock.mockImplementation(async ({ q }: { q: string }) => {
+      if (!q.startsWith("in:inbox")) throw new Error("quota");
+      return { data: { messages: [{ id: "in1" }] } };
+    });
+    getMock.mockResolvedValue({ data: { ...header("Hello", "x@y.com"), snippet: "hi" } });
+    const out = captureSave({ mailItems: [], sprintApprovals: [pending] });
+
+    const result = await syncGmailInbox();
+
+    expect(result).toMatchObject({ synced: 1, added: 1, failed: 0 });
+    expect(out.saved?.mailItems.map((m) => m.gmailId)).toEqual(["in1"]);
+    expect(out.saved?.sprintApprovals[0].approvals).toEqual({ gm: false, dev: false, qa: false });
+    expect(out.saved?.integrations.gmail.lastSyncError).toMatch(/1 build thread search failed/);
+  });
+});
+
+describe("buildApprovalThreadQuery", () => {
+  it("searches all mail for the build thread subject", () => {
+    expect(buildApprovalThreadQuery("Android Build 1.192")).toBe(
+      'subject:"Android Build 1.192 Thread" newer_than:365d'
+    );
+    expect(buildApprovalThreadQuery("iOS Release 1.80")).not.toMatch(/in:inbox/);
+  });
+
+  it("strips quotes and backslashes so the phrase can't be broken", () => {
+    expect(buildApprovalThreadQuery(' iOS "Release"\ 1.80 ')).toBe(
+      'subject:"iOS Release 1.80 Thread" newer_than:365d'
+    );
   });
 });

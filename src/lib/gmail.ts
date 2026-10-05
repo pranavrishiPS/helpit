@@ -4,7 +4,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { readGmailTokens, writeGmailTokens, type GmailTokens } from "@/lib/gmail-store";
 import { UserFacingError } from "@/lib/errors";
 import { categorizeMail } from "@/lib/mail-category";
-import { applyMailApprovals } from "@/lib/sprint-approvals";
+import { applyMailApprovals, needsMailCheck } from "@/lib/sprint-approvals";
 
 const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -216,6 +216,96 @@ export function mergeGmailItems(
 const GMAIL_PAGE_SIZE = 50;
 const GMAIL_MAX_PAGES = 5;
 const GMAIL_GET_BATCH = 10;
+/** Max messages fetched per build thread search. */
+const GMAIL_THREAD_MAX_RESULTS = 50;
+
+/**
+ * Gmail search for a sprint approval's build thread across all mail (archived included),
+ * e.g. `subject:"Android Build 1.192 Thread" newer_than:365d`. Quotes/backslashes are
+ * stripped from the title so it can't break out of the phrase.
+ */
+export function buildApprovalThreadQuery(title: string): string {
+  const safe = title.replace(/["\\]/g, " ").replace(/\s+/g, " ").trim();
+  return `subject:"${safe} Thread" newer_than:365d`;
+}
+
+type GmailClient = ReturnType<typeof google.gmail>;
+
+/** Fetch metadata for ids in batches; failures are counted, not thrown. */
+async function fetchMessages(
+  gmail: GmailClient,
+  ids: string[]
+): Promise<{ items: MailItem[]; failed: number }> {
+  const items: MailItem[] = [];
+  let failed = 0;
+  for (let i = 0; i < ids.length; i += GMAIL_GET_BATCH) {
+    const batch = ids.slice(i, i + GMAIL_GET_BATCH);
+    const results = await Promise.allSettled(
+      batch.map((id) =>
+        gmail.users.messages.get({
+          userId: "me",
+          id,
+          format: "metadata",
+          metadataHeaders: ["Subject", "From", "Date"],
+        })
+      )
+    );
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        items.push(mapGmailMessage(batch[idx], result.value.data));
+      } else {
+        failed++;
+      }
+    });
+  }
+  return { items, failed };
+}
+
+/**
+ * Messages on build threads for approvals that still need something. Only used to tick
+ * approvals — never merged into mailItems. Ids in `skipIds` (already fetched) are skipped.
+ */
+async function fetchApprovalThreadMessages(
+  gmail: GmailClient,
+  titles: string[],
+  skipIds: Set<string>
+): Promise<{ items: MailItem[]; failed: number; searchFailed: number }> {
+  const ids = new Set<string>();
+  let searchFailed = 0;
+  for (let i = 0; i < titles.length; i += GMAIL_GET_BATCH) {
+    const batch = titles.slice(i, i + GMAIL_GET_BATCH);
+    const results = await Promise.allSettled(
+      batch.map((title) =>
+        gmail.users.messages.list({
+          userId: "me",
+          maxResults: GMAIL_THREAD_MAX_RESULTS,
+          q: buildApprovalThreadQuery(title),
+        })
+      )
+    );
+    for (const result of results) {
+      if (result.status === "rejected") {
+        searchFailed++;
+        continue;
+      }
+      const found = (result.value.data.messages ?? []).slice(0, GMAIL_THREAD_MAX_RESULTS);
+      for (const m of found) {
+        if (m.id && !skipIds.has(m.id)) ids.add(m.id);
+      }
+    }
+  }
+  const { items, failed } = await fetchMessages(gmail, [...ids]);
+  return { items, failed, searchFailed };
+}
+
+function syncErrorText(failed: number, searchFailed: number): string | undefined {
+  const parts: string[] = [];
+  if (failed > 0) parts.push(`${failed} message${failed === 1 ? "" : "s"} could not be fetched`);
+  if (searchFailed > 0) {
+    parts.push(`${searchFailed} build thread search${searchFailed === 1 ? "" : "es"} failed`);
+  }
+  return parts.length > 0 ? parts.join("; ") : undefined;
+}
 
 export async function syncGmailInbox(): Promise<{
   synced: number;
@@ -243,30 +333,30 @@ export async function syncGmailInbox(): Promise<{
     if (!pageToken) break;
   }
 
-  const fetched: MailItem[] = [];
-  let failed = 0;
-  for (let i = 0; i < messageIds.length; i += GMAIL_GET_BATCH) {
-    const batch = messageIds.slice(i, i + GMAIL_GET_BATCH);
-    const results = await Promise.allSettled(
-      batch.map((id) =>
-        gmail.users.messages.get({
-          userId: "me",
-          id,
-          format: "metadata",
-          metadataHeaders: ["Subject", "From", "Date"],
-        })
-      )
-    );
-    results.forEach((result, idx) => {
-      if (result.status === "fulfilled") {
-        fetched.push(mapGmailMessage(batch[idx], result.value.data));
-      } else {
-        failed++;
-      }
-    });
+  const inbox = await fetchMessages(gmail, messageIds);
+  const fetched = inbox.items;
+  let failed = inbox.failed;
+
+  // Build threads may be archived or older than the inbox window: search all mail for the
+  // approvals that still need a tick or a sent date. Errors here never fail the sync.
+  const { readStore, updateStore } = await import("@/lib/db");
+  let threadMessages: MailItem[] = [];
+  let searchFailed = 0;
+  try {
+    const snapshot = await readStore();
+    const titles = [
+      ...new Set((snapshot.sprintApprovals ?? []).filter(needsMailCheck).map((a) => a.title)),
+    ];
+    if (titles.length > 0) {
+      const thread = await fetchApprovalThreadMessages(gmail, titles, new Set(messageIds));
+      threadMessages = thread.items;
+      failed += thread.failed;
+      searchFailed = thread.searchFailed;
+    }
+  } catch {
+    searchFailed++;
   }
 
-  const { updateStore } = await import("@/lib/db");
   const now = new Date().toISOString();
   let added = 0;
   let updated = 0;
@@ -279,17 +369,18 @@ export async function syncGmailInbox(): Promise<{
       ...s,
       mailItems: merged.mailItems,
       // Auto-tick sprint approvals from the freshly merged mail (overrides respected).
-      sprintApprovals: applyMailApprovals(s.sprintApprovals ?? [], merged.mailItems),
+      // Thread messages only feed detection; they are never added to mailItems.
+      sprintApprovals: applyMailApprovals(s.sprintApprovals ?? [], [
+        ...merged.mailItems,
+        ...threadMessages,
+      ]),
       integrations: {
         ...s.integrations,
         gmail: {
           connected: true,
           email: stored.email,
           lastSyncedAt: now,
-          lastSyncError:
-            failed > 0
-              ? `${failed} message${failed === 1 ? "" : "s"} could not be fetched`
-              : undefined,
+          lastSyncError: syncErrorText(failed, searchFailed),
         },
       },
     };

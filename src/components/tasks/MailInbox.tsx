@@ -38,7 +38,6 @@ interface MailInboxProps {
   onSync?: () => void;
   syncing?: boolean;
   connected?: boolean;
-  lastSyncedAt?: string;
 }
 
 export function MailInbox({
@@ -47,7 +46,6 @@ export function MailInbox({
   onSync,
   syncing,
   connected,
-  lastSyncedAt,
 }: MailInboxProps) {
   const [filter, setFilter] = useState<Filter>("all");
   const [showDone, setShowDone] = useState(false);
@@ -89,22 +87,9 @@ export function MailInbox({
   return (
     <div>
       {!showPlaceholder && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted">
-            {counts.all} conversation{counts.all === 1 ? "" : "s"} need attention
-            {lastSyncedAt && (
-              <span className="ml-2">
-                · Last sync {new Date(lastSyncedAt).toLocaleString()}
-              </span>
-            )}
-          </p>
-          {connected && onSync && (
-            <Button variant="secondary" size="sm" onClick={onSync} disabled={syncing}>
-              <RefreshCw className={syncing ? "animate-spin" : ""} />
-              Sync Gmail
-            </Button>
-          )}
-        </div>
+        <p className="mb-3 text-sm text-muted">
+          {counts.all} conversation{counts.all === 1 ? "" : "s"} need attention
+        </p>
       )}
 
       {showPlaceholder ? (
