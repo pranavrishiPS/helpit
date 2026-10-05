@@ -28,8 +28,8 @@ interface TaskBoardProps {
 }
 
 /**
- * Day-by-day Tasks tab: Today (always shown), earlier days newest first, Upcoming days, then
- * undated tasks. Each day is a collapsible group header above a flat four-column table.
+ * Day-by-day Tasks tab, newest date on top: Upcoming days (latest first), Today (always shown),
+ * earlier days newest first, then undated tasks. Each day is a collapsible group header above a flat four-column table.
  */
 export function TaskBoard({ tasks, recurringRules, onAdd, onUpdate, onDelete }: TaskBoardProps) {
   const [today, setToday] = useState(() => todayKey());
@@ -160,6 +160,15 @@ export function TaskBoard({ tasks, recurringRules, onAdd, onUpdate, onDelete }: 
         </label>
       </div>
 
+      {groups.upcoming.length > 0 && (
+        <>
+          <h2 className="font-display text-xs font-semibold uppercase tracking-[0.06em] text-muted">
+            Upcoming
+          </h2>
+          {[...groups.upcoming].reverse().map(renderDay)}
+        </>
+      )}
+
       <TaskDaySection
         section={groups.today}
         isToday
@@ -178,15 +187,6 @@ export function TaskBoard({ tasks, recurringRules, onAdd, onUpdate, onDelete }: 
         </div>
       )}
       {showOlder && older.map(renderDay)}
-
-      {groups.upcoming.length > 0 && (
-        <>
-          <h2 className="pt-2 font-display text-xs font-semibold uppercase tracking-[0.06em] text-muted">
-            Upcoming
-          </h2>
-          {groups.upcoming.map(renderDay)}
-        </>
-      )}
 
       <TaskDaySection
         section={groups.noDate}
