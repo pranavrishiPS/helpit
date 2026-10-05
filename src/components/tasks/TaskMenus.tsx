@@ -71,7 +71,7 @@ export function RowMenu({ task, actions }: { task: Task; actions: TaskActions })
       icon={MoreHorizontal}
       items={items}
       // Visible on hover/focus on desktop, always on touch, and while its menu is open.
-      triggerClassName="mt-1 h-6 w-6 shrink-0 sm:opacity-0sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 aria-expanded:opacity-100"
+      triggerClassName="mt-1 h-6 w-6 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 aria-expanded:opacity-100"
       onOpenChange={(open) => {
         if (!open) setPicking(false);
       }}
@@ -100,6 +100,8 @@ export interface TaskActions {
   /** Real local today. */
   today: string;
   pending: ReadonlySet<string>;
+  /** Rule summary for a row created by a recurring rule that still exists. */
+  recurrenceSummary: (task: Task) => string | undefined;
   setStatus: (task: Task, status: TaskStatus) => void;
   toggleDone: (task: Task) => void;
   reschedule: (task: Task, dayKey: string | undefined) => void;

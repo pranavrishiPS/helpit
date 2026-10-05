@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Check, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Repeat } from "lucide-react";
 import type { Task } from "@/lib/types";
 import { Badge, checkboxClasses } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -116,6 +116,7 @@ function TaskRow({
 }) {
   const done = task.status === "done";
   const pending = actions.pending.has(task.id);
+  const recurrence = actions.recurrenceSummary(task);
 
   return (
     <tr
@@ -147,6 +148,16 @@ function TaskRow({
               {done && <Check className="h-2.5 w-2.5 animate-pop" strokeWidth={3} />}
             </span>
           </button>
+          {recurrence && (
+            <span
+              role="img"
+              title={recurrence}
+              aria-label={recurrence}
+              className="mt-1.5 shrink-0"
+            >
+              <Repeat aria-hidden="true" className="h-3.5 w-3.5 text-muted" />
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <EditableText
               value={task.title}

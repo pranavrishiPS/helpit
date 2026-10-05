@@ -76,6 +76,37 @@ describe("db", () => {
     expect(mockFiles.has("store.json")).toBe(true);
   });
 
+  it("default store has no recurring rules", async () => {
+    const store = await readStore();
+    expect(store.recurringTasks).toEqual([]);
+  });
+
+  it("reads recurringTasks as [] from an old store without rewriting the file for it", async () => {
+    seedStore();
+    const before = mockFiles.get("store.json");
+    const store = await readStore();
+    expect(store.recurringTasks).toEqual([]);
+    expect(mockFiles.get("store.json")).toBe(before);
+  });
+
+  it("normalises stored recurring rules on read (drops invalid ones, defaults active)", async () => {
+    const good = {
+      id: "r1",
+      title: "Standup",
+      cadence: "weekly",
+      weekdays: [1, 1, 9, 3],
+      startDate: "2026-10-05",
+      createdAt: "2026-10-01T00:00:00.000Z",
+      updatedAt: "2026-10-01T00:00:00.000Z",
+    };
+    seedStore({
+      recurringTasks: [good, { ...good, id: "r2", cadence: "yearly" }, { ...good, id: "r3", startDate: "x" }],
+    });
+    const store = await readStore();
+    expect(store.recurringTasks).toHaveLength(1);
+    expect(store.recurringTasks![0]).toMatchObject({ id: "r1", weekdays: [1, 3], active: true });
+  });
+
   it("refuses to seed defaults over a store that exists but reads as empty", async () => {
     mockFiles.set("store.json", "");
     // Real readJsonText reports an empty file as null

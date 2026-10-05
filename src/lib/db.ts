@@ -2,6 +2,7 @@ import type { DashboardStore, Outing, Task } from "./types";
 import { isOutingPast } from "./utils";
 import { syncSprintApprovalsFromReleases } from "./sprint-approvals";
 import { normalizeRelease } from "./release-utils";
+import { normalizeRecurringTasks } from "./recurrence";
 import {
   backupJson,
   jsonExists,
@@ -35,6 +36,7 @@ function createDefaultStore(): DashboardStore {
     scrumMembers: [],
     scrumAttendance: [],
     scrumHolidays: [],
+    recurringTasks: [],
     integrations: {
       gmail: { connected: false },
     },
@@ -251,6 +253,8 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
     scrumMembers: withReleaseIds.scrumMembers ?? [],
     scrumAttendance: withReleaseIds.scrumAttendance ?? [],
     scrumHolidays: withReleaseIds.scrumHolidays ?? [],
+    // Old stores lack the key. Persisted by the next write (a read alone never rewrites for this).
+    recurringTasks: normalizeRecurringTasks(withReleaseIds.recurringTasks),
   });
   const withScrumStatusFixed = dropAttendanceOnHolidays(migrateLegacyScrumStatus(withApprovals));
 

@@ -14,6 +14,34 @@ export interface Task {
   tags: string[];
   owner?: string;
   slackTs?: string;
+  /** Id of the recurring rule that created this row. Set only by the generator. */
+  recurringId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RecurringCadence = "daily" | "weekly" | "monthly";
+export type RecurringMonthlyMode = "weekday_of_month" | "day_of_month";
+export type RecurringWeekOfMonth = 1 | 2 | 3 | 4 | "last";
+
+/** A repeat rule that creates one ordinary Task per matching day (see docs/specs/recurring-tasks.md). */
+export interface RecurringTask {
+  id: string;
+  title: string;
+  comment?: string;
+  cadence: RecurringCadence;
+  /** 0-6, Sun = 0 (date-fns `getDay`). Used by weekly and monthly "weekday of month". */
+  weekdays?: number[];
+  monthlyMode?: RecurringMonthlyMode;
+  weekOfMonth?: RecurringWeekOfMonth;
+  /** 1-31; 29-31 clamp to the month's last day. */
+  dayOfMonth?: number;
+  /** yyyy-MM-dd */
+  startDate: string;
+  endDate?: string;
+  active: boolean;
+  /** High-water mark: the last day already considered for this rule. Only moves forward on generation. */
+  generatedThrough?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -267,6 +295,8 @@ export interface DashboardStore {
   scrumMembers: string[];
   scrumAttendance: ScrumAttendanceEntry[];
   scrumHolidays: ScrumHoliday[];
+  /** Optional so older stores load; `readStore` always returns an array. */
+  recurringTasks?: RecurringTask[];
   integrations?: {
     gmail?: GmailIntegration;
     slack?: SlackIntegration;

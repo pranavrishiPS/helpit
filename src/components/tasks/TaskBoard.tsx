@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Task } from "@/lib/types";
+import type { RecurringTask, Task } from "@/lib/types";
+import { ruleSummary } from "@/lib/recurrence";
 import { Button, fieldClasses } from "@/components/ui";
 import { DateCommitInput } from "@/components/ui/DateCommitInput";
 import { cn } from "@/lib/cn";
@@ -19,6 +20,8 @@ import type { TaskActions } from "./TaskMenus";
 interface TaskBoardProps {
   /** Tasks-tab tasks only (see `getTasksTabTasks`). */
   tasks: Task[];
+  /** Rules behind recurring rows; a row shows the repeat icon only while its rule exists. */
+  recurringRules?: RecurringTask[];
   onAdd: (task: Partial<Task>) => Promise<boolean>;
   onUpdate: (task: Task) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
@@ -28,7 +31,7 @@ interface TaskBoardProps {
  * Day-by-day Tasks tab: Today (always shown), earlier days newest first, Upcoming days, then
  * undated tasks. Each day is a collapsible group header above a flat four-column table.
  */
-export function TaskBoard({ tasks, onAdd, onUpdate, onDelete }: TaskBoardProps) {
+export function TaskBoard({ tasks, recurringRules, onAdd, onUpdate, onDelete }: TaskBoardProps) {
   const [today, setToday] = useState(() => todayKey());
   const [revealed, setRevealed] = useState<ReadonlySet<string>>(new Set());
   const [showOlder, setShowOlder] = useState(false);
@@ -69,9 +72,15 @@ export function TaskBoard({ tasks, onAdd, onUpdate, onDelete }: TaskBoardProps) 
     }
   }, []);
 
+  const summaries = useMemo(
+    () => new Map((recurringRules ?? []).map((rule) => [rule.id, ruleSummary(rule)])),
+    [recurringRules]
+  );
+
   const actions: TaskActions = {
     today,
     pending,
+    recurrenceSummary: (task) => (task.recurringId ? summaries.get(task.recurringId) : undefined),
     setStatus: (task, status) => void run(task.id, () => onUpdate(statusPatch(task, status))),
     toggleDone: (task) =>
       void run(task.id, () => onUpdate(statusPatch(task, task.status === "done" ? "todo" : "done"))),

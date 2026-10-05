@@ -3,6 +3,7 @@ import type {
   MailItem,
   ProjectResourceType,
   ReleasePhase,
+  RecurringTask,
   ReleaseStatus,
   ScrumAttendanceEntry,
   ScrumHoliday,
@@ -10,6 +11,7 @@ import type {
   SprintApprovalParty,
   Task,
 } from "@/lib/types";
+import type { RecurringRuleFields, RecurringRulePatch } from "@/lib/recurrence";
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   // No API key here: the browser authenticates with the site-auth session cookie.
@@ -55,6 +57,63 @@ export async function deleteTask(id: string): Promise<void> {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Failed to delete task");
+}
+
+export interface RecurringRuleResult {
+  rule: RecurringTask;
+  created: number;
+}
+
+async function recurringResult(res: Response, fallback: string): Promise<RecurringRuleResult> {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : fallback);
+  return data;
+}
+
+/** `today` is the local yyyy-MM-dd; the server never decides it. */
+export async function createRecurringTask(
+  input: RecurringRuleFields,
+  today: string
+): Promise<RecurringRuleResult> {
+  const res = await apiFetch("/api/recurring-tasks", {
+    method: "POST",
+    body: JSON.stringify({ ...input, today }),
+  });
+  return recurringResult(res, "Failed to save recurring task");
+}
+
+/** Edit, pause or resume (`active`). `null` clears an optional field. */
+export async function updateRecurringTask(
+  id: string,
+  patch: RecurringRulePatch,
+  today: string
+): Promise<RecurringRuleResult> {
+  const res = await apiFetch("/api/recurring-tasks", {
+    method: "PATCH",
+    body: JSON.stringify({ ...patch, id, today }),
+  });
+  return recurringResult(res, "Failed to update recurring task");
+}
+
+export async function deleteRecurringTask(id: string, today: string): Promise<void> {
+  const res = await apiFetch(
+    `/api/recurring-tasks?id=${encodeURIComponent(id)}&today=${encodeURIComponent(today)}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(typeof data.error === "string" ? data.error : "Failed to delete recurring task");
+  }
+}
+
+/** Creates today's and tomorrow's rows for due rules; idempotent. */
+export async function generateRecurring(today: string): Promise<{ created: number }> {
+  const res = await apiFetch("/api/recurring-tasks/generate", {
+    method: "POST",
+    body: JSON.stringify({ today }),
+  });
+  if (!res.ok) throw new Error("Failed to create recurring tasks");
+  return res.json();
 }
 
 export async function updateSlackItem(id: string, completed: boolean): Promise<void> {

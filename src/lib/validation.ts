@@ -4,6 +4,13 @@ import {
   SCRUM_STATUS_LABELS,
   isStatusAllowedOnDate,
 } from "./scrum-attendance";
+import {
+  MAX_COMMENT_LENGTH,
+  MAX_TITLE_LENGTH,
+  isRealDayKey,
+  validateRule,
+  type RecurringRuleFields,
+} from "./recurrence";
 
 export const taskStatusSchema = z.enum(["todo", "in_progress", "done", "blocked"]);
 export const taskPrioritySchema = z.enum(["low", "medium", "high", "urgent"]);
@@ -70,6 +77,79 @@ export const updateTaskSchema = z
 
 export const deleteTaskSchema = z.object({
   id: z.string().min(1),
+});
+
+const dayKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Dates must be yyyy-MM-dd");
+
+/** Client-local today; the server never decides what "today" is. */
+const recurringTodaySchema = dayKeySchema.refine(isRealDayKey, "Invalid date");
+
+const recurringRuleShape = {
+  title: z.string().min(1, "Title required").max(MAX_TITLE_LENGTH),
+  comment: z.string().max(MAX_COMMENT_LENGTH),
+  cadence: z.enum(["daily", "weekly", "monthly"]),
+  weekdays: z.array(z.number().int().min(0).max(6)).max(7),
+  monthlyMode: z.enum(["weekday_of_month", "day_of_month"]),
+  weekOfMonth: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal("last")]),
+  dayOfMonth: z.number().int("Day of month must be 1 to 31").min(1, "Day of month must be 1 to 31").max(31, "Day of month must be 1 to 31"),
+  startDate: dayKeySchema,
+  endDate: dayKeySchema,
+};
+
+/** Cross-field rules (weekdays, day of month, end >= start) shared with the form. */
+function checkRecurringRule(
+  data: Partial<RecurringRuleFields>,
+  ctx: z.RefinementCtx
+): void {
+  const errors = validateRule({ ...data, startDate: data.startDate ?? "" });
+  for (const message of Object.values(errors)) {
+    if (message) ctx.addIssue({ code: "custom", message });
+  }
+}
+
+export const createRecurringTaskSchema = z
+  .object({
+    ...recurringRuleShape,
+    comment: recurringRuleShape.comment.optional(),
+    weekdays: recurringRuleShape.weekdays.optional(),
+    monthlyMode: recurringRuleShape.monthlyMode.optional(),
+    weekOfMonth: recurringRuleShape.weekOfMonth.optional(),
+    dayOfMonth: recurringRuleShape.dayOfMonth.optional(),
+    endDate: recurringRuleShape.endDate.optional(),
+    today: recurringTodaySchema,
+  })
+  .superRefine(checkRecurringRule);
+
+/**
+ * Edit, pause or resume. `null` clears an optional field. The merged rule is validated again
+ * against the stored one, so only per-field shape is checked here.
+ */
+export const updateRecurringTaskSchema = z
+  .object({
+    id: z.string().min(1),
+    today: recurringTodaySchema,
+    title: recurringRuleShape.title.optional(),
+    comment: recurringRuleShape.comment.nullable().optional(),
+    cadence: recurringRuleShape.cadence.optional(),
+    weekdays: recurringRuleShape.weekdays.optional(),
+    monthlyMode: recurringRuleShape.monthlyMode.optional(),
+    weekOfMonth: recurringRuleShape.weekOfMonth.optional(),
+    dayOfMonth: recurringRuleShape.dayOfMonth.optional(),
+    startDate: recurringRuleShape.startDate.optional(),
+    endDate: recurringRuleShape.endDate.nullable().optional(),
+    active: z.boolean().optional(),
+  })
+  .refine((data) => Object.keys(data).filter((k) => k !== "id" && k !== "today").length > 0, {
+    message: "At least one field to update is required",
+  });
+
+export const deleteRecurringTaskSchema = z.object({
+  id: z.string().min(1),
+  today: recurringTodaySchema,
+});
+
+export const generateRecurringSchema = z.object({
+  today: recurringTodaySchema,
 });
 
 export const updateSlackItemSchema = z.object({
