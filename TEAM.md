@@ -8,6 +8,7 @@ Slack mentions: `<@USERID>` (people) or `<!subteam^GROUPID>` (user groups).
 
 | Name | Role | Slack ID |
 |---|---|---|
+| Anup G | GM | `U08TT60J802` |
 | Amit Kumar Srivastava | Game Director and Product | `U0BC98DKXQ8` |
 | Pranav Rishi | Producer | `U0AMXP1Q4RE` |
 | Vrushali Patil | UX | `U08TT64PSP4` |
@@ -26,6 +27,7 @@ Slack mentions: `<@USERID>` (people) or `<!subteam^GROUPID>` (user groups).
 
 ## By function
 
+- **GM** — Anup G
 - **Game Director / Product** — Amit Kumar Srivastava
 - **Producer** — Pranav Rishi
 - **Product** — Gunjan Kamboj, Pratyush Aryan, Mangesh
@@ -42,9 +44,12 @@ Slack mentions: `<@USERID>` (people) or `<!subteam^GROUPID>` (user groups).
 |---|---|
 | Cryptogram Devs | `S0BKHP2P63C` |
 | Cryptogram QAs | `S0BKMEBP4JY` |
+| Cryptogram Preprod | `S0BKEEBPY93` |
+| Cryptogram Product | `S0BKMH4847N` |
 
 ## Mention defaults
 
 - **Aryan** → Aryan Kulkarni (GD). Not other Aryans.
 - **Ayush** → Ayush Upadhyay (Dev). Not Ayush Sarkar.
 - **Althamash / Althmash** → Althmash Shaikh (Art).
+- **Anup** → Anup G (GM). Not Anup Langoti (QA).
