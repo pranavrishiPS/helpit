@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { PageHeader, ErrorBanner, PageSkeleton, SectionTitle } from "@/components/ui";
 import { MailTodos } from "@/components/tasks/MailTodos";
 import { MailInbox } from "@/components/tasks/MailInbox";
@@ -24,37 +24,21 @@ export default function MailPage() {
   const [syncing, setSyncing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  const autoSynced = useRef(false);
+
   const loadGmailStatus = useCallback(async () => {
     try {
       const status = await fetchGmailStatus();
       setGmailConnected(!!status.connected);
       setLastSyncedAt(status.lastSyncedAt);
+      return !!status.connected;
     } catch {
       setGmailConnected(false);
+      return false;
     }
   }, []);
 
-  useEffect(() => {
-    loadGmailStatus();
-  }, [loadGmailStatus]);
-
-  function handleAddTask(partial: Parameters<typeof addTask>[0]) {
-    return addTask({ ...partial, source: "mail" });
-  }
-
-  async function handleMailStatus(id: string, status: MailItem["status"]) {
-    setActionError(null);
-    try {
-      await updateMailItem(id, status);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to update mail item");
-      return;
-    }
-    await reload();
-    notifyStoreUpdated();
-  }
-
-  async function handleGmailSync() {
+  const handleGmailSync = useCallback(async () => {
     setSyncing(true);
     setActionError(null);
     try {
@@ -71,6 +55,31 @@ export default function MailPage() {
     } finally {
       setSyncing(false);
     }
+  }, [reload, loadGmailStatus]);
+
+  // Sync Gmail once each time the page is opened (when connected).
+  useEffect(() => {
+    if (autoSynced.current) return;
+    autoSynced.current = true;
+    loadGmailStatus().then((connected) => {
+      if (connected) void handleGmailSync();
+    });
+  }, [loadGmailStatus, handleGmailSync]);
+
+  function handleAddTask(partial: Parameters<typeof addTask>[0]) {
+    return addTask({ ...partial, source: "mail" });
+  }
+
+  async function handleMailStatus(id: string, status: MailItem["status"]) {
+    setActionError(null);
+    try {
+      await updateMailItem(id, status);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to update mail item");
+      return;
+    }
+    await reload();
+    notifyStoreUpdated();
   }
 
   async function handleApprovalToggle(
