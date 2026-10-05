@@ -12,7 +12,7 @@ import {
 } from "@/lib/utils";
 
 const PARTY_LABELS: Record<SprintApprovalParty, string> = {
-  gm: "GM",
+  gm: "Product",
   dev: "Dev",
   qa: "QA",
 };
@@ -311,7 +311,7 @@ export function MailApprovals({ items, onToggle, onMailSent }: MailApprovalsProp
         <EmptyState
           compact
           icon={Send}
-          title="No sprint costing approvals yet. Add a release in Planning to track GM, Dev, and QA sign-off here."
+          title="No sprint costing approvals yet. Start an Android Build or iOS Release Thread mail and sync to track Product, Dev, and QA sign-off here."
         />
       </Card>
     );
