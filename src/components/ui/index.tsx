@@ -513,6 +513,7 @@ export function Button({
   variant?: ButtonVariant;
   size?: ButtonSize;
   type?: "button" | "submit";
+  ref?: React.Ref<HTMLButtonElement>;
 }) {
   return (
     <button {...rest} type={type} className={cn(buttonClasses({ variant, size }), className)}>
