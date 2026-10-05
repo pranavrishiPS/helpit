@@ -9,6 +9,7 @@ export type MailCategory = MailItem["category"];
 export const MAIL_CATEGORIES: { id: MailCategory; label: string }[] = [
   { id: "leave", label: "Leaves/WFH" },
   { id: "meeting", label: "Meetings" },
+  { id: "sprint", label: "Sprint costing" },
   { id: "other", label: "Others" },
 ];
 
@@ -43,11 +44,15 @@ const SUPPORT_SUBJECT_KEYWORDS = [
   "need some help on cryptogram",
 ];
 
-/** Keyword-based category for a message. Rules are checked meeting → leave → support. */
+// Sprint costing threads, e.g. "Re: Android Build 1.192 Thread" / "iOS Release 1.80 Thread".
+const SPRINT_SUBJECT_PATTERN = /\b(android build|ios release)\s+\d+\.\d+\s+thread\b/;
+
+/** Keyword-based category for a message. Rules are checked sprint → meeting → leave → support. */
 export function categorizeMail(subject: string, from: string): MailCategory {
   const s = subject.toLowerCase().trim();
   const f = from.toLowerCase();
 
+  if (SPRINT_SUBJECT_PATTERN.test(s)) return "sprint";
   if (
     MEETING_SUBJECT_PREFIXES.some((p) => s.startsWith(p)) ||
     f.includes("calendar-notification@google.com") ||

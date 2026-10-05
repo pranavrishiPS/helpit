@@ -68,7 +68,7 @@ export function MailInbox({
   );
 
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: 0, support: 0, leave: 0, meeting: 0, other: 0 };
+    const c: Record<Filter, number> = { all: 0, support: 0, leave: 0, meeting: 0, sprint: 0, other: 0 };
     for (const t of openThreads) {
       c.all++;
       c[t.category]++;

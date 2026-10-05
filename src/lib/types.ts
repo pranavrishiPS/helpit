@@ -194,7 +194,7 @@ export interface MailItem {
   id: string;
   subject: string;
   from: string;
-  category: "support" | "leave" | "meeting" | "other";
+  category: "support" | "leave" | "meeting" | "sprint" | "other";
   summary: string;
   status: "unread" | "needs_reply" | "drafted" | "done";
   receivedAt: string;

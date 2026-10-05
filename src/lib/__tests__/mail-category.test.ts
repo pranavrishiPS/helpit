@@ -77,7 +77,7 @@ describe("resolveMailCategory", () => {
   });
 
   it("lists the shown categories (support is hidden)", () => {
-    expect(MAIL_CATEGORIES.map((c) => c.id)).toEqual(["leave", "meeting", "other"]);
+    expect(MAIL_CATEGORIES.map((c) => c.id)).toEqual(["leave", "meeting", "sprint", "other"]);
   });
 });
 
@@ -116,5 +116,16 @@ describe("mailThreadKey", () => {
 describe("meeting proposals", () => {
   it("treats 'Proposed new time' as a meeting", () => {
     expect(categorizeMail("Proposed new time: Planning @ Tue", "a@b.com")).toBe("meeting");
+  });
+});
+
+describe("sprint costing", () => {
+  it("detects build and release threads", () => {
+    expect(categorizeMail("Re: Android Build 1.192 Thread", "ayushupadhyay@playsimple.in")).toBe("sprint");
+    expect(categorizeMail("Re: iOS Release 1.80 Thread", "amitsrivastava@playsimple.in")).toBe("sprint");
+  });
+
+  it("ignores other build mail", () => {
+    expect(categorizeMail("Android Build 1.192 is live", "a@b.com")).toBe("other");
   });
 });
