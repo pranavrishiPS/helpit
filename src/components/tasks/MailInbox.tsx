@@ -12,7 +12,7 @@ import {
   buttonClasses,
   type BadgeTone,
 } from "@/components/ui";
-import { Check, Mail, RefreshCw } from "lucide-react";
+import { Mail, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { formatDueDate } from "@/lib/utils";
 import {
@@ -305,17 +305,6 @@ function MailRow({
             {formatMailTime(latest.receivedAt)}
           </span>
         </button>
-        {!done && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onUpdateStatus("done")}
-            aria-label={`Mark "${latest.subject}" done`}
-            title="Mark done"
-          >
-            <Check />
-          </Button>
-        )}
       </div>
 
       {expanded && (
