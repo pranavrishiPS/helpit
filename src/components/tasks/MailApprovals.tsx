@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { SprintApproval, SprintApprovalParty } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, tableClasses } from "@/components/ui";
-import { CheckCircle2, ChevronDown, Circle, Send } from "lucide-react";
+import { CheckCircle2, ChevronDown, Circle, Mail, Send } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   releasePlatformTitleClass,
@@ -32,6 +32,22 @@ function isComplete(item: SprintApproval): boolean {
 
 function isMailSent(item: SprintApproval): boolean {
   return !!item.sentAt;
+}
+
+function isAutoApproved(item: SprintApproval, party: SprintApprovalParty): boolean {
+  return item.approvals[party] && !!item.autoApproved?.[party];
+}
+
+/** Tiny marker on ticks detected from synced mail; manual ticks show nothing. */
+function AutoMark() {
+  return (
+    <span
+      className="pointer-events-none absolute -bottom-1 -right-1.5 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-card text-muted ring-1 ring-border"
+      aria-hidden="true"
+    >
+      <Mail className="h-2.5 w-2.5" />
+    </span>
+  );
 }
 
 function sortApprovals(items: SprintApproval[]): SprintApproval[] {
@@ -105,6 +121,7 @@ function ApprovalMobileCard({
         <div className="mt-3 grid grid-cols-3 gap-2">
           {PARTIES.map((party) => {
             const approved = item.approvals[party];
+            const auto = isAutoApproved(item, party);
             return (
               <div key={party} className="flex flex-col items-center gap-1">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">{PARTY_LABELS[party]}</span>
@@ -112,10 +129,14 @@ function ApprovalMobileCard({
                   type="button"
                   onClick={() => onToggle(item.id, party, !approved)}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-control text-subtle transition-colors hover:bg-surface-3 hover:text-foreground"
-                  aria-label={`${PARTY_LABELS[party]} ${approved ? "approved" : "pending"}`}
+                  aria-label={`${PARTY_LABELS[party]} ${approved ? (auto ? "approved, detected from mail" : "approved") : "pending"}`}
+                  title={auto ? "Detected from mail" : undefined}
                 >
                   {approved ? (
-                    <CheckCircle2 className="h-5 w-5 fill-success stroke-success text-white" />
+                    <span className="relative inline-flex">
+                      <CheckCircle2 className="h-5 w-5 fill-success stroke-success text-white" />
+                      {auto && <AutoMark />}
+                    </span>
                   ) : (
                     <Circle className="h-5 w-5 stroke-current" />
                   )}
@@ -165,17 +186,21 @@ function ApprovalRow({ item, onToggle, onMailSent, complete }: ApprovalItemProps
       {mailSent ? (
         PARTIES.map((party) => {
           const approved = item.approvals[party];
+          const auto = isAutoApproved(item, party);
           return (
             <td key={party} className="px-1 py-1.5 text-center">
               <button
                 type="button"
                 onClick={() => onToggle(item.id, party, !approved)}
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-subtle transition-colors hover:bg-surface-3 hover:text-foreground"
-                aria-label={`${PARTY_LABELS[party]} ${approved ? "approved" : "pending"}`}
-                title={approved ? `Undo ${PARTY_LABELS[party]} approval` : `Mark ${PARTY_LABELS[party]} approved`}
+                aria-label={`${PARTY_LABELS[party]} ${approved ? (auto ? "approved, detected from mail" : "approved") : "pending"}`}
+                title={auto ? `Detected from mail — click to undo ${PARTY_LABELS[party]} approval` : approved ? `Undo ${PARTY_LABELS[party]} approval` : `Mark ${PARTY_LABELS[party]} approved`}
               >
                 {approved ? (
-                  <CheckCircle2 className="h-[18px] w-[18px] shrink-0 fill-success stroke-success text-white" />
+                  <span className="relative inline-flex">
+                    <CheckCircle2 className="h-[18px] w-[18px] shrink-0 fill-success stroke-success text-white" />
+                    {auto && <AutoMark />}
+                  </span>
                 ) : (
                   <Circle className="h-[18px] w-[18px] shrink-0 stroke-current" />
                 )}

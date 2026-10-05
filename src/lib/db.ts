@@ -1,6 +1,6 @@
 import type { DashboardStore, Outing, Task } from "./types";
 import { isOutingPast } from "./utils";
-import { syncSprintApprovalsFromReleases } from "./sprint-approvals";
+import { syncSprintApprovals } from "./sprint-approvals";
 import { normalizeRelease } from "./release-utils";
 import { normalizeRecurringTasks } from "./recurrence";
 import {
@@ -244,7 +244,7 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
 
   const migrated = migrateLegacyReminders(parsed);
   const withReleaseIds = migrateReleaseIds(migrated);
-  const withApprovals = syncSprintApprovalsFromReleases({
+  const withApprovals = syncSprintApprovals({
     ...withReleaseIds,
     sprintApprovals: withReleaseIds.sprintApprovals ?? [],
     projectResources: withReleaseIds.projectResources ?? [],
@@ -320,7 +320,7 @@ async function updateStoreOptimistic(
     const { text, etag } = await readBlobStoreText();
     const store = await readStoreUnlocked(text);
     const result = updater(store);
-    const synced = syncSprintApprovalsFromReleases(result);
+    const synced = syncSprintApprovals(result);
     // No-op (e.g. 404 path): don't write or bump lastUpdated.
     if (result === store && synced === result) return store;
     const updated = { ...synced, lastUpdated: new Date().toISOString() };
@@ -343,7 +343,7 @@ export async function updateStore(
   return withStoreLock(async () => {
     const store = await readStoreUnlocked();
     const result = updater(store);
-    const synced = syncSprintApprovalsFromReleases(result);
+    const synced = syncSprintApprovals(result);
     // No-op (e.g. 404 path): don't write or bump lastUpdated.
     if (result === store && synced === result) return store;
     return writeStoreUnlocked(synced);

@@ -4,6 +4,7 @@ import { getAppUrl } from "@/lib/app-url";
 import { readGmailTokens, writeGmailTokens, type GmailTokens } from "@/lib/gmail-store";
 import { UserFacingError } from "@/lib/errors";
 import { categorizeMail } from "@/lib/mail-category";
+import { applyMailApprovals } from "@/lib/sprint-approvals";
 
 const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -277,6 +278,8 @@ export async function syncGmailInbox(): Promise<{
     return {
       ...s,
       mailItems: merged.mailItems,
+      // Auto-tick sprint approvals from the freshly merged mail (overrides respected).
+      sprintApprovals: applyMailApprovals(s.sprintApprovals ?? [], merged.mailItems),
       integrations: {
         ...s.integrations,
         gmail: {

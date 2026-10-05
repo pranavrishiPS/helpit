@@ -27,13 +27,21 @@ export async function PATCH(request: NextRequest) {
           return {
             ...item,
             sentAt: mailSent ? new Date().toISOString() : undefined,
+            // Manual choice wins over mail-thread detection from now on.
+            sentOverride: mailSent,
+            autoSent: undefined,
             updatedAt: new Date().toISOString(),
           };
         }
 
+        // A manual toggle wins over mail auto-detection for this party from now on.
+        const autoApproved = { ...item.autoApproved };
+        delete autoApproved[party!];
         return {
           ...item,
           approvals: { ...item.approvals, [party!]: approved! },
+          overrides: { ...item.overrides, [party!]: approved! },
+          autoApproved: Object.keys(autoApproved).length > 0 ? autoApproved : undefined,
           updatedAt: new Date().toISOString(),
         };
       }),

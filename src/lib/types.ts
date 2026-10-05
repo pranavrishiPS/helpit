@@ -235,6 +235,14 @@ export interface SprintApproval {
   /** When the approval mail was sent */
   sentAt?: string;
   approvals: Record<SprintApprovalParty, boolean>;
+  /** Parties the user ticked/unticked by hand — mail auto-detection never touches these. */
+  overrides?: Partial<Record<SprintApprovalParty, boolean>>;
+  /** Parties ticked automatically from synced mail (shown with a subtle marker). */
+  autoApproved?: Partial<Record<SprintApprovalParty, true>>;
+  /** sentAt was set from the build's mail thread rather than by the user. */
+  autoSent?: true;
+  /** User marked mail sent/unsent by hand — mail detection never sets sentAt again. */
+  sentOverride?: boolean;
   createdAt: string;
   updatedAt: string;
 }

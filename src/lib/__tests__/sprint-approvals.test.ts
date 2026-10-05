@@ -29,6 +29,12 @@ const baseStore = (): DashboardStore => ({
       updatedAt: "2026-07-08T11:00:00.000Z",
     },
   ],
+  projectResources: [],
+  plotBacklog: [],
+  features: [],
+  scrumMembers: [],
+  scrumAttendance: [],
+  scrumHolidays: [],
   lastUpdated: "2026-07-08T12:00:00.000Z",
 });
 
