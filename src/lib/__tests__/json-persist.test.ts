@@ -88,17 +88,29 @@ describe("json-persist (Blob conditional writes, mocked SDK)", () => {
     await expect(readJsonTextWithEtag("store.json")).rejects.toThrow(/network down/);
   });
 
-  it("writeJsonTextIfMatch sends ifMatch + allowOverwrite when an etag is given", async () => {
+  // Conditional (ifMatch) Blob writes are switched off (BLOB_CONDITIONAL_WRITES) after they
+  // failed every production save; an existing blob is overwritten unconditionally.
+  it("writeJsonTextIfMatch overwrites an existing blob without ifMatch", async () => {
+    blob.put.mockClear();
     blob.put.mockResolvedValueOnce({});
     await expect(writeJsonTextIfMatch("store.json", "x", '"abc"')).resolves.toBe(true);
-    expect(blob.put).toHaveBeenCalledWith(
-      "store.json",
-      "x",
-      expect.objectContaining({ ifMatch: '"abc"', allowOverwrite: true })
-    );
+    expect(blob.put).toHaveBeenCalledTimes(1);
+    const opts = blob.put.mock.calls[0][2];
+    expect(opts.allowOverwrite).toBe(true);
+    expect(opts.ifMatch).toBeUndefined();
   });
 
-  it("writeJsonTextIfMatch creates without overwrite when there is no etag", async () => {
+  it("writeJsonTextIfMatch overwrites unconditionally when the blob exists but the SDK gave no ETag", async () => {
+    blob.put.mockClear();
+    blob.put.mockResolvedValueOnce({});
+    await expect(writeJsonTextIfMatch("store.json", "x", "")).resolves.toBe(true);
+    const opts = blob.put.mock.calls[0][2];
+    expect(opts.allowOverwrite).toBe(true);
+    expect(opts.ifMatch).toBeUndefined();
+  });
+
+  it("writeJsonTextIfMatch creates without overwrite when there is no blob yet", async () => {
+    blob.put.mockClear();
     blob.put.mockResolvedValueOnce({});
     await expect(writeJsonTextIfMatch("store.json", "x", null)).resolves.toBe(true);
     const opts = blob.put.mock.calls[0][2];
@@ -106,36 +118,12 @@ describe("json-persist (Blob conditional writes, mocked SDK)", () => {
     expect(opts.ifMatch).toBeUndefined();
   });
 
-  it("writeJsonTextIfMatch returns false on precondition failure or create-race, throws otherwise", async () => {
-    blob.put.mockRejectedValueOnce(new blob.BlobPreconditionFailedError());
-    await expect(writeJsonTextIfMatch("store.json", "x", '"abc"')).resolves.toBe(false);
+  it("writeJsonTextIfMatch returns false when a create-only write loses the race, throws otherwise", async () => {
     blob.put.mockRejectedValueOnce(new Error("This blob already exists"));
     await expect(writeJsonTextIfMatch("store.json", "x", null)).resolves.toBe(false);
     blob.put.mockRejectedValueOnce(new Error("boom"));
     await expect(writeJsonTextIfMatch("store.json", "x", null)).rejects.toThrow(/boom/);
-  });
-
-  it("writeJsonTextIfMatch overwrites unconditionally when the blob exists but the SDK gave no ETag", async () => {
-    blob.put.mockClear();
-    blob.put.mockResolvedValueOnce({});
-    await expect(writeJsonTextIfMatch("store.json", "x", "")).resolves.toBe(true);
-    expect(blob.put).toHaveBeenCalledTimes(1);
-    const opts = blob.put.mock.calls[0][2];
-    expect(opts.allowOverwrite).toBe(true);
-    expect(opts.ifMatch).toBeUndefined();
-  });
-
-  it("writeJsonTextIfMatch falls back to a plain overwrite when the conditional write is rejected for another reason", async () => {
-    blob.put.mockClear();
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    blob.put.mockRejectedValueOnce(new Error("ifMatch not supported"));
-    blob.put.mockResolvedValueOnce({});
-    await expect(writeJsonTextIfMatch("store.json", "x", '"abc"')).resolves.toBe(true);
-    expect(blob.put).toHaveBeenCalledTimes(2);
-    const fallbackOpts = blob.put.mock.calls[1][2];
-    expect(fallbackOpts.allowOverwrite).toBe(true);
-    expect(fallbackOpts.ifMatch).toBeUndefined();
-    expect(log).toHaveBeenCalled();
-    log.mockRestore();
+    blob.put.mockRejectedValueOnce(new Error("blob store down"));
+    await expect(writeJsonTextIfMatch("store.json", "x", '"abc"')).rejects.toThrow(/blob store down/);
   });
 });

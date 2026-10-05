@@ -38,6 +38,13 @@ async function writeBlobText(pathname: string, content: string): Promise<void> {
   });
 }
 
+/**
+ * Whether Blob writes use ifMatch (optimistic concurrency). Disabled: it was only ever tested
+ * with mocks and broke every production save. Re-enable only after verifying the ETag
+ * round-trip (get() ETag -> put ifMatch) against a real Blob store.
+ */
+const BLOB_CONDITIONAL_WRITES = false;
+
 export interface JsonTextWithEtag {
   text: string | null;
   /** Blob ETag of the version that was read; null when there is no blob yet. */
@@ -79,6 +86,14 @@ export async function writeJsonTextIfMatch(
     addRandomSuffix: false,
     contentType: "application/json",
   };
+
+  // Production showed every ifMatch write failing as a precondition error even with no
+  // concurrent writer (the ETag from get() is not accepted by put's ifMatch), which made
+  // all saves fail. Conditional writes stay off until verified against a real Blob store.
+  if (!BLOB_CONDITIONAL_WRITES && etag !== null) {
+    await put(filename, content, { ...base, allowOverwrite: true });
+    return true;
+  }
 
   // null  -> the blob doesn't exist yet: create-only.
   // ""    -> the blob exists but the SDK returned no ETag: we can't do a conditional write,
