@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { SprintApproval, SprintApprovalParty } from "@/lib/types";
-import { Badge, Button, Card, EmptyState, tableClasses } from "@/components/ui";
+import { Button, Card, EmptyState, tableClasses } from "@/components/ui";
 import { CheckCircle2, ChevronDown, Circle, Mail, Send } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
@@ -98,7 +98,7 @@ function ApprovalMobileCard({
         >
           {title}
         </p>
-        {!mailSent ? (
+        {!mailSent && (
           <Button
             variant="ghost"
             size="sm"
@@ -108,10 +108,6 @@ function ApprovalMobileCard({
           >
             {markingSent ? "Saving…" : "Mark mail sent"}
           </Button>
-        ) : (
-          <Badge tone={complete ? "success" : "caution"} solid={complete}>
-            {complete ? "Complete" : "Pending"}
-          </Badge>
         )}
       </div>
 
@@ -209,31 +205,21 @@ function ApprovalRow({ item, onToggle, onMailSent, complete }: ApprovalItemProps
           );
         })
       ) : (
-        <td colSpan={3} className="px-3 py-2.5 text-center">
-          <span className="text-xs text-muted">Mail not sent yet</span>
+        <td colSpan={3} className="px-3 py-1.5 text-center">
+          <span className="inline-flex items-center gap-2">
+            <span className="text-xs text-muted">Mail not sent yet</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleMarkSent}
+              disabled={markingSent}
+              className="-my-1 text-accent hover:bg-accent-soft hover:text-accent"
+            >
+              {markingSent ? "Saving…" : "Mark mail sent"}
+            </Button>
+          </span>
         </td>
       )}
-      <td className="w-32 px-3 py-2.5 text-center">
-        {!mailSent ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleMarkSent}
-            disabled={markingSent}
-            className="-my-1 text-accent hover:bg-accent-soft hover:text-accent"
-          >
-            {markingSent ? "Saving…" : "Mark mail sent"}
-          </Button>
-        ) : (
-          <Badge
-            tone={complete ? "success" : "caution"}
-            solid={complete}
-            className="min-w-[4.75rem] justify-center"
-          >
-            {complete ? "Complete" : "Pending"}
-          </Badge>
-        )}
-      </td>
     </tr>
   );
 }
@@ -273,7 +259,6 @@ function ApprovalTable({
                   {PARTY_LABELS[party]}
                 </th>
               ))}
-              <th className="w-32 px-3 py-2.5 text-center">Status</th>
             </tr>
           </thead>
           <tbody>

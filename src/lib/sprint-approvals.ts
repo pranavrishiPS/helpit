@@ -8,6 +8,14 @@ import type {
 import { formatSprintApprovalTitle } from "./utils";
 import { SPRINT_SUBJECT_PATTERN } from "./mail-category";
 
+/**
+ * Build numbers that were skipped and will never get a sprint costing mail (approvalKey
+ * format). They get no row, and any existing row is removed.
+ */
+export const SKIPPED_BUILD_KEYS = new Set<string>([
+  "ios:1.84", // version number accidentally skipped by devs
+]);
+
 /** Who signs off each column. Matched case-insensitively against the email in `from`. */
 export const SPRINT_APPROVAL_SENDERS: Record<SprintApprovalParty, string[]> = {
   gm: ["amitsrivastava@playsimple.in"],
@@ -46,7 +54,7 @@ export function addApprovalsFromMail(
     if (!SPRINT_SUBJECT_PATTERN.test(subject)) continue;
     const key = approvalKey(subject);
     const match = key.match(/^(android|ios):(\d+\.\d+)$/);
-    if (!match || known.has(key)) continue;
+    if (!match || known.has(key) || SKIPPED_BUILD_KEYS.has(key)) continue;
     known.add(key);
 
     const platform = match[1] as "android" | "ios";
@@ -201,7 +209,9 @@ export function needsMailCheck(approval: SprintApproval): boolean {
 /** Store-level wrapper; returns the same store when nothing changed. */
 export function applyMailApprovalsToStore(store: DashboardStore): DashboardStore {
   const current = store.sprintApprovals ?? [];
-  const sprintApprovals = applyMailApprovals(current, store.mailItems ?? []);
+  const kept = current.filter((a) => !SKIPPED_BUILD_KEYS.has(approvalKey(a.title, a.platform)));
+  const base = kept.length === current.length ? current : kept;
+  const sprintApprovals = applyMailApprovals(base, store.mailItems ?? []);
   if (sprintApprovals === current) return store;
   return { ...store, sprintApprovals };
 }

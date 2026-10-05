@@ -150,3 +150,37 @@ describe("addApprovalsFromMail", () => {
     expect(ids(syncSprintApprovals({ ...store, releases: [] }))).toEqual(expected);
   });
 });
+
+describe("skipped builds", () => {
+  const skippedThread = [
+    {
+      id: "s",
+      gmailId: "s",
+      subject: "iOS Release 1.84 Thread",
+      from: "pranavrishi@playsimple.in",
+      summary: "Hey Team",
+      status: "unread",
+      category: "sprint",
+      receivedAt: "2026-08-31T00:00:00.000Z",
+      source: "gmail",
+    },
+  ] as MailItem[];
+
+  it("never creates a row for iOS 1.84", () => {
+    expect(addApprovalsFromMail([], skippedThread, "2026-10-05T00:00:00.000Z")).toEqual([]);
+  });
+
+  it("removes an existing iOS 1.84 row", () => {
+    const row: SprintApproval = {
+      id: "sprint-approval-mail-ios-1.84",
+      title: "iOS Release 1.84",
+      platform: "ios",
+      source: "mail",
+      approvals: { gm: false, dev: false, qa: false },
+      createdAt: "2026-10-05T00:00:00.000Z",
+      updatedAt: "2026-10-05T00:00:00.000Z",
+    };
+    const store = { ...baseStore(), sprintApprovals: [row] };
+    expect(syncSprintApprovals(store).sprintApprovals).toEqual([]);
+  });
+});
