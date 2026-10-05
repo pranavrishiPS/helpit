@@ -29,7 +29,13 @@ vi.mock("@/lib/gmail-store", () => ({
 
 vi.mock("@/lib/db", () => ({ updateStore: updateStoreMock, readStore: readStoreMock }));
 
-import { INBOX_QUERY, buildApprovalThreadQuery, mergeGmailItems, syncGmailInbox } from "@/lib/gmail";
+import {
+  INBOX_QUERY,
+  SPRINT_THREAD_DISCOVERY_QUERY,
+  buildApprovalThreadQuery,
+  mergeGmailItems,
+  syncGmailInbox,
+} from "@/lib/gmail";
 
 function mail(overrides: Partial<MailItem> & { id: string }): MailItem {
   return {
@@ -145,7 +151,8 @@ describe("syncGmailInbox", () => {
       .mockResolvedValueOnce({
         data: { messages: [{ id: "1" }, { id: "2" }], nextPageToken: "p2" },
       })
-      .mockResolvedValueOnce({ data: { messages: [{ id: "3" }] } });
+      .mockResolvedValueOnce({ data: { messages: [{ id: "3" }] } })
+      .mockResolvedValueOnce({ data: { messages: [] } });
     getMock.mockImplementation(async ({ id }: { id: string }) => {
       if (id === "2") throw new Error("boom");
       return { data: { snippet: `snip ${id}`, payload: { headers: [] } } };
@@ -158,8 +165,10 @@ describe("syncGmailInbox", () => {
 
     const result = await syncGmailInbox();
 
-    expect(listMock).toHaveBeenCalledTimes(2);
+    // Two inbox pages, then the sprint thread discovery search.
+    expect(listMock).toHaveBeenCalledTimes(3);
     expect(listMock.mock.calls[1][0].pageToken).toBe("p2");
+    expect(listMock.mock.calls[2][0].q).toBe(SPRINT_THREAD_DISCOVERY_QUERY);
     expect(result).toMatchObject({ synced: 2, added: 2, failed: 1 });
     expect(saved?.mailItems.map((m) => m.gmailId).sort()).toEqual(["1", "3"]);
     expect(saved?.integrations.gmail.lastSyncError).toMatch(/1 message/);
@@ -250,8 +259,11 @@ describe("syncGmailInbox", () => {
 
     await syncGmailInbox();
 
-    expect(listMock).toHaveBeenCalledTimes(1);
-    expect(listMock.mock.calls[0][0].q).toBe(INBOX_QUERY);
+    // Inbox + discovery only; no per-approval thread search.
+    expect(listMock.mock.calls.map((c) => c[0].q)).toEqual([
+      INBOX_QUERY,
+      SPRINT_THREAD_DISCOVERY_QUERY,
+    ]);
   });
 
   it("does not fail the inbox sync when a thread search errors", async () => {
@@ -269,7 +281,126 @@ describe("syncGmailInbox", () => {
     expect(result).toMatchObject({ synced: 1, added: 1, failed: 0 });
     expect(out.saved?.mailItems.map((m) => m.gmailId)).toEqual(["in1"]);
     expect(out.saved?.sprintApprovals[0].approvals).toEqual({ gm: false, dev: false, qa: false });
+    // Both the per-approval search and discovery failed.
+    expect(out.saved?.integrations.gmail.lastSyncError).toMatch(/2 build thread searches failed/);
+  });
+
+  const at = (iso: string) => String(Date.parse(iso));
+
+  it("creates rows for build threads found by discovery, including Sent-only threads", async () => {
+    const existing = approval({ id: "a1", title: "Android Build 1.192", platform: "android" });
+    readStoreMock.mockResolvedValue({ sprintApprovals: [existing] });
+    listMock.mockImplementation(async ({ q }: { q: string }) => {
+      if (q.startsWith("in:inbox")) return { data: { messages: [{ id: "in1" }] } };
+      if (q === SPRINT_THREAD_DISCOVERY_QUERY) {
+        return {
+          data: { messages: ["in1", "s1", "r1", "i1", "old"].map((id) => ({ id })) },
+        };
+      }
+      return { data: { messages: [] } };
+    });
+    const msgs: Record<string, object> = {
+      // Inbox mail: a reply on the 1.200 thread.
+      in1: {
+        ...header("Re: Android Build 1.200 Thread", "Uttam <uttamk@playsimple.in>"),
+        snippet: "Dev costing attached",
+        internalDate: at("2026-09-21T00:00:00.000Z"),
+      },
+      // The user's initiating mail — only in Sent.
+      s1: {
+        ...header("Android Build 1.200 Thread", "Pranav Rishi <pranavrishi@playsimple.in>"),
+        snippet: "Hey Team, Initiating this thread for the Android 1.200 Sprint...",
+        internalDate: at("2026-09-20T00:00:00.000Z"),
+        labelIds: ["SENT"],
+      },
+      r1: {
+        ...header("Re: Android Build 1.200 Thread", "Amit <amitsrivastava@playsimple.in>"),
+        snippet: "Approved",
+        internalDate: at("2026-09-22T00:00:00.000Z"),
+      },
+      i1: {
+        ...header("iOS Release 1.82 Thread", "pranavrishi@playsimple.in"),
+        snippet: "Hey Team, Initiating this thread",
+        internalDate: at("2026-09-25T00:00:00.000Z"),
+      },
+      // Existing row: no duplicate.
+      old: {
+        ...header("Re: Android Build 1.192 Thread", "pranavrishi@playsimple.in"),
+        snippet: "",
+        internalDate: at("2026-08-01T00:00:00.000Z"),
+      },
+    };
+    getMock.mockImplementation(async ({ id }: { id: string }) => ({ data: msgs[id] }));
+    const out = captureSave({ mailItems: [], sprintApprovals: [existing] });
+
+    await syncGmailInbox();
+
+    // in1 was fetched once for the inbox, not again for discovery.
+    expect(getMock.mock.calls.filter((c) => c[0].id === "in1")).toHaveLength(1);
+    expect(out.saved?.mailItems.map((m) => m.gmailId)).toEqual(["in1"]);
+    const rows = out.saved?.sprintApprovals ?? [];
+    expect(rows.filter((a) => a.title === "Android Build 1.192")).toHaveLength(1);
+    expect(rows.find((a) => a.id === "sprint-approval-mail-android-1.200")).toMatchObject({
+      title: "Android Build 1.200",
+      platform: "android",
+      source: "mail",
+      approvals: { gm: true, dev: true, qa: false },
+      sentAt: "2026-09-20T00:00:00.000Z",
+      autoSent: true,
+    });
+    expect(rows.find((a) => a.id === "sprint-approval-mail-ios-1.82")).toMatchObject({
+      title: "iOS Release 1.82",
+      platform: "ios",
+      source: "mail",
+      sentAt: "2026-09-25T00:00:00.000Z",
+    });
+    expect(rows.map((a) => a.id).sort()).toEqual([
+      "a1",
+      "sprint-approval-mail-android-1.200",
+      "sprint-approval-mail-ios-1.82",
+    ]);
+  });
+
+  it("ignores discovered build mail whose subject is not a sprint thread", async () => {
+    readStoreMock.mockResolvedValue({ sprintApprovals: [] });
+    listMock.mockImplementation(async ({ q }: { q: string }) =>
+      q === SPRINT_THREAD_DISCOVERY_QUERY
+        ? { data: { messages: [{ id: "n1" }, { id: "n2" }] } }
+        : { data: { messages: [] } }
+    );
+    const msgs: Record<string, object> = {
+      n1: { ...header("Android Build 1.204 release notes", "x@y.com"), snippet: "Thread" },
+      n2: { ...header("Thread: iOS Release plan 1.84", "x@y.com"), snippet: "" },
+    };
+    getMock.mockImplementation(async ({ id }: { id: string }) => ({ data: msgs[id] }));
+    const out = captureSave({ mailItems: [], sprintApprovals: [] });
+
+    await syncGmailInbox();
+
+    expect(out.saved?.sprintApprovals).toEqual([]);
+  });
+
+  it("does not fail the sync when discovery errors", async () => {
+    readStoreMock.mockResolvedValue({ sprintApprovals: [] });
+    listMock.mockImplementation(async ({ q }: { q: string }) => {
+      if (q === SPRINT_THREAD_DISCOVERY_QUERY) throw new Error("quota");
+      return { data: { messages: [{ id: "in1" }] } };
+    });
+    getMock.mockResolvedValue({ data: { ...header("Hello", "x@y.com"), snippet: "hi" } });
+    const out = captureSave({ mailItems: [], sprintApprovals: [] });
+
+    const result = await syncGmailInbox();
+
+    expect(result).toMatchObject({ synced: 1, added: 1, failed: 0 });
+    expect(out.saved?.mailItems.map((m) => m.gmailId)).toEqual(["in1"]);
     expect(out.saved?.integrations.gmail.lastSyncError).toMatch(/1 build thread search failed/);
+  });
+});
+
+describe("SPRINT_THREAD_DISCOVERY_QUERY", () => {
+  it("searches all mail, Sent included", () => {
+    expect(SPRINT_THREAD_DISCOVERY_QUERY).not.toMatch(/in:inbox/);
+    expect(SPRINT_THREAD_DISCOVERY_QUERY).toContain("newer_than:60d");
   });
 });
 

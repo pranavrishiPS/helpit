@@ -3,8 +3,12 @@ import type { MailItem } from "@/lib/types";
 import { getAppUrl } from "@/lib/app-url";
 import { readGmailTokens, writeGmailTokens, type GmailTokens } from "@/lib/gmail-store";
 import { UserFacingError } from "@/lib/errors";
-import { categorizeMail } from "@/lib/mail-category";
-import { applyMailApprovals, needsMailCheck } from "@/lib/sprint-approvals";
+import { SPRINT_SUBJECT_PATTERN, categorizeMail } from "@/lib/mail-category";
+import {
+  addApprovalsFromMail,
+  applyMailApprovals,
+  needsMailCheck,
+} from "@/lib/sprint-approvals";
 
 const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -237,6 +241,16 @@ export function buildApprovalThreadQuery(title: string): string {
   return `subject:"${safe} Thread" newer_than:365d`;
 }
 
+/**
+ * Finds sprint build threads across all mail (Sent included: the user starts each thread),
+ * so builds missing from Planning still get an approval row.
+ */
+export const SPRINT_THREAD_DISCOVERY_QUERY =
+  'subject:Thread ("Android Build" OR "iOS Release") newer_than:60d';
+
+/** One list page is enough for ~2 months of build threads. */
+const GMAIL_DISCOVERY_MAX_RESULTS = 100;
+
 type GmailClient = ReturnType<typeof google.gmail>;
 
 /** Fetch metadata for ids in batches; failures are counted, not thrown. */
@@ -306,6 +320,27 @@ async function fetchApprovalThreadMessages(
   return { items, failed, searchFailed };
 }
 
+/**
+ * Sprint thread messages from the discovery search, minus ids already fetched. Only
+ * subjects matching SPRINT_SUBJECT_PATTERN are returned. Throws if the search fails.
+ */
+async function discoverSprintThreadMessages(
+  gmail: GmailClient,
+  skipIds: Set<string>
+): Promise<{ items: MailItem[]; failed: number }> {
+  const list = await gmail.users.messages.list({
+    userId: "me",
+    maxResults: GMAIL_DISCOVERY_MAX_RESULTS,
+    q: SPRINT_THREAD_DISCOVERY_QUERY,
+  });
+  const ids = new Set<string>();
+  for (const m of (list.data.messages ?? []).slice(0, GMAIL_DISCOVERY_MAX_RESULTS)) {
+    if (m.id && !skipIds.has(m.id)) ids.add(m.id);
+  }
+  const { items, failed } = await fetchMessages(gmail, [...ids]);
+  return { items: items.filter((m) => SPRINT_SUBJECT_PATTERN.test(m.subject)), failed };
+}
+
 function syncErrorText(failed: number, searchFailed: number): string | undefined {
   const parts: string[] = [];
   if (failed > 0) parts.push(`${failed} message${failed === 1 ? "" : "s"} could not be fetched`);
@@ -366,6 +401,21 @@ export async function syncGmailInbox(): Promise<{
     searchFailed++;
   }
 
+  // Discover build threads that have no approval row yet (e.g. not in Planning). New rows
+  // are covered by these results, so they need no per-approval search this sync.
+  let discovered: MailItem[] = [];
+  try {
+    const skipIds = new Set([
+      ...messageIds,
+      ...threadMessages.map((m) => m.gmailId).filter((id): id is string => !!id),
+    ]);
+    const discovery = await discoverSprintThreadMessages(gmail, skipIds);
+    discovered = discovery.items;
+    failed += discovery.failed;
+  } catch {
+    searchFailed++;
+  }
+
   const now = new Date().toISOString();
   let added = 0;
   let updated = 0;
@@ -374,15 +424,14 @@ export async function syncGmailInbox(): Promise<{
     const merged = mergeGmailItems(s.mailItems, fetched);
     added = merged.added;
     updated = merged.updated;
+    // Thread/discovered messages only feed approvals; they are never added to mailItems.
+    const approvalMail = [...merged.mailItems, ...threadMessages, ...discovered];
+    const withMailRows = addApprovalsFromMail(s.sprintApprovals ?? [], approvalMail, now);
     return {
       ...s,
       mailItems: merged.mailItems,
       // Auto-tick sprint approvals from the freshly merged mail (overrides respected).
-      // Thread messages only feed detection; they are never added to mailItems.
-      sprintApprovals: applyMailApprovals(s.sprintApprovals ?? [], [
-        ...merged.mailItems,
-        ...threadMessages,
-      ]),
+      sprintApprovals: applyMailApprovals(withMailRows, approvalMail, now),
       integrations: {
         ...s.integrations,
         gmail: {

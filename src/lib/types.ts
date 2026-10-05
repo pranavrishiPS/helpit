@@ -243,6 +243,8 @@ export interface SprintApproval {
   autoSent?: true;
   /** User marked mail sent/unsent by hand — mail detection never sets sentAt again. */
   sentOverride?: boolean;
+  /** "mail" = created from a Gmail build thread (never pruned); unset/"release" = from Planning. */
+  source?: "release" | "mail";
   createdAt: string;
   updatedAt: string;
 }

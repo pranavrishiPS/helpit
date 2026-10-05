@@ -249,7 +249,7 @@ describe("db", () => {
     expect(mockFiles.get("store.json")).toBe(before);
   });
 
-  it("updateStore persists the updater result and re-syncs sprint approvals", async () => {
+  it("updateStore persists the updater result without creating approvals from releases", async () => {
     seedStore({
       releases: [
         {
@@ -269,7 +269,7 @@ describe("db", () => {
     }));
 
     expect(updated.profile.name).toBe("Alex");
-    expect(updated.sprintApprovals.some((a) => a.releaseId === "rel-android-1180")).toBe(true);
+    expect(updated.sprintApprovals.some((a) => a.releaseId === "rel-android-1180")).toBe(false);
 
     const persisted = JSON.parse(mockFiles.get("store.json")!);
     expect(persisted.profile.name).toBe("Alex");

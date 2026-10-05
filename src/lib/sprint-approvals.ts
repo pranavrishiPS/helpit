@@ -6,6 +6,7 @@ import type {
   SprintApprovalParty,
 } from "./types";
 import { formatSprintApprovalTitle } from "./utils";
+import { SPRINT_SUBJECT_PATTERN } from "./mail-category";
 
 /** Who signs off each column. Matched case-insensitively against the email in `from`. */
 export const SPRINT_APPROVAL_SENDERS: Record<SprintApprovalParty, string[]> = {
@@ -25,99 +26,43 @@ export function approvalKey(title: string, platform?: Release["platform"]): stri
   return lower.trim();
 }
 
-export function syncSprintApprovalsFromReleases(store: DashboardStore): DashboardStore {
-  let changed = false;
-  const approvals = (store.sprintApprovals ?? []).filter((item) => {
-    const keep = item.title.trim().length > 1;
-    if (!keep) changed = true;
-    return keep;
-  });
+const PARTIES: SprintApprovalParty[] = ["gm", "dev", "qa"];
 
-  for (const approval of approvals) {
-    const formatted = formatSprintApprovalTitle(approval.title, approval.platform);
-    if (approval.title !== formatted) {
-      approval.title = formatted;
-      changed = true;
-    }
-  }
+/**
+ * Creates a row for each build with a sprint thread in mail ("Android Build 1.200 Thread")
+ * but no approval row yet (matched by approvalKey). Run applyMailApprovals afterwards to
+ * tick parties and set sentAt. Idempotent; returns the same array when nothing was added.
+ */
+export function addApprovalsFromMail(
+  approvals: SprintApproval[],
+  mailItems: MailItem[],
+  now: string = new Date().toISOString()
+): SprintApproval[] {
+  const known = new Set(approvals.map((a) => approvalKey(a.title, a.platform)));
 
-  const byReleaseId = new Map(
-    approvals.filter((a) => a.releaseId).map((a) => [a.releaseId!, a])
-  );
-  const byKey = new Map(approvals.map((a) => [approvalKey(a.title, a.platform), a]));
-
-  const now = new Date().toISOString();
   const added: SprintApproval[] = [];
+  for (const mail of mailItems) {
+    const subject = mail.subject ?? "";
+    if (!SPRINT_SUBJECT_PATTERN.test(subject)) continue;
+    const key = approvalKey(subject);
+    const match = key.match(/^(android|ios):(\d+\.\d+)$/);
+    if (!match || known.has(key)) continue;
+    known.add(key);
 
-  for (const release of store.releases) {
-    if (release.status === "live") continue;
-
-    const key = approvalKey(release.name, release.platform);
-    const linked = byReleaseId.get(release.id) ?? byKey.get(key);
-
-    if (linked) {
-      let linkedChanged = false;
-      if (!linked.releaseId) {
-        linked.releaseId = release.id;
-        linkedChanged = true;
-      }
-      if (!linked.platform && release.platform) {
-        linked.platform = release.platform;
-        linkedChanged = true;
-      }
-      const formattedTitle = formatSprintApprovalTitle(release.name, release.platform);
-      if (linked.title !== formattedTitle) {
-        linked.title = formattedTitle;
-        linkedChanged = true;
-      }
-      if (linkedChanged) {
-        linked.updatedAt = now;
-        changed = true;
-      }
-      continue;
-    }
-
-    const approval: SprintApproval = {
-      id: `sprint-approval-${release.id}`,
-      releaseId: release.id,
-      title: formatSprintApprovalTitle(release.name, release.platform),
-      platform: release.platform,
+    const platform = match[1] as "android" | "ios";
+    added.push({
+      id: `sprint-approval-mail-${platform}-${match[2]}`,
+      title: formatSprintApprovalTitle(match[2], platform),
+      platform,
+      source: "mail",
       approvals: { gm: false, dev: false, qa: false },
       createdAt: now,
       updatedAt: now,
-    };
-    added.push(approval);
-    byReleaseId.set(release.id, approval);
-    byKey.set(key, approval);
-    changed = true;
+    });
   }
 
-  if (!changed) return store;
-
-  return {
-    ...store,
-    sprintApprovals: pruneOrphanApprovals([...added, ...approvals], store.releases),
-  };
+  return added.length > 0 ? [...added, ...approvals] : approvals;
 }
-
-function pruneOrphanApprovals(
-  approvals: SprintApproval[],
-  releases: Release[]
-): SprintApproval[] {
-  const releaseIds = new Set(releases.map((r) => r.id));
-  const activeKeys = new Set(
-    releases
-      .filter((r) => r.status !== "live")
-      .map((r) => approvalKey(r.name, r.platform))
-  );
-
-  return approvals.filter((approval) => {
-    if (approval.releaseId) return releaseIds.has(approval.releaseId);
-    return activeKeys.has(approvalKey(approval.title, approval.platform));
-  });
-}
-
-const PARTIES: SprintApprovalParty[] = ["gm", "dev", "qa"];
 
 function decodeEntities(text: string): string {
   return text
@@ -261,7 +206,10 @@ export function applyMailApprovalsToStore(store: DashboardStore): DashboardStore
   return { ...store, sprintApprovals };
 }
 
-/** Release sync + mail auto-detection — what the store runs on every read/write. */
+/**
+ * What the store runs on every read/write. Sprint approvals come only from Gmail build
+ * threads; they are not linked to Planning releases.
+ */
 export function syncSprintApprovals(store: DashboardStore): DashboardStore {
-  return applyMailApprovalsToStore(syncSprintApprovalsFromReleases(store));
+  return applyMailApprovalsToStore(store);
 }
