@@ -74,19 +74,41 @@ export async function writeJsonTextIfMatch(
   etag: string | null
 ): Promise<boolean> {
   const { put, BlobPreconditionFailedError } = await import("@vercel/blob");
+  const base = {
+    access: "private" as const,
+    addRandomSuffix: false,
+    contentType: "application/json",
+  };
+
+  // null  -> the blob doesn't exist yet: create-only.
+  // ""    -> the blob exists but the SDK returned no ETag: we can't do a conditional write,
+  //          so overwrite unconditionally (the pre-concurrency behaviour) rather than fail.
+  // other -> conditional write.
+  if (etag === "") {
+    await put(filename, content, { ...base, allowOverwrite: true });
+    return true;
+  }
+
   try {
-    await put(filename, content, {
-      access: "private",
-      addRandomSuffix: false,
-      contentType: "application/json",
-      ...(etag ? { allowOverwrite: true, ifMatch: etag } : { allowOverwrite: false }),
-    });
+    await put(
+      filename,
+      content,
+      etag === null
+        ? { ...base, allowOverwrite: false }
+        : { ...base, allowOverwrite: true, ifMatch: etag }
+    );
     return true;
   } catch (err) {
     if (err instanceof BlobPreconditionFailedError) return false;
     // Create-only write hit an existing blob (someone created it first).
-    if (!etag && err instanceof Error && /already exists/i.test(err.message)) return false;
-    throw err;
+    if (etag === null && err instanceof Error && /already exists/i.test(err.message)) return false;
+    if (etag === null) throw err;
+    // The conditional write itself was rejected for a reason other than "someone else wrote"
+    // (e.g. the store doesn't accept ifMatch). Saving the user's change matters more than the
+    // race protection, so log it and fall back to a plain overwrite.
+    console.error("[json-persist] conditional Blob write failed; falling back to overwrite:", err);
+    await put(filename, content, { ...base, allowOverwrite: true });
+    return true;
   }
 }
 
