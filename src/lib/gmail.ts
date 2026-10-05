@@ -3,6 +3,7 @@ import type { MailItem } from "@/lib/types";
 import { getAppUrl } from "@/lib/app-url";
 import { readGmailTokens, writeGmailTokens, type GmailTokens } from "@/lib/gmail-store";
 import { UserFacingError } from "@/lib/errors";
+import { categorizeMail } from "@/lib/mail-category";
 
 const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
@@ -115,30 +116,6 @@ function parseFrom(raw: string): string {
   return (match?.[1] ?? raw).trim();
 }
 
-function categorizeMail(subject: string, from: string): MailItem["category"] {
-  const lowerSubject = subject.toLowerCase();
-  const lowerFrom = from.toLowerCase();
-
-  if (
-    lowerSubject.includes("[support]") ||
-    lowerSubject.includes("support ticket") ||
-    lowerFrom.includes("support@")
-  ) {
-    return "support";
-  }
-  if (
-    lowerSubject.includes("quote") ||
-    lowerSubject.includes("vendor") ||
-    lowerFrom.includes("vendor")
-  ) {
-    return "vendor";
-  }
-  if (lowerFrom.includes("playsimple") || lowerFrom.includes("@psg.")) {
-    return "internal";
-  }
-  return "other";
-}
-
 function mapGmailMessage(
   id: string,
   data: {
@@ -174,7 +151,9 @@ function mapGmailMessage(
  * Pure: call it with the *fresh* store's mailItems (inside updateStore) so edits
  * made during the network phase of a sync are never clobbered.
  *
- * - Re-fetched items keep the user's id, category, followUpDate and drafted/done status.
+ * - Re-fetched items keep the user's id, followUpDate and drafted/done status. Category is
+ *   never user-edited, so it takes the freshly computed value (this also re-categorises
+ *   legacy "internal"/"vendor" items).
  * - Gmail items missing from the fetch (older than the window, archived) are kept when
  *   the user has handled them (drafted/done) or set a followUpDate; everything else
  *   (unread / needs_reply, which the sync assigns automatically) is pruned.
@@ -207,7 +186,7 @@ export function mergeGmailItems(
         ...item,
         id: existing.id,
         status: preserveStatus ? existing.status : item.status,
-        category: existing.category,
+        category: item.category,
         followUpDate: existing.followUpDate,
       });
       updated++;

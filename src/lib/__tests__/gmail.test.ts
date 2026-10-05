@@ -75,13 +75,13 @@ describe("mergeGmailItems", () => {
     expect(mailItems.map((m) => m.gmailId)).toEqual(["reply"]);
   });
 
-  it("does not clobber user edits on a re-fetched item", () => {
+  it("does not clobber user edits on a re-fetched item, but refreshes category", () => {
     const existing = gmailItem("a", {
       status: "drafted",
-      category: "vendor",
+      category: "other",
       followUpDate: "2026-10-09",
     });
-    const refetched = gmailItem("a", { status: "unread", category: "other", summary: "new" });
+    const refetched = gmailItem("a", { status: "unread", category: "meeting", summary: "new" });
     const { mailItems, updated, added } = mergeGmailItems([existing], [refetched]);
     expect(updated).toBe(1);
     expect(added).toBe(0);
@@ -89,7 +89,7 @@ describe("mergeGmailItems", () => {
     expect(mailItems[0]).toMatchObject({
       id: "gmail-a",
       status: "drafted",
-      category: "vendor",
+      category: "meeting",
       followUpDate: "2026-10-09",
       summary: "new",
     });
