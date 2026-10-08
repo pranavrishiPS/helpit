@@ -5,7 +5,6 @@ import type { SprintApproval } from "@/lib/types";
 const AMIT = "@Amit Kumar Srivastava";
 const AYUSH = "@Ayush Upadhyay";
 const ROHAN = "@Rohan Karir";
-const MANVI = "@Manvi Thakur";
 const HEADER = "Hi team, gentle reminder on the sprint costing threads — pending from you:";
 
 function approval(
@@ -36,7 +35,7 @@ describe("buildCostingReminder", () => {
     ).toBe("");
   });
 
-  it("groups builds per column owner, newest first, tagging both QAs", () => {
+  it("groups builds per column owner, newest first, tagging the QA owner", () => {
     const message = buildCostingReminder([
       approval("iOS Release 1.86", "ios", { gm: true }),
       approval("Android Build 1.202", "android"),
@@ -47,7 +46,7 @@ describe("buildCostingReminder", () => {
         HEADER,
         `• ${AMIT} — Android Build 1.202`,
         `• ${AYUSH} — Android Build 1.202, iOS Release 1.86`,
-        `• ${ROHAN}, ${MANVI} — Android Build 1.202, Android Build 1.200, iOS Release 1.86`,
+        `• ${ROHAN} — Android Build 1.202, Android Build 1.200, iOS Release 1.86`,
       ].join("\n")
     );
   });
@@ -56,7 +55,7 @@ describe("buildCostingReminder", () => {
     const message = buildCostingReminder([
       approval("Android Build 1.196", "android", { gm: true, dev: true }),
     ]);
-    expect(message).toContain(`• ${ROHAN}, ${MANVI} — Android Build 1.196`);
+    expect(message).toContain(`• ${ROHAN} — Android Build 1.196`);
     expect(message).not.toContain(AMIT);
     expect(message).not.toContain(AYUSH);
   });

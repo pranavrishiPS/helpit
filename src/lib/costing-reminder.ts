@@ -14,7 +14,6 @@ export const COSTING_REMINDER_OWNERS: Record<
   dev: [{ name: "Ayush Upadhyay", slackId: "U0A4E3EQW9Z" }],
   qa: [
     { name: "Rohan Karir", slackId: "U08TT5VN15G" },
-    { name: "Manvi Thakur", slackId: "U08TJQTRCGN" },
   ],
 };
 
