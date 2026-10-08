@@ -228,13 +228,13 @@ function MailRow({
 
   return (
     <li className={cn(done && "bg-surface-2/60")}>
-      <div className="flex items-center gap-2 pr-4">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={expanded}
           aria-controls={detailsId}
-          className="flex min-w-0 flex-1 items-center gap-2.5 py-2.5 pl-4 text-left transition-colors hover:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
+          className="flex min-w-0 flex-1 items-center gap-2.5 py-2.5 pl-4 pr-4 text-left transition-colors hover:bg-surface-2/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal"
         >
           <span
             aria-hidden="true"
