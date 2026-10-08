@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 import { PwaRegister } from "@/components/layout/PwaRegister";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +39,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the inline script sets data-theme before React hydrates
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* No-flash theme: resolve System/Light/Dark before first paint (docs/specs/dark-mode.md §5) */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased`}>
         <AppShell>{children}</AppShell>
         <PwaRegister />

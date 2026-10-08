@@ -229,15 +229,15 @@ const BADGE_SOFT: Record<BadgeTone, string> = {
 };
 
 const BADGE_SOLID: Record<BadgeTone, string> = {
-  neutral: "bg-foreground text-white",
-  accent: "bg-accent text-white",
-  success: "bg-success text-white",
-  caution: "bg-caution text-white",
-  danger: "bg-danger text-white",
-  info: "bg-info text-white",
-  pop: "bg-pop text-foreground",
-  android: "bg-android text-white",
-  ios: "bg-ios text-white",
+  neutral: "bg-foreground text-on-fill",
+  accent: "bg-accent text-on-fill",
+  success: "bg-success text-on-fill",
+  caution: "bg-caution text-on-fill",
+  danger: "bg-danger text-on-fill",
+  info: "bg-info text-on-fill",
+  pop: "bg-pop text-on-signal",
+  android: "bg-android text-on-fill",
+  ios: "bg-ios text-on-fill",
 };
 
 export function badgeClasses({
@@ -494,11 +494,11 @@ export function buttonClasses({
     size === "md" && "h-10 px-4 text-sm [&_svg]:h-4 [&_svg]:w-4",
     size === "icon" && "h-8 w-8 p-0 text-sm [&_svg]:h-4 [&_svg]:w-4",
     variant === "primary" &&
-      "bg-accent text-white shadow-card hover:bg-accent-hover",
+      "bg-accent text-on-fill shadow-card hover:bg-accent-hover",
     variant === "secondary" &&
       "border border-border-strong bg-card text-foreground shadow-card hover:border-input/60 hover:bg-surface-2",
     variant === "ghost" && "text-muted hover:bg-surface-2 hover:text-foreground",
-    variant === "danger" && "bg-danger-soft text-danger hover:bg-danger hover:text-white"
+    variant === "danger" && "bg-danger-soft text-danger hover:bg-danger hover:text-on-fill"
   );
 }
 
@@ -656,6 +656,139 @@ export function Tabs<T extends string>({
 }
 
 /* ------------------------------------------------------------------ */
+/* Segmented control (single choice, radiogroup)                       */
+/* ------------------------------------------------------------------ */
+
+export type SegmentedItem<T extends string> = {
+  id: T;
+  label: string;
+  icon?: LucideIcon;
+  describedBy?: string;
+};
+
+const SEGMENT_TONES = {
+  surface: {
+    track: "bg-surface-2 ring-1 ring-inset ring-border",
+    idle: "text-muted hover:text-foreground",
+    selected: "bg-card text-foreground shadow-card",
+    focus: FOCUS_RING,
+  },
+  // Sidebar stays dark in both themes, so white/black opacities are allowed here (visual-redesign §2.4)
+  sidebar: {
+    track: "bg-black/20 ring-1 ring-inset ring-white/10",
+    idle: "text-sidebar-muted hover:bg-white/[0.06] hover:text-white",
+    selected: "bg-white/[0.14] text-white shadow-card ring-1 ring-inset ring-white/10",
+    focus: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
+  },
+} as const;
+
+/**
+ * Radio-style segmented control (docs/specs/dark-mode.md §12). `value` null = nothing
+ * selected yet (pre-hydration). Roving tabindex; arrows/Home/End move and select.
+ */
+export function SegmentedControl<T extends string>({
+  value,
+  onChange,
+  items,
+  tone = "surface",
+  size = "md",
+  fullWidth,
+  disabled,
+  className,
+  "aria-label": ariaLabel,
+}: {
+  value: T | null;
+  onChange: (value: T) => void;
+  items: SegmentedItem<T>[];
+  tone?: "surface" | "sidebar";
+  size?: "sm" | "md";
+  fullWidth?: boolean;
+  disabled?: boolean;
+  className?: string;
+  "aria-label": string;
+}) {
+  const styles = SEGMENT_TONES[tone];
+  const selectedIndex = items.findIndex((item) => item.id === value);
+  const tabStop = selectedIndex === -1 ? 0 : selectedIndex;
+
+  function select(index: number, focusGroup?: HTMLElement | null) {
+    const item = items[index];
+    if (!item) return;
+    if (item.id !== value) onChange(item.id);
+    focusGroup?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[index]?.focus();
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    const last = items.length - 1;
+    let next: number | null = null;
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        next = index === last ? 0 : index + 1;
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        next = index === 0 ? last : index - 1;
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = last;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    select(next, event.currentTarget.parentElement);
+  }
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label={ariaLabel}
+      aria-disabled={disabled || undefined}
+      className={cn(
+        "rounded-control",
+        size === "sm" ? "gap-0.5 p-0.5" : "gap-1 p-1",
+        fullWidth ? "flex w-full" : "inline-flex",
+        styles.track,
+        className
+      )}
+    >
+      {items.map((item, index) => {
+        const checked = index === selectedIndex;
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            aria-describedby={item.describedBy}
+            tabIndex={index === tabStop ? 0 : -1}
+            disabled={disabled}
+            onClick={() => select(index)}
+            onKeyDown={(event) => onKeyDown(event, index)}
+            className={cn(
+              "inline-flex h-8 items-center justify-center rounded-lg text-xs disabled:cursor-not-allowed disabled:opacity-50",
+              size === "sm" ? "gap-1 px-1 font-medium" : "gap-1.5 px-3 font-semibold",
+              fullWidth ? "min-w-0 flex-1" : "shrink-0",
+              styles.focus,
+              // Transition only on unselected so the pill snaps in (no fade on first select)
+              checked ? styles.selected : cn(TRANSITION, styles.idle, "disabled:hover:bg-transparent")
+            )}
+          >
+            {Icon && <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />}
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Table styles                                                        */
 /* ------------------------------------------------------------------ */
 
@@ -793,7 +926,7 @@ export function checkboxClasses({ done, round }: { done: boolean; round?: boolea
     FOCUS_RING,
     round ? "h-[22px] w-[22px] rounded-full" : "h-5 w-5 rounded-md",
     done
-      ? "border-success bg-success text-white"
+      ? "border-success bg-success text-on-fill"
       : "border-input bg-card text-transparent hover:border-signal hover:bg-accent-soft"
   );
 }

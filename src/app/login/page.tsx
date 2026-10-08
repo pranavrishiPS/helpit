@@ -22,7 +22,7 @@ function LoginContent() {
       <div className="w-full max-w-sm animate-scale-in rounded-modal border border-border bg-card p-8 text-center shadow-raised">
         <div
           aria-hidden="true"
-          className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-signal font-display text-2xl font-bold leading-none text-foreground"
+          className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-signal font-display text-2xl font-bold leading-none text-on-signal"
         >
           H
         </div>

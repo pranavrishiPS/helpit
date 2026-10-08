@@ -330,7 +330,7 @@ export function ScrumAttendanceBoard({
                 className={cn(
                   "h-7 shrink-0 rounded-full px-3 text-[11px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
                   date === selectedDate
-                    ? "bg-accent text-white"
+                    ? "bg-accent text-on-fill"
                     : "bg-surface-2 text-muted ring-1 ring-inset ring-border hover:text-foreground"
                 )}
               >
@@ -608,7 +608,7 @@ export function ScrumAttendanceBoard({
                             mutedOutOfMonth && "text-subtle",
                             day.inMonth && "font-medium text-foreground",
                             today &&
-                              "grid h-5 w-5 place-items-center rounded-full bg-accent font-semibold leading-none text-white"
+                              "grid h-5 w-5 place-items-center rounded-full bg-accent font-semibold leading-none text-on-fill"
                           )}
                         >
                           {format(day.date, "d")}

@@ -103,7 +103,7 @@ export function isOverdue(dateStr?: string): boolean {
 export function priorityColor(priority: string): string {
   switch (priority) {
     case "urgent":
-      return "bg-danger text-white border-danger";
+      return "bg-danger text-on-fill border-danger";
     case "high":
       return "bg-accent-soft text-accent border-accent/30";
     case "medium":

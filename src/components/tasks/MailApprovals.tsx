@@ -131,7 +131,7 @@ function ApprovalMobileCard({
                 >
                   {approved ? (
                     <span className="relative inline-flex">
-                      <CheckCircle2 className="h-5 w-5 fill-success stroke-success text-white" />
+                      <CheckCircle2 className="h-5 w-5 fill-success stroke-success [&_path]:stroke-on-fill" />
                       {auto && <AutoMark />}
                     </span>
                   ) : (
@@ -195,7 +195,7 @@ function ApprovalRow({ item, onToggle, onMailSent, complete }: ApprovalItemProps
               >
                 {approved ? (
                   <span className="relative inline-flex">
-                    <CheckCircle2 className="h-[18px] w-[18px] shrink-0 fill-success stroke-success text-white" />
+                    <CheckCircle2 className="h-[18px] w-[18px] shrink-0 fill-success stroke-success [&_path]:stroke-on-fill" />
                     {auto && <AutoMark />}
                   </span>
                 ) : (

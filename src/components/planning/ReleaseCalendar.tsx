@@ -143,7 +143,7 @@ export function ReleaseCalendar({
                   "mb-1 text-[11px] leading-4",
                   mutedOutOfMonth && "text-subtle",
                   day.inMonth && "font-medium text-foreground",
-                  today && "rounded-full bg-accent px-1.5 font-semibold text-white"
+                  today && "rounded-full bg-accent px-1.5 font-semibold text-on-fill"
                 );
                 const dayLabelText = format(day.date, mutedOutOfMonth ? "d" : "MMM d");
 

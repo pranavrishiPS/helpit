@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* One-off dark overrides (prefer tokens). See docs/specs/dark-mode.md §5 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* "Ink & signal orange" tokens — see docs/specs/visual-redesign.md §2 */
 :root {
   color-scheme: light;
@@ -54,8 +57,116 @@
   --sidebar-foreground: #DDD9D1;
   --sidebar-muted: #9A948A;   /* 5.8:1 on --sidebar */
 
-  /* Overlay scrim */
+  /* Text/icons on solid fills (semantic, platform, accent, neutral) and on signal/pop */
+  --on-fill: #FFFFFF;
+  --on-signal: #1A1918;
+
+  /* Overlay scrim + text selection */
   --overlay: rgb(26 25 24 / 0.5);
+  --selection: rgb(232 89 12 / 0.18);
+
+  /* Elevation — read by the --shadow-* theme vars below so shadows switch per theme */
+  --elevation-card: 0 1px 2px rgb(26 25 24 / 0.04);
+  --elevation-raised: 0 4px 12px -4px rgb(26 25 24 / 0.10), 0 1px 2px rgb(26 25 24 / 0.04);
+  --elevation-overlay: 0 20px 40px -12px rgb(26 25 24 / 0.25), 0 0 0 1px rgb(26 25 24 / 0.05);
+}
+
+/* Dark tokens — docs/specs/dark-mode.md §6. The inline script in layout.tsx sets
+   data-theme="light|dark" before first paint. The media block below is the no-JS
+   fallback for System and must declare exactly the same values (theme-css.test.ts checks). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #141312;
+  --card: #1E1C1A;
+  --surface-2: #272522;
+  --surface-3: #33302C;
+  --border: #35322E;
+  --border-strong: #45413C;
+  --border-input: #7A746B;
+
+  --foreground: #EDEAE4;
+  --muted: #A8A298;
+  --subtle: #6E6961;
+
+  --brand: #EDEAE4;
+  --brand-hover: #FFFFFF;
+
+  --accent: #F07A35;
+  --accent-hover: #F08A4B;
+  --accent-soft: #3A2418;
+  --signal: #E8590C;
+
+  --success: #6BBF8A;  --success-hover: #86CFA0;  --success-soft: #1C2C22;
+  --caution: #E0B062;  --caution-hover: #EAC27E;  --caution-soft: #2E2614;
+  --caution-mark: #D69A3A;
+  --danger:  #F28B7F;  --danger-hover:  #F6A79D;  --danger-soft:  #3A1E1B;
+  --info:    #8FAAD1;  --info-hover:    #A9BFDE;  --info-soft:    #1D2533;
+
+  --android: #9BBE86;  --android-soft: #1F2A1B;  --android-ink: #BBD6A9;
+  --ios:     #8FAAD1;  --ios-soft:     #1D2533;  --ios-ink:     #B4C6E2;
+
+  --sidebar: #0E0D0C;
+  --sidebar-2: #1C1A18;
+
+  --on-fill: #141312;
+  --on-signal: #1A1918;
+
+  --overlay: rgb(0 0 0 / 0.6);
+  --selection: rgb(232 89 12 / 0.35);
+
+  --elevation-card: 0 1px 2px rgb(0 0 0 / 0.30);
+  --elevation-raised: 0 4px 12px -4px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.30);
+  --elevation-overlay: 0 20px 40px -12px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+/* System fallback when data-theme hasn't been resolved yet (JS off / script failed) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+
+    --background: #141312;
+    --card: #1E1C1A;
+    --surface-2: #272522;
+    --surface-3: #33302C;
+    --border: #35322E;
+    --border-strong: #45413C;
+    --border-input: #7A746B;
+
+    --foreground: #EDEAE4;
+    --muted: #A8A298;
+    --subtle: #6E6961;
+
+    --brand: #EDEAE4;
+    --brand-hover: #FFFFFF;
+
+    --accent: #F07A35;
+    --accent-hover: #F08A4B;
+    --accent-soft: #3A2418;
+    --signal: #E8590C;
+
+    --success: #6BBF8A;  --success-hover: #86CFA0;  --success-soft: #1C2C22;
+    --caution: #E0B062;  --caution-hover: #EAC27E;  --caution-soft: #2E2614;
+    --caution-mark: #D69A3A;
+    --danger:  #F28B7F;  --danger-hover:  #F6A79D;  --danger-soft:  #3A1E1B;
+    --info:    #8FAAD1;  --info-hover:    #A9BFDE;  --info-soft:    #1D2533;
+
+    --android: #9BBE86;  --android-soft: #1F2A1B;  --android-ink: #BBD6A9;
+    --ios:     #8FAAD1;  --ios-soft:     #1D2533;  --ios-ink:     #B4C6E2;
+
+    --sidebar: #0E0D0C;
+    --sidebar-2: #1C1A18;
+
+    --on-fill: #141312;
+    --on-signal: #1A1918;
+
+    --overlay: rgb(0 0 0 / 0.6);
+    --selection: rgb(232 89 12 / 0.35);
+
+    --elevation-card: 0 1px 2px rgb(0 0 0 / 0.30);
+    --elevation-raised: 0 4px 12px -4px rgb(0 0 0 / 0.45), 0 1px 2px rgb(0 0 0 / 0.30);
+    --elevation-overlay: 0 20px 40px -12px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.06);
+  }
 }
 
 @theme inline {
@@ -106,6 +217,8 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-muted: var(--sidebar-muted);
   --color-overlay: var(--overlay);
+  --color-on-fill: var(--on-fill);
+  --color-on-signal: var(--on-signal);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -119,10 +232,10 @@
   --radius-card: 1rem;         /* 16px — cards, stat tiles, tables, list containers */
   --radius-modal: 1.25rem;     /* 20px — modals, hero, login card */
 
-  /* Neutral ink shadows only — no coloured glows */
-  --shadow-card: 0 1px 2px rgb(26 25 24 / 0.04);
-  --shadow-raised: 0 4px 12px -4px rgb(26 25 24 / 0.10), 0 1px 2px rgb(26 25 24 / 0.04);
-  --shadow-overlay: 0 20px 40px -12px rgb(26 25 24 / 0.25), 0 0 0 1px rgb(26 25 24 / 0.05);
+  /* Neutral ink shadows only — no coloured glows. Values live in :root --elevation-* so they theme */
+  --shadow-card: var(--elevation-card);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
 
   --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
 
@@ -173,7 +286,7 @@
   }
 
   ::selection {
-    background: rgb(232 89 12 / 0.18);
+    background: var(--selection);
   }
 
   :focus-visible {
@@ -183,7 +296,7 @@
 
   input[type="date"],
   input[type="datetime-local"] {
-    color-scheme: light;
+    color-scheme: inherit;
   }
 
   img,
@@ -209,6 +322,13 @@
   * {
     box-sizing: border-box;
   }
+}
+
+/* Set by use-theme.ts for one frame while data-theme changes, so the swap doesn't cross-fade */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

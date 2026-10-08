@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { MODULE_ICONS } from "@/lib/modules";
 import { cn } from "@/lib/cn";
-import { Button, ModuleChip } from "@/components/ui";
+import { Button, ModuleChip, SegmentedControl, type SegmentedItem } from "@/components/ui";
+import type { ThemePreference } from "@/lib/theme";
+import { useTheme } from "@/lib/use-theme";
 import { SlackSyncPoller } from "./SlackSyncPoller";
 import { SlackRateLimitToast } from "./SlackRateLimitToast";
 import { TaskReminderProvider } from "./TaskReminderProvider";
@@ -17,7 +19,7 @@ function BrandBlock() {
     <div className="flex items-center gap-3">
       <div
         aria-hidden="true"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-signal font-display text-lg font-bold leading-none text-foreground"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-signal font-display text-lg font-bold leading-none text-on-signal"
       >
         H
       </div>
@@ -78,11 +80,46 @@ function SidebarNav({ onNavigate, large }: { onNavigate?: () => void; large?: bo
   );
 }
 
+function ThemeToggle() {
+  const { preference, resolved, setPreference } = useTheme();
+  // Two footers can be mounted at once (desktop sidebar + mobile drawer), so ids must be unique
+  const hintId = `${useId()}-theme-hint`;
+  const items: SegmentedItem<ThemePreference>[] = [
+    { id: "system", label: "System", icon: Monitor, describedBy: preference === "system" ? hintId : undefined },
+    { id: "light", label: "Light", icon: Sun },
+    { id: "dark", label: "Dark", icon: Moon },
+  ];
+
+  return (
+    <div className="mt-3">
+      {/* Visible label; the group's accessible name comes from aria-label */}
+      <p aria-hidden="true" className="mb-1.5 text-[11px] font-medium text-sidebar-muted">
+        Theme
+      </p>
+      <SegmentedControl
+        aria-label="Theme"
+        tone="sidebar"
+        size="sm"
+        fullWidth
+        value={preference}
+        onChange={setPreference}
+        items={items}
+      />
+      {preference === "system" && (
+        <p id={hintId} className="mt-1.5 text-[11px] text-sidebar-muted">
+          Using {resolved}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function SidebarFooter({ onSignOut }: { onSignOut: () => void }) {
   return (
     <div className="m-3 rounded-card bg-white/[0.04] p-3 ring-1 ring-inset ring-white/10">
       <p className="text-xs text-sidebar-foreground">PlaySimple Games</p>
       <p className="text-[11px] text-sidebar-muted">v0.1 — building daily</p>
+      <ThemeToggle />
       <button
         type="button"
         onClick={onSignOut}
