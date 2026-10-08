@@ -125,6 +125,10 @@ describe("sprint costing", () => {
     expect(categorizeMail("Re: iOS Release 1.80 Thread", "amitsrivastava@playsimple.in")).toBe("sprint");
   });
 
+  it("tolerates a missing space before Thread", () => {
+    expect(categorizeMail("Android Build 1.202Thread", "pranavrishi@playsimple.in")).toBe("sprint");
+  });
+
   it("ignores other build mail", () => {
     expect(categorizeMail("Android Build 1.192 is live", "a@b.com")).toBe("other");
   });

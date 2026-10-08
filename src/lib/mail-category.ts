@@ -45,7 +45,8 @@ const SUPPORT_SUBJECT_KEYWORDS = [
 ];
 
 // Sprint costing threads, e.g. "Re: Android Build 1.192 Thread" / "iOS Release 1.80 Thread".
-export const SPRINT_SUBJECT_PATTERN = /\b(android build|ios release)\s+\d+\.\d+\s+thread\b/i;
+// The space before "Thread" is optional: a subject typed as "Android Build 1.202Thread" still counts.
+export const SPRINT_SUBJECT_PATTERN = /\b(android build|ios release)\s+\d+\.\d+\s*thread\b/i;
 
 /** Keyword-based category for a message. Rules are checked sprint → meeting → leave → support. */
 export function categorizeMail(subject: string, from: string): MailCategory {
