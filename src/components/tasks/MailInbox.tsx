@@ -228,7 +228,7 @@ function MailRow({
 
   return (
     <li className={cn(done && "bg-surface-2/60")}>
-      <div className="flex items-center gap-2 pr-2">
+      <div className="flex items-center gap-2 pr-4">
         <button
           type="button"
           onClick={onToggle}
