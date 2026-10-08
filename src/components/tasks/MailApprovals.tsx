@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SprintApproval, SprintApprovalParty } from "@/lib/types";
 import { Button, Card, EmptyState, tableClasses } from "@/components/ui";
-import { CheckCircle2, ChevronDown, Circle, Mail, Send } from "lucide-react";
+import { Bell, Check, CheckCircle2, ChevronDown, Circle, Mail, Send } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { buildCostingReminder } from "@/lib/costing-reminder";
 import {
   releasePlatformTitleClass,
   compareBuildVersionTitlesDesc,
@@ -275,6 +276,64 @@ function ApprovalTable({
         </table>
       </div>
     </>
+  );
+}
+
+/** Copies text via the async Clipboard API, falling back to a hidden textarea + execCommand. */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to the legacy path
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(area);
+  }
+}
+
+/** Section-header button: copies a Slack reminder for whoever still owes a costing response. */
+export function CostingRemindButton({ items }: { items: SprintApproval[] }) {
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const message = buildCostingReminder(items);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  if (!message) return null;
+
+  async function handleClick() {
+    const ok = await copyText(message);
+    setStatus(ok ? "copied" : "failed");
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setStatus("idle"), 2000);
+  }
+
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={handleClick}
+      title="Copy a Slack reminder for pending sprint costing responses"
+    >
+      {status === "copied" ? <Check /> : <Bell />}
+      <span aria-live="polite">
+        {status === "copied" ? "Copied" : status === "failed" ? "Copy failed" : "Remind"}
+      </span>
+    </Button>
   );
 }
 

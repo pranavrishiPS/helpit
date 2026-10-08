@@ -5,17 +5,16 @@ import { Button, PageHeader, ErrorBanner, PageSkeleton, SectionTitle } from "@/c
 import { RefreshCw } from "lucide-react";
 import { MailTodos } from "@/components/tasks/MailTodos";
 import { MailInbox } from "@/components/tasks/MailInbox";
-import { MailApprovals } from "@/components/tasks/MailApprovals";
+import { CostingRemindButton, MailApprovals } from "@/components/tasks/MailApprovals";
 import { useDashboard } from "@/lib/use-dashboard";
 import {
   fetchGmailStatus,
   syncGmail,
-  updateMailItem,
   updateSprintApproval,
   updateSprintApprovalMailSent,
 } from "@/lib/api-client";
 import { notifyStoreUpdated } from "@/lib/store-events";
-import type { MailItem, SprintApprovalParty } from "@/lib/types";
+import type { SprintApprovalParty } from "@/lib/types";
 import { getMailTabTasks } from "@/lib/utils";
 
 export default function MailPage() {
@@ -69,18 +68,6 @@ export default function MailPage() {
 
   function handleAddTask(partial: Parameters<typeof addTask>[0]) {
     return addTask({ ...partial, source: "mail" });
-  }
-
-  async function handleMailStatus(id: string, status: MailItem["status"]) {
-    setActionError(null);
-    try {
-      await updateMailItem(id, status);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to update mail item");
-      return;
-    }
-    await reload();
-    notifyStoreUpdated();
   }
 
   async function handleApprovalToggle(
@@ -157,7 +144,6 @@ export default function MailPage() {
         <SectionTitle>Inbox</SectionTitle>
         <MailInbox
           items={store.mailItems}
-          onUpdateStatus={handleMailStatus}
           onSync={handleGmailSync}
           syncing={syncing}
           connected={gmailConnected}
@@ -165,7 +151,7 @@ export default function MailPage() {
       </section>
 
       <section className="mb-8">
-        <SectionTitle>Sprint approvals</SectionTitle>
+        <SectionTitle action={<CostingRemindButton items={approvals} />}>Sprint costing</SectionTitle>
         <MailApprovals
           items={approvals}
           onToggle={handleApprovalToggle}

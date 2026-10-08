@@ -34,7 +34,6 @@ type Filter = "all" | MailCategory;
 
 interface MailInboxProps {
   items: MailItem[];
-  onUpdateStatus: (id: string, status: MailItem["status"]) => void | Promise<void>;
   onSync?: () => void;
   syncing?: boolean;
   connected?: boolean;
@@ -42,7 +41,6 @@ interface MailInboxProps {
 
 export function MailInbox({
   items,
-  onUpdateStatus,
   onSync,
   syncing,
   connected,
@@ -79,12 +77,6 @@ export function MailInbox({
           rows: visible.filter((t) => t.category === c.id),
         })).filter((g) => g.rows.length > 0)
       : [{ id: filter, label: "", rows: visible }];
-
-  async function updateThread(thread: MailThread, status: MailItem["status"]) {
-    for (const item of thread.items) {
-      if (item.status !== "done" && item.status !== status) await onUpdateStatus(item.id, status);
-    }
-  }
 
   return (
     <div>
@@ -153,7 +145,6 @@ export function MailInbox({
                           onToggle={() =>
                             setExpandedId((cur) => (cur === thread.key ? null : thread.key))
                           }
-                          onUpdateStatus={(status) => updateThread(thread, status)}
                         />
                       ))}
                     </ul>
@@ -225,12 +216,10 @@ function MailRow({
   thread,
   expanded,
   onToggle,
-  onUpdateStatus,
 }: {
   thread: MailThread;
   expanded: boolean;
   onToggle: () => void;
-  onUpdateStatus: (status: MailItem["status"]) => void;
 }) {
   const { latest, items, status } = thread;
   const done = status === "done";
@@ -297,23 +286,6 @@ function MailRow({
             {items.length > 1 ? `Latest from ${latest.from} · ${items.length} messages` : `From ${latest.from}`}
           </p>
           {followUp && <p className="text-xs text-muted">Follow up {formatDueDate(followUp)}</p>}
-          {!done && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {status === "unread" && (
-                <Button variant="ghost" size="sm" onClick={() => onUpdateStatus("needs_reply")}>
-                  Flag
-                </Button>
-              )}
-              {status !== "drafted" && (
-                <Button variant="ghost" size="sm" onClick={() => onUpdateStatus("drafted")}>
-                  Drafted
-                </Button>
-              )}
-              <Button variant="secondary" size="sm" onClick={() => onUpdateStatus("done")}>
-                Done
-              </Button>
-            </div>
-          )}
         </div>
       )}
     </li>
