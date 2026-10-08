@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { buildCostingReminder } from "@/lib/costing-reminder";
 import type { SprintApproval } from "@/lib/types";
 
-const AMIT = "<@U0BC98DKXQ8>";
-const AYUSH = "<@U0A4E3EQW9Z>";
-const ROHAN = "<@U08TT5VN15G>";
-const MANVI = "<@U08TJQTRCGN>";
+const AMIT = "@Amit Kumar Srivastava";
+const AYUSH = "@Ayush Upadhyay";
+const ROHAN = "@Rohan Karir";
+const MANVI = "@Manvi Thakur";
 const HEADER = "Hi team, gentle reminder on the sprint costing threads — pending from you:";
 
 function approval(

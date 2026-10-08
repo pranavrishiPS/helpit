@@ -2,7 +2,7 @@ import type { SprintApproval, SprintApprovalParty } from "./types";
 import { compareBuildVersionTitlesDesc, formatSprintApprovalTitle } from "./utils";
 
 /**
- * Who owes each costing column, from TEAM.md (Slack mentions are `<@USERID>`). The mail
+ * Who owes each costing column, from TEAM.md (tagged by full name: pasted `<@USERID>` shows as raw text in Slack). The mail
  * senders in SPRINT_APPROVAL_SENDERS also include Uttam Katiyar for Dev, but TEAM.md does
  * not name him a Dev approver, so only Ayush is tagged; add `U08TT62MAD8` here to include him.
  */
@@ -10,11 +10,11 @@ export const COSTING_REMINDER_OWNERS: Record<
   SprintApprovalParty,
   { name: string; slackId: string }[]
 > = {
-  gm: [{ name: "Amit", slackId: "U0BC98DKXQ8" }],
-  dev: [{ name: "Ayush", slackId: "U0A4E3EQW9Z" }],
+  gm: [{ name: "Amit Kumar Srivastava", slackId: "U0BC98DKXQ8" }],
+  dev: [{ name: "Ayush Upadhyay", slackId: "U0A4E3EQW9Z" }],
   qa: [
-    { name: "Rohan", slackId: "U08TT5VN15G" },
-    { name: "Manvi", slackId: "U08TJQTRCGN" },
+    { name: "Rohan Karir", slackId: "U08TT5VN15G" },
+    { name: "Manvi Thakur", slackId: "U08TJQTRCGN" },
   ],
 };
 
@@ -39,7 +39,7 @@ export function buildCostingReminder(approvals: SprintApproval[]): string {
       .filter((item) => !item.approvals[party])
       .map((item) => formatSprintApprovalTitle(item.title, item.platform));
     if (builds.length === 0) continue;
-    const mentions = COSTING_REMINDER_OWNERS[party].map((o) => `<@${o.slackId}>`).join(", ");
+    const mentions = COSTING_REMINDER_OWNERS[party].map((o) => `@${o.name}`).join(", ");
     lines.push(`• ${mentions} — ${builds.join(", ")}`);
   }
 
