@@ -2,7 +2,7 @@ import type { SprintApproval, SprintApprovalParty } from "./types";
 import { compareBuildVersionTitlesDesc, formatSprintApprovalTitle } from "./utils";
 
 /**
- * Who owes each costing column, from TEAM.md (tagged as plain `@Name` so the pasted text reads well in Slack). The mail
+ * Who owes each costing column, from TEAM.md (Slack mentions are `<@USERID>`). The mail
  * senders in SPRINT_APPROVAL_SENDERS also include Uttam Katiyar for Dev, but TEAM.md does
  * not name him a Dev approver, so only Ayush is tagged; add `U08TT62MAD8` here to include him.
  */
@@ -39,7 +39,7 @@ export function buildCostingReminder(approvals: SprintApproval[]): string {
       .filter((item) => !item.approvals[party])
       .map((item) => formatSprintApprovalTitle(item.title, item.platform));
     if (builds.length === 0) continue;
-    const mentions = COSTING_REMINDER_OWNERS[party].map((o) => `@${o.name}`).join(", ");
+    const mentions = COSTING_REMINDER_OWNERS[party].map((o) => `<@${o.slackId}>`).join(", ");
     lines.push(`• ${mentions} — ${builds.join(", ")}`);
   }
 

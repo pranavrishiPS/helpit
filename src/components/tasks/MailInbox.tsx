@@ -27,7 +27,6 @@ import {
 // Only statuses worth calling out get a badge in the compact row.
 const ROW_BADGES: Partial<Record<MailItem["status"], { label: string; tone: BadgeTone }>> = {
   needs_reply: { label: "Needs reply", tone: "caution" },
-  drafted: { label: "Drafted", tone: "info" },
 };
 
 type Filter = "all" | MailCategory;
