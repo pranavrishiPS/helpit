@@ -693,6 +693,7 @@ export function SegmentedControl<T extends string>({
   tone = "surface",
   size = "md",
   fullWidth,
+  iconOnly,
   disabled,
   className,
   "aria-label": ariaLabel,
@@ -703,6 +704,8 @@ export function SegmentedControl<T extends string>({
   tone?: "surface" | "sidebar";
   size?: "sm" | "md";
   fullWidth?: boolean;
+  /** Square icon segments; `label` becomes the aria-label and title tooltip. */
+  iconOnly?: boolean;
   disabled?: boolean;
   className?: string;
   "aria-label": string;
@@ -766,21 +769,29 @@ export function SegmentedControl<T extends string>({
             role="radio"
             aria-checked={checked}
             aria-describedby={item.describedBy}
+            aria-label={iconOnly ? item.label : undefined}
+            title={iconOnly ? item.label : undefined}
             tabIndex={index === tabStop ? 0 : -1}
             disabled={disabled}
             onClick={() => select(index)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={cn(
               "inline-flex h-8 items-center justify-center rounded-lg text-xs disabled:cursor-not-allowed disabled:opacity-50",
-              size === "sm" ? "gap-1 px-1 font-medium" : "gap-1.5 px-3 font-semibold",
+              iconOnly
+                ? "w-8"
+                : size === "sm"
+                  ? "gap-1 px-1 font-medium"
+                  : "gap-1.5 px-3 font-semibold",
               fullWidth ? "min-w-0 flex-1" : "shrink-0",
               styles.focus,
               // Transition only on unselected so the pill snaps in (no fade on first select)
               checked ? styles.selected : cn(TRANSITION, styles.idle, "disabled:hover:bg-transparent")
             )}
           >
-            {Icon && <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />}
-            {item.label}
+            {Icon && (
+              <Icon aria-hidden="true" className={cn("shrink-0", iconOnly ? "h-4 w-4" : "h-3.5 w-3.5")} />
+            )}
+            {!iconOnly && item.label}
           </button>
         );
       })}

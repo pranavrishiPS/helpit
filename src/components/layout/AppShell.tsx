@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
@@ -82,52 +82,40 @@ function SidebarNav({ onNavigate, large }: { onNavigate?: () => void; large?: bo
 
 function ThemeToggle() {
   const { preference, resolved, setPreference } = useTheme();
-  // Two footers can be mounted at once (desktop sidebar + mobile drawer), so ids must be unique
-  const hintId = `${useId()}-theme-hint`;
   const items: SegmentedItem<ThemePreference>[] = [
-    { id: "system", label: "System", icon: Monitor, describedBy: preference === "system" ? hintId : undefined },
+    { id: "system", label: preference === "system" ? `System (${resolved})` : "System", icon: Monitor },
     { id: "light", label: "Light", icon: Sun },
     { id: "dark", label: "Dark", icon: Moon },
   ];
 
   return (
-    <div className="mt-3">
-      {/* Visible label; the group's accessible name comes from aria-label */}
-      <p aria-hidden="true" className="mb-1.5 text-[11px] font-medium text-sidebar-muted">
-        Theme
-      </p>
-      <SegmentedControl
-        aria-label="Theme"
-        tone="sidebar"
-        size="sm"
-        fullWidth
-        value={preference}
-        onChange={setPreference}
-        items={items}
-      />
-      {preference === "system" && (
-        <p id={hintId} className="mt-1.5 text-[11px] text-sidebar-muted">
-          Using {resolved}
-        </p>
-      )}
-    </div>
+    <SegmentedControl
+      aria-label="Theme"
+      tone="sidebar"
+      size="sm"
+      iconOnly
+      value={preference}
+      onChange={setPreference}
+      items={items}
+    />
   );
 }
 
 function SidebarFooter({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <div className="m-3 rounded-card bg-white/[0.04] p-3 ring-1 ring-inset ring-white/10">
-      <p className="text-xs text-sidebar-foreground">PlaySimple Games</p>
-      <p className="text-[11px] text-sidebar-muted">v0.1 — building daily</p>
-      <ThemeToggle />
-      <button
-        type="button"
-        onClick={onSignOut}
-        className="mt-2 flex h-8 w-full items-center gap-2 rounded-lg px-2 text-xs text-sidebar-foreground transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-      >
-        <LogOut className="h-3.5 w-3.5" />
-        Sign out
-      </button>
+    <div className="mx-3 border-t border-white/5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+      <p className="px-2 text-[11px] text-sidebar-muted">PlaySimple Games · v0.1</p>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="flex h-8 items-center gap-2 rounded-lg px-2 text-xs text-sidebar-foreground transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        >
+          <LogOut aria-hidden="true" className="h-3.5 w-3.5" />
+          Sign out
+        </button>
+        <ThemeToggle />
+      </div>
     </div>
   );
 }

@@ -124,6 +124,8 @@ Contrast ratios are computed (WCAG 2.x, approximate). "card" is the reference su
 
 ## 11. UX
 
+> **Revised 2026-10-09 (footer declutter, user-approved).** The footer is no longer a card. It is plain rows under a subtle `border-t`: one muted line "PlaySimple Games · v0.1", then one row with Sign out on the left and an icon-only theme switch (Monitor / Sun / Moon) on the right. The "Theme" label and the "Using dark/light" line are gone; the resolved theme moves into the System segment's `aria-label`/`title` ("System (dark)") while System is selected. Each segment has an `aria-label` + `title` tooltip. Tab order is now Sign out, then the theme group. Radiogroup keyboard behavior and 32px targets are unchanged. Where the original text below conflicts (diagram, "icon + short text", "Using dark" line, tab order), this note wins.
+
 **Placement.** One `ThemeToggle` component inside `SidebarFooter`, so the desktop sidebar and mobile drawer render the same control. Order in the footer card: org line, version line, theme control, Sign out. The theme control sits above Sign out so the destructive-ish action stays last and isn't hit by accident.
 
 ```
@@ -175,7 +177,7 @@ There is no loading, empty, or error state for the user to see.
 
 ### 12.1 Components
 - **New: `SegmentedControl`** exported from `src/components/ui/index.tsx` (next to `Tabs`, which it visually mirrors). `ThemeToggle` in `AppShell.tsx` is a thin wrapper around it.
-- Props: `value: T | null` (null = pre-hydration, nothing selected), `onChange`, `items: { id, label, icon?: LucideIcon, describedBy? }[]`, `aria-label`, `tone: "surface" | "sidebar"` (default `surface`), `size: "sm" | "md"` (default `md`), `fullWidth?: boolean`.
+- Props: `value: T | null` (null = pre-hydration, nothing selected), `onChange`, `items: { id, label, icon?: LucideIcon, describedBy? }[]`, `aria-label`, `tone: "surface" | "sidebar"` (default `surface`), `size: "sm" | "md"` (default `md`), `fullWidth?: boolean`, `iconOnly?: boolean` (see §12.4).
 - Reuse the existing `TRANSITION` constant. Don't reuse `FOCUS_RING` for the sidebar tone (see focus below).
 - Icons: **lucide-react** (already used, e.g. `LogOut`, `Menu`, `X` in AppShell): `Monitor`, `Sun`, `Moon`, `aria-hidden`.
 
@@ -203,6 +205,13 @@ Inner radius 8px inside a 10px track with 2px padding keeps the corners concentr
 `white/` and `black/` opacities are allowed in the sidebar only (`visual-redesign.md` §2.4). The `surface` tone uses tokens only.
 
 ### 12.4 Footer layout and phone width
+
+**Current (2026-10-09):**
+- `SegmentedControl` has an `iconOnly` prop: segments are `h-8 w-8` (32px targets), icon `h-4 w-4`, no visible text; `label` becomes the segment's `aria-label` and `title`. Use it instead of a one-off icon toggle.
+- `SidebarFooter`: `mx-3 border-t border-white/5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]`, no background or ring. Version line `px-2 text-[11px] text-sidebar-muted`. Bottom row `mt-1.5 flex items-center justify-between gap-2`: Sign out (`h-8 px-2`, aligns with nav item padding) left, `ThemeToggle` (`tone="sidebar" size="sm" iconOnly`, ~104px wide) right.
+- Same component and classes in the desktop sidebar (208px inner) and the 375px drawer (~264px inner); both have plenty of room, no wrapping.
+
+**Superseded (original card layout):**
 - Order inside `SidebarFooter`: org, version, then `mt-3` label "Theme" (`text-[11px] font-medium text-sidebar-muted mb-1.5`), the control (`fullWidth`, `size="sm"`), the optional "Using dark/light" line (`mt-1.5 text-[11px] text-sidebar-muted`), then Sign out (`mt-2`, unchanged).
 - Width budget: desktop inner width is 208px, so each segment is about 68px. "System" plus a 14px icon at `text-xs` with `gap-1 px-1` fits about 62-66px. Never truncate the label. If a build check shows it clipping, hide the icons (keep the text), per §11.
 - Mobile drawer: same component, same classes. No breakpoint changes. Check at 375px that the drawer footer doesn't wrap the control onto two lines.
