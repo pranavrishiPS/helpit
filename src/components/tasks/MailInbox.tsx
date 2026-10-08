@@ -48,7 +48,6 @@ export function MailInbox({
   connected,
 }: MailInboxProps) {
   const [filter, setFilter] = useState<Filter>("all");
-  const [showDone, setShowDone] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Support mail is read in Gmail itself, not here; drop any left over from older syncs.
@@ -62,11 +61,6 @@ export function MailInbox({
     () => toThreads(inboxItems.filter((m) => m.status !== "done")),
     [inboxItems]
   );
-  const threads = useMemo(
-    () => (showDone ? toThreads(inboxItems) : openThreads),
-    [inboxItems, openThreads, showDone]
-  );
-
   const counts = useMemo(() => {
     const c: Record<Filter, number> = { all: 0, support: 0, leave: 0, meeting: 0, sprint: 0, other: 0 };
     for (const t of openThreads) {
@@ -76,7 +70,7 @@ export function MailInbox({
     return c;
   }, [openThreads]);
 
-  const visible = threads.filter((t) => filter === "all" || t.category === filter);
+  const visible = openThreads.filter((t) => filter === "all" || t.category === filter);
 
   const groups =
     filter === "all"
@@ -136,21 +130,12 @@ export function MailInbox({
                 ...MAIL_CATEGORIES.map((c) => ({ id: c.id, label: c.label, count: counts[c.id] })),
               ]}
             />
-            <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-muted">
-              <input
-                type="checkbox"
-                checked={showDone}
-                onChange={(e) => setShowDone(e.target.checked)}
-                className="h-3.5 w-3.5 accent-[var(--signal)]"
-              />
-              Show done
-            </label>
           </div>
 
           <Card className="overflow-hidden p-0 sm:p-0">
             <div className="max-h-[22rem] overflow-y-auto">
               {groups.length === 0 ? (
-                <p className="px-4 py-6 text-center text-sm text-muted">{filter === "all" && !showDone ? "All caught up" : "No mail in this category"}</p>
+                <p className="px-4 py-6 text-center text-sm text-muted">{filter === "all" ? "All caught up" : "No mail in this category"}</p>
               ) : (
                 groups.map((group) => (
                   <div key={group.id}>
