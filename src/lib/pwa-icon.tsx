@@ -5,6 +5,9 @@ const INK = "#1A1918";
 const PAPER = "#F6F4EF";
 const SIGNAL = "#E8590C";
 
+/** Bump when the icon artwork changes so installed PWAs fetch the new files. */
+export const ICON_VERSION = "2";
+
 /**
  * The "full stop" mark (lowercase h + orange square) on an ink tile.
  * `scale` is the glyph's share of the 100-unit tile; smaller sizes get heavier strokes.
@@ -32,7 +35,12 @@ export function brandTile(size: number, { scale, radius }: { scale: number; radi
         </svg>
       </div>
     ),
-    { width: size, height: size }
+    {
+      width: size,
+      height: size,
+      // ImageResponse defaults to a 1-year immutable cache, which pins old icons on installed PWAs.
+      headers: { "Cache-Control": "public, max-age=86400, must-revalidate" },
+    }
   );
 }
 
