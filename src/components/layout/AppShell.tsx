@@ -10,23 +10,19 @@ import { cn } from "@/lib/cn";
 import { Button, ModuleChip, SegmentedControl, type SegmentedItem } from "@/components/ui";
 import type { ThemePreference } from "@/lib/theme";
 import { useTheme } from "@/lib/use-theme";
+import { Wordmark } from "./BrandMark";
 import { SlackSyncPoller } from "./SlackSyncPoller";
 import { SlackRateLimitToast } from "./SlackRateLimitToast";
 import { TaskReminderProvider } from "./TaskReminderProvider";
 
 function BrandBlock() {
   return (
-    <div className="flex items-center gap-3">
-      <div
-        aria-hidden="true"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-signal font-display text-lg font-bold leading-none text-on-signal"
-      >
-        H
-      </div>
-      <div className="min-w-0">
-        <p className="font-display text-lg font-bold leading-6 text-white">Helpit</p>
-        <p className="text-[11px] text-sidebar-muted">Command center</p>
-      </div>
+    <div className="min-w-0">
+      <p className="text-[26px] leading-8 text-white">
+        <Wordmark />
+        <span className="sr-only">Helpit</span>
+      </p>
+      <p className="text-[11px] text-sidebar-muted">Command center</p>
     </div>
   );
 }
