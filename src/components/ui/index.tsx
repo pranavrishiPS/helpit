@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AlertCircle, ArrowRight, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { MODULE_ICONS, MODULE_STYLES, type ModuleId } from "@/lib/modules";
+import { MODULE_ICONS, MODULE_STYLES, type ModuleIcon, type ModuleId } from "@/lib/modules";
 
 // Shared UI primitives for the "Ink & signal orange" look (docs/specs/visual-redesign.md §4).
 // No hooks here so server components can render these too.
@@ -23,7 +23,7 @@ export function ModuleChip({
   className,
 }: {
   module: ModuleId;
-  icon?: LucideIcon;
+  icon?: ModuleIcon;
   size?: "sm" | "md" | "lg";
   variant?: "solid" | "soft";
   className?: string;

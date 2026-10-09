@@ -5,23 +5,26 @@ import {
   LayoutDashboard,
   Link2,
   ListTodo,
-  Mail,
   MessageSquare,
   Settings,
   Users,
-  type LucideIcon,
 } from "lucide-react";
+import type { ComponentType } from "react";
+import { GmailIcon } from "@/components/ui/GmailIcon";
 import type { ModuleId } from "./types";
 
 export type { ModuleId };
 
 /** Sidebar / page icon per module (shared by AppShell, PageHeader, Modal). */
-export const MODULE_ICONS: Record<ModuleId, LucideIcon> = {
+/** Any icon component that takes a className (Lucide icons and brand marks like Gmail). */
+export type ModuleIcon = ComponentType<{ className?: string }>;
+
+export const MODULE_ICONS: Record<ModuleId, ModuleIcon> = {
   home: LayoutDashboard,
   tasks: ListTodo,
   scrum: ClipboardCheck,
   slack: MessageSquare,
-  mail: Mail,
+  mail: GmailIcon,
   planning: CalendarRange,
   features: Layers,
   resources: Link2,
