@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { FileSpreadsheet, Link2, RefreshCw } from "lucide-react";
+import { ExternalLink, FileSpreadsheet, Link2, RefreshCw } from "lucide-react";
 import { Alert, Badge, Button, Card, Input, ModuleChip, buttonClasses } from "@/components/ui";
 import {
   connectScrumSheet,
@@ -20,6 +20,13 @@ interface ScrumSheetStatus {
   spreadsheetUrl?: string;
   lastSyncedAt?: string;
   lastSyncError?: string;
+}
+
+/** Link to the sheet in Google Sheets — the stored value may be a pasted URL or a bare ID. */
+function sheetHref(status: ScrumSheetStatus): string | null {
+  if (status.spreadsheetUrl?.startsWith("https://")) return status.spreadsheetUrl;
+  if (status.spreadsheetId) return `https://docs.google.com/spreadsheets/d/${status.spreadsheetId}/edit`;
+  return null;
 }
 
 function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
@@ -136,14 +143,29 @@ function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
           </div>
         </div>
 
-        {status.configured && !status.connected && (
-          <a
-            href="/api/scrum-attendance/sheet/auth"
-            className={buttonClasses({ variant: "secondary", size: "sm" })}
-          >
-            <Link2 />
-            Connect
-          </a>
+        {!status.connected && (sheetHref(status) || status.configured) && (
+          <div className="flex flex-wrap gap-2">
+            {sheetHref(status) && (
+              <a
+                href={sheetHref(status)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonClasses({ variant: "secondary", size: "sm" })}
+              >
+                <ExternalLink />
+                Open sheet
+              </a>
+            )}
+            {status.configured && (
+              <a
+                href="/api/scrum-attendance/sheet/auth"
+                className={buttonClasses({ variant: "secondary", size: "sm" })}
+              >
+                <Link2 />
+                Connect
+              </a>
+            )}
+          </div>
         )}
 
         {status.connected && status.spreadsheetId && (
@@ -153,7 +175,18 @@ function ScrumSheetSyncContent({ onSynced }: { onSynced: () => void }) {
                 Last sync {new Date(status.lastSyncedAt).toLocaleString()}
               </span>
             )}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {sheetHref(status) && (
+                <a
+                  href={sheetHref(status)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonClasses({ variant: "secondary", size: "sm" })}
+                >
+                  <ExternalLink />
+                  Open sheet
+                </a>
+              )}
               <Button variant="secondary" size="sm" onClick={handleSync} disabled={syncing}>
                 <RefreshCw className={syncing ? "animate-spin" : ""} />
                 Sync now
