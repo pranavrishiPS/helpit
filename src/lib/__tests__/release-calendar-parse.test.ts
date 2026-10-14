@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addDays, format, getISOWeek } from "date-fns";
 import {
+  cellLines,
   groupDayLines,
   parseHeaderCell,
   parseReleaseCalendar,
@@ -62,6 +63,62 @@ describe("groupDayLines", () => {
   it("keeps lines like 'Released' or 'no release' as plain lines", () => {
     expect(groupDayLines(["Released to 10%", "Skipped build by devs, no release"])).toEqual([
       { items: ["Released to 10%", "Skipped build by devs, no release"] },
+    ]);
+  });
+});
+
+describe("cellLines (strikethrough)", () => {
+  it("strikes every line of a cell struck as a whole", () => {
+    expect(cellLines({ text: "Release 1.204\nP2E", strike: true })).toEqual([
+      { text: "Release 1.204", struck: true },
+      { text: "P2E", struck: true },
+    ]);
+    expect(cellLines("P2E")).toEqual([{ text: "P2E", struck: false }]);
+  });
+
+  it("strikes a line only when text runs strike all of it", () => {
+    const text = "Release 1.204\nP2E\n cd_start_change ";
+    const runs = [
+      { start: 0, strike: true },
+      { start: text.indexOf("P2E"), strike: false },
+      { start: text.indexOf("cd_"), strike: true },
+      { start: text.indexOf("start"), strike: false },
+    ];
+    expect(cellLines({ text, runs })).toEqual([
+      { text: "Release 1.204", struck: true },
+      { text: "P2E", struck: false },
+      { text: "cd_start_change", struck: false },
+    ]);
+  });
+
+  it("lets runs without a strike setting inherit the cell format", () => {
+    expect(cellLines({ text: "a\nb", strike: true, runs: [{ start: 2 }] })).toEqual([
+      { text: "a", struck: true },
+      { text: "b", struck: true },
+    ]);
+  });
+});
+
+describe("struck lines in parsed days", () => {
+  it("marks the struck Wed Oct 14 items and leaves Thu Oct 15 unstruck (sheet D773:D777 shape)", () => {
+    const items = ["Release 1.204", "P2E", "cd_start_change", "dq_v3_opts", "dc_two_mistakes"];
+    const rows = [
+      headerRow("Week 42", new Date(2026, 9, 12)),
+      ...items.map((text) => ["", "", "", { text, strike: true }, text]),
+    ];
+    const { weeks } = parseReleaseCalendar(rows, TODAY);
+    const [, , wed, thu] = weeks[0].days;
+    expect(wed.groups).toEqual([
+      {
+        heading: "Release 1.204",
+        headingStruck: true,
+        items: ["P2E", "cd_start_change", "dq_v3_opts", "dc_two_mistakes"],
+        struckItems: [0, 1, 2, 3],
+      },
+    ]);
+    // Unstruck days carry no flags, same shape as older snapshots.
+    expect(thu.groups).toEqual([
+      { heading: "Release 1.204", items: ["P2E", "cd_start_change", "dq_v3_opts", "dc_two_mistakes"] },
     ]);
   });
 });

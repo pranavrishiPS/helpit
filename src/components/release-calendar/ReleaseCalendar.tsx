@@ -12,6 +12,7 @@ import {
   listSnapshotMonths,
   pickInitialMonth,
   weeksInMonth,
+  releaseHeadingPlatform,
 } from "@/lib/release-calendar-view";
 
 // Read-only month view of the Release Calendar snapshot (docs/specs/release-calendar-sheet.md §15–16).
@@ -225,7 +226,7 @@ export function ReleaseCalendar({ weeks, initialTodayKey, footer }: ReleaseCalen
                       key={day.date + day.label}
                       aria-current={today ? "date" : undefined}
                       className={cn(
-                        "grid grid-cols-[5rem_1fr] gap-x-3 py-1.5",
+                        "grid grid-cols-[3.5rem_1fr] gap-x-3 py-1.5",
                         today && "-mx-3 rounded-none bg-pop-soft/50 px-3"
                       )}
                     >
@@ -235,7 +236,7 @@ export function ReleaseCalendar({ weeks, initialTodayKey, footer }: ReleaseCalen
                           today && "rounded-full bg-accent px-1.5 font-semibold text-on-fill"
                         )}
                       >
-                        {format(parseISO(day.date), "EEE, MMM d")}
+                        {format(parseISO(day.date), "EEE d")}
                       </span>
                       <DayEntries groups={day.groups} />
                     </div>
@@ -294,31 +295,52 @@ function DayCell({
     >
       <span
         className={cn(
-          "self-start text-[11px] font-medium leading-4 text-foreground",
+          "self-start text-[11px] font-medium leading-4 tabular-nums text-foreground",
           outOfMonth && "text-subtle",
           today && "rounded-full bg-accent px-1.5 font-semibold text-on-fill"
         )}
       >
-        {format(parseISO(day.date), "MMM d")}
+        <span className="sr-only">{format(parseISO(day.date), "EEEE, MMMM d")}</span>
+        <span aria-hidden="true">{format(parseISO(day.date), "d")}</span>
       </span>
-      <DayEntries groups={day.groups} />
+      <DayEntries groups={day.groups} centered />
     </div>
   );
 }
 
-/** Sheet text verbatim, in sheet order: release groups (bold heading + items) and plain lines. */
-function DayEntries({ groups }: { groups: ReleaseCalendarEntryGroup[] }) {
+/** Classes for one line: struck lines (sheet strikethrough) are crossed out and muted. */
+function lineClass(struck: boolean | undefined): string {
+  return cn("break-words text-xs leading-4", struck ? "text-muted line-through" : "text-foreground");
+}
+
+/**
+ * Sheet text verbatim, in sheet order: release groups (bold heading in the platform colour,
+ * items below) and plain lines. Centred in the laptop grid; left-aligned in the phone list.
+ */
+function DayEntries({ groups, centered }: { groups: ReleaseCalendarEntryGroup[]; centered?: boolean }) {
   if (groups.length === 0) return null;
   return (
-    <div className="min-w-0 space-y-1.5">
-      {groups.map((group, i) =>
-        group.heading ? (
+    <div className={cn("min-w-0 space-y-1.5", centered && "text-center")}>
+      {groups.map((group, i) => {
+        const struckItems = new Set(group.struckItems ?? []);
+        return group.heading ? (
           <div key={i}>
-            <p className="break-words text-xs font-semibold leading-4 text-foreground">{group.heading}</p>
+            <p
+              className={cn(
+                "break-words text-xs font-semibold leading-4",
+                group.headingStruck
+                  ? "text-muted line-through"
+                  : releaseHeadingPlatform(group.heading) === "ios"
+                    ? "text-ios"
+                    : "text-android"
+              )}
+            >
+              {group.heading}
+            </p>
             {group.items.length > 0 && (
-              <ul className="mt-0.5 space-y-0.5 border-l border-border pl-2">
+              <ul className="mt-0.5 space-y-0.5">
                 {group.items.map((item, j) => (
-                  <li key={j} className="break-words text-xs leading-4 text-foreground">
+                  <li key={j} className={lineClass(struckItems.has(j))}>
                     {item}
                   </li>
                 ))}
@@ -328,13 +350,13 @@ function DayEntries({ groups }: { groups: ReleaseCalendarEntryGroup[] }) {
         ) : (
           <div key={i} className="space-y-0.5">
             {group.items.map((line, j) => (
-              <p key={j} className="break-words text-xs leading-4 text-foreground">
+              <p key={j} className={lineClass(struckItems.has(j))}>
                 {line}
               </p>
             ))}
           </div>
-        )
-      )}
+        );
+      })}
     </div>
   );
 }

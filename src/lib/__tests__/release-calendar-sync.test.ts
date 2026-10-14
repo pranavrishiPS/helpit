@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
 
 const sheetsApi = vi.hoisted(() => ({
   get: vi.fn(),
+  gridGet: vi.fn(),
   valuesGet: vi.fn(),
   // Any write call would show up here.
   writes: vi.fn(),
@@ -20,7 +21,8 @@ vi.mock("googleapis", () => ({
   google: {
     sheets: () => ({
       spreadsheets: {
-        get: sheetsApi.get,
+        get: (args: { includeGridData?: boolean }) =>
+          args.includeGridData ? sheetsApi.gridGet(args) : sheetsApi.get(args),
         batchUpdate: sheetsApi.writes,
         values: {
           get: sheetsApi.valuesGet,
@@ -43,11 +45,16 @@ vi.mock("@/lib/release-calendar-store", () => ({
   }),
 }));
 
-import { describeSyncError, syncReleaseCalendar, syncSkipReason } from "@/lib/release-calendar-sync";
+import {
+  describeSyncError,
+  gridToRows,
+  syncReleaseCalendar,
+  syncSkipReason,
+} from "@/lib/release-calendar-sync";
 
 const WEEK_42 = [
   ["Week 42", "Mon, October 12", "Tue, October 13", "Wed, October 14", "Thu, October 15", "Fri, October 16"],
-  ["", "Release 1.204"],
+  ["", "Release 1.204", "Release 1.205"],
 ];
 
 function snapshot(overrides: Partial<ReleaseCalendarSnapshot> = {}): ReleaseCalendarSnapshot {
@@ -117,7 +124,25 @@ describe("syncReleaseCalendar", () => {
     sheetsApi.get.mockImplementation(async () => ({
       data: { sheets: [{ properties: { sheetId: 1, title: "Plan" } }, { properties: { sheetId: state.sheetId, title: "Cal 'x'" } }] },
     }));
-    sheetsApi.valuesGet.mockImplementation(async () => ({ data: { values: state.rows } }));
+    // Grid read: plain rows -> rowData with formattedValue (cell C2 struck through).
+    sheetsApi.gridGet.mockImplementation(async () => ({
+      data: {
+        sheets: [
+          {
+            data: [
+              {
+                rowData: state.rows.map((row, r) => ({
+                  values: (row as string[]).map((text, c) => ({
+                    formattedValue: text,
+                    ...(r === 1 && c === 2 ? { effectiveFormat: { textFormat: { strikethrough: true } } } : {}),
+                  })),
+                })),
+              },
+            ],
+          },
+        ],
+      },
+    }));
   });
 
   it("reads the gid tab by title (read-only) and stores the parsed snapshot", async () => {
@@ -128,12 +153,20 @@ describe("syncReleaseCalendar", () => {
       spreadsheetId: "1r7M2HRio4Kg4dUIzPu_nkYqoO8N2rR5fqtnw8ehGQM8",
       fields: "sheets.properties",
     });
-    expect(sheetsApi.valuesGet).toHaveBeenCalledWith(
-      expect.objectContaining({ range: "'Cal ''x'''!A:Z", valueRenderOption: "FORMATTED_VALUE" })
+    expect(sheetsApi.gridGet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ranges: ["'Cal ''x'''!A:Z"],
+        includeGridData: true,
+        fields: expect.stringContaining("strikethrough"),
+      })
     );
     expect(sheetsApi.writes).not.toHaveBeenCalled();
+    expect(sheetsApi.valuesGet).not.toHaveBeenCalled();
     expect(state.snapshot?.sheetTitle).toBe("Cal 'x'");
     expect(state.snapshot?.weeks[0].days[0].groups).toEqual([{ heading: "Release 1.204", items: [] }]);
+    expect(state.snapshot?.weeks[0].days[1].groups).toEqual([
+      { heading: "Release 1.205", headingStruck: true, items: [] },
+    ]);
     expect(state.snapshot?.syncedAt).toBeDefined();
     expect(JSON.stringify(result)).not.toContain("rt");
   });
@@ -142,10 +175,10 @@ describe("syncReleaseCalendar", () => {
     await syncReleaseCalendar();
     const again = await syncReleaseCalendar();
     expect(again.skipped).toBe("fresh");
-    expect(sheetsApi.valuesGet).toHaveBeenCalledTimes(1);
+    expect(sheetsApi.gridGet).toHaveBeenCalledTimes(1);
 
     await syncReleaseCalendar({ force: true });
-    expect(sheetsApi.valuesGet).toHaveBeenCalledTimes(2);
+    expect(sheetsApi.gridGet).toHaveBeenCalledTimes(2);
   });
 
   it("returns not connected without touching the snapshot", async () => {
@@ -159,7 +192,7 @@ describe("syncReleaseCalendar", () => {
   it("keeps the previous weeks and syncedAt on failure and records the error", async () => {
     await syncReleaseCalendar();
     const before = structuredClone(state.snapshot!);
-    sheetsApi.valuesGet.mockRejectedValueOnce({ code: 403 });
+    sheetsApi.gridGet.mockRejectedValueOnce({ code: 403 });
 
     const result = await syncReleaseCalendar({ force: true });
 
@@ -187,6 +220,41 @@ describe("syncReleaseCalendar", () => {
   it("shares one in-process sync between concurrent callers", async () => {
     const [a, b] = await Promise.all([syncReleaseCalendar({ force: true }), syncReleaseCalendar({ force: true })]);
     expect(a).toBe(b);
-    expect(sheetsApi.valuesGet).toHaveBeenCalledTimes(1);
+    expect(sheetsApi.gridGet).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("gridToRows", () => {
+  it("aligns grid data to A1 and keeps strike formatting only where present", () => {
+    const rows = gridToRows([
+      {
+        startRow: 1,
+        rowData: [
+          {
+            values: [
+              {},
+              { formattedValue: "Release 1.204", effectiveFormat: { textFormat: { strikethrough: true } } },
+              { formattedValue: "P2E", effectiveFormat: { textFormat: { strikethrough: false } } },
+              {
+                formattedValue: "a\nb",
+                textFormatRuns: [{ startIndex: 0, format: { strikethrough: true } }, { startIndex: 1, format: {} }],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(rows[0]).toEqual([]);
+    expect(rows[1][0]).toBeUndefined();
+    expect(rows[1][1]).toEqual({ text: "Release 1.204", strike: true });
+    expect(rows[1][2]).toBe("P2E");
+    expect(rows[1][3]).toEqual({
+      text: "a\nb",
+      strike: false,
+      runs: [
+        { start: 0, strike: true },
+        { start: 1, strike: undefined },
+      ],
+    });
   });
 });

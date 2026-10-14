@@ -64,7 +64,7 @@ interface Block {
   cells: HeaderCell[];
   notes: string[];
   /** Lines per header cell, top to bottom. */
-  lines: string[][];
+  lines: CellLine[][];
 }
 
 export interface ParsedReleaseCalendar {
@@ -72,9 +72,34 @@ export interface ParsedReleaseCalendar {
   warnings: string[];
 }
 
-function cellText(row: unknown[] | undefined, col: number): string {
+/** A text run inside a cell: from `start` (UTF-16 index) to the next run's start. */
+export interface SheetTextRun {
+  start: number;
+  /** Unset = same as the cell's own format. */
+  strike?: boolean;
+}
+
+/** A sheet cell: plain text, or text plus strikethrough formatting from the grid read. */
+export type SheetCell =
+  | string
+  | null
+  | undefined
+  | { text: string; strike?: boolean; runs?: SheetTextRun[] };
+
+export interface CellLine {
+  text: string;
+  struck: boolean;
+}
+
+function cellValue(row: SheetCell[] | undefined, col: number): Exclude<SheetCell, string | null | undefined> {
   const value = row?.[col];
-  return value == null ? "" : String(value);
+  if (value == null) return { text: "" };
+  if (typeof value === "object") return value;
+  return { text: String(value) };
+}
+
+function cellText(row: SheetCell[] | undefined, col: number): string {
+  return cellValue(row, col).text;
 }
 
 export function parseHeaderCell(text: string): Omit<HeaderCell, "col"> | null {
@@ -87,7 +112,7 @@ export function parseHeaderCell(text: string): Omit<HeaderCell, "col"> | null {
   return { label, weekday: WEEKDAY_INDEX[match[1].toLowerCase()], month, day };
 }
 
-function headerCells(row: unknown[] | undefined): HeaderCell[] {
+function headerCells(row: SheetCell[] | undefined): HeaderCell[] {
   const cells: HeaderCell[] = [];
   const width = row?.length ?? 0;
   for (let col = 1; col < width; col++) {
@@ -104,26 +129,70 @@ export function splitCellLines(text: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Lines of a cell with strikethrough per line. A line is struck when every non-space character
+ * in it is struck: the cell format applies unless a text run (Sheets textFormatRuns) overrides it.
+ */
+export function cellLines(cell: SheetCell): CellLine[] {
+  const value = cell == null ? { text: "" } : typeof cell === "object" ? cell : { text: String(cell) };
+  const text = value.text;
+  const cellStrike = !!value.strike;
+  const runs = [...(value.runs ?? [])].sort((a, b) => a.start - b.start);
+
+  const strikeAt = (index: number): boolean => {
+    let strike = cellStrike;
+    for (const run of runs) {
+      if (run.start > index) break;
+      strike = run.strike ?? cellStrike;
+    }
+    return strike;
+  };
+
+  const lines: CellLine[] = [];
+  let start = 0;
+  for (let i = 0; i <= text.length; i++) {
+    if (i < text.length && text[i] !== "\n") continue;
+    const raw = text.slice(start, i).replace(/\r$/, "");
+    const trimmed = raw.trim();
+    if (trimmed) {
+      let struck = true;
+      for (let j = 0; j < raw.length; j++) {
+        if (raw[j].trim() && !(runs.length > 0 ? strikeAt(start + j) : cellStrike)) {
+          struck = false;
+          break;
+        }
+      }
+      lines.push({ text: trimmed, struck });
+    }
+    start = i + 1;
+  }
+  return lines;
+}
+
 /** A "Release …" / "iOS Release …" / "Android Release …" line starts a group; other lines are its items. */
-export function groupDayLines(lines: string[]): ReleaseCalendarEntryGroup[] {
+export function groupDayLines(lines: (string | CellLine)[]): ReleaseCalendarEntryGroup[] {
   const groups: ReleaseCalendarEntryGroup[] = [];
   let current: ReleaseCalendarEntryGroup | undefined;
-  for (const line of lines) {
-    if (RELEASE_HEADING.test(line)) {
-      current = { heading: line, items: [] };
+  for (const entry of lines) {
+    const line = typeof entry === "string" ? { text: entry, struck: false } : entry;
+    if (RELEASE_HEADING.test(line.text)) {
+      current = { heading: line.text, items: [] };
+      if (line.struck) current.headingStruck = true;
       groups.push(current);
     } else {
       if (!current) {
         current = { items: [] };
         groups.push(current);
       }
-      current.items.push(line);
+      // Struck flags are only stored when set, so old/unformatted snapshots look the same.
+      if (line.struck) current.struckItems = [...(current.struckItems ?? []), current.items.length];
+      current.items.push(line.text);
     }
   }
   return groups;
 }
 
-function readBlocks(rows: unknown[][]): Block[] {
+function readBlocks(rows: SheetCell[][]): Block[] {
   const blocks: Block[] = [];
   let current: Block | undefined;
 
@@ -150,7 +219,7 @@ function readBlocks(rows: unknown[][]): Block[] {
     if (!current) return;
     current.notes.push(...splitCellLines(cellText(row, 0)));
     current.cells.forEach((cell, i) => {
-      current!.lines[i].push(...splitCellLines(cellText(row, cell.col)));
+      current!.lines[i].push(...cellLines(row?.[cell.col]));
     });
   });
 
@@ -257,7 +326,7 @@ function pickAssignment(blocks: Block[], today: Date): YearAssignment {
 }
 
 export function parseReleaseCalendar(
-  rows: unknown[][],
+  rows: SheetCell[][],
   now: Date = new Date()
 ): ParsedReleaseCalendar {
   const blocks = readBlocks(rows);

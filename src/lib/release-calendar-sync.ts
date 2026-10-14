@@ -7,14 +7,14 @@ import {
   RELEASE_CALENDAR_SPREADSHEET_ID,
   RELEASE_CALENDAR_THROTTLE_MS,
 } from "./release-calendar-config";
-import { parseReleaseCalendar } from "./release-calendar-parse";
+import { parseReleaseCalendar, type SheetCell } from "./release-calendar-parse";
 import { readReleaseCalendarSnapshot, writeReleaseCalendarSnapshot } from "./release-calendar-store";
 import { getAuthorizedClient } from "./scrum-sheet";
 import { readScrumSheetTokens } from "./scrum-sheet-store";
 import type { ReleaseCalendarSnapshot } from "./types";
 
 // Read-only sync of the WP sheet's Calendar tab (docs/specs/release-calendar-sheet.md §7).
-// Only spreadsheets.get and values.get are called; nothing here ever writes to the sheet.
+// Only spreadsheets.get is called (metadata, then grid data); nothing here ever writes to the sheet.
 // Tokens stay on the server: nothing returned from here contains them.
 
 export type SyncSkipReason = "fresh" | "in_flight" | "recent_attempt";
@@ -91,7 +91,49 @@ function emptySnapshot(): ReleaseCalendarSnapshot {
   };
 }
 
-async function readCalendarRows(): Promise<{ title: string; rows: unknown[][] }> {
+/** Only what the parser needs: text plus strikethrough (cell format and per-run). Keeps the response small. */
+const GRID_FIELDS =
+  "sheets(data(startRow,startColumn,rowData(values(formattedValue,effectiveFormat/textFormat/strikethrough,textFormatRuns(startIndex,format/strikethrough)))))";
+
+interface GridCellData {
+  formattedValue?: string | null;
+  effectiveFormat?: { textFormat?: { strikethrough?: boolean | null } | null } | null;
+  textFormatRuns?: { startIndex?: number | null; format?: { strikethrough?: boolean | null } | null }[] | null;
+}
+
+interface GridData {
+  startRow?: number | null;
+  startColumn?: number | null;
+  rowData?: { values?: GridCellData[] | null }[] | null;
+}
+
+/** Sheets grid data -> parser rows (row/col aligned to A1). Pure; exported for tests. */
+export function gridToRows(grids: GridData[] | null | undefined): SheetCell[][] {
+  const rows: SheetCell[][] = [];
+  for (const grid of grids ?? []) {
+    const startRow = grid.startRow ?? 0;
+    const startCol = grid.startColumn ?? 0;
+    (grid.rowData ?? []).forEach((rowData, r) => {
+      const row = (rows[startRow + r] ??= []);
+      (rowData.values ?? []).forEach((value, c) => {
+        const text = value.formattedValue ?? "";
+        if (!text) return;
+        const strike = !!value.effectiveFormat?.textFormat?.strikethrough;
+        const runs = (value.textFormatRuns ?? []).map((run) => ({
+          start: run.startIndex ?? 0,
+          strike: run.format?.strikethrough ?? undefined,
+        }));
+        row[startCol + c] =
+          strike || runs.length > 0 ? { text, strike, ...(runs.length > 0 ? { runs } : {}) } : text;
+      });
+    });
+  }
+  // Fill gaps so callers can iterate safely.
+  for (let i = 0; i < rows.length; i++) rows[i] ??= [];
+  return rows;
+}
+
+async function readCalendarRows(): Promise<{ title: string; rows: SheetCell[][] }> {
   const client = await getAuthorizedClient();
   const sheets = google.sheets({ version: "v4", auth: client });
 
@@ -103,12 +145,14 @@ async function readCalendarRows(): Promise<{ title: string; rows: unknown[][] }>
   const title = tab?.properties?.title;
   if (!title) throw new UserFacingError(`Calendar tab not found in ${RELEASE_CALENDAR_SHEET_NAME}.`);
 
-  const read = await sheets.spreadsheets.values.get({
+  // Read-only grid read (values + strikethrough); spreadsheets.get never writes.
+  const grid = await sheets.spreadsheets.get({
     spreadsheetId: RELEASE_CALENDAR_SPREADSHEET_ID,
-    range: `'${title.replace(/'/g, "''")}'!A:Z`,
-    valueRenderOption: "FORMATTED_VALUE",
+    ranges: [`'${title.replace(/'/g, "''")}'!A:Z`],
+    includeGridData: true,
+    fields: GRID_FIELDS,
   });
-  return { title, rows: (read.data.values ?? []) as unknown[][] };
+  return { title, rows: gridToRows(grid.data.sheets?.[0]?.data as GridData[] | undefined) };
 }
 
 async function runSync(current: ReleaseCalendarSnapshot | null): Promise<ReleaseCalendarSyncResult> {

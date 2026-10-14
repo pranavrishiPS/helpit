@@ -152,7 +152,11 @@ export interface SwagCostingRow {
 export interface ReleaseCalendarEntryGroup {
   /** Release line that starts the group, e.g. "Release 1.204". Unset for lines before any heading. */
   heading?: string;
+  /** Heading cell text is struck through in the sheet. Unset in older snapshots. */
+  headingStruck?: boolean;
   items: string[];
+  /** Indexes into `items` that are struck through in the sheet. Unset in older snapshots. */
+  struckItems?: number[];
 }
 
 export interface ReleaseCalendarDay {

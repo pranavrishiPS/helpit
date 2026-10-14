@@ -4,6 +4,7 @@ import {
   layoutWeek,
   listSnapshotMonths,
   pickInitialMonth,
+  releaseHeadingPlatform,
   upcomingReleases,
   weeksInMonth,
 } from "@/lib/release-calendar-view";
@@ -76,5 +77,14 @@ describe("release calendar view helpers", () => {
       "Release 1.202",
       "Release 1.204",
     ]);
+  });
+});
+
+describe("releaseHeadingPlatform", () => {
+  it("colours iOS headings blue and Release / Android Release headings green", () => {
+    expect(releaseHeadingPlatform("iOS Release 1.90")).toBe("ios");
+    expect(releaseHeadingPlatform("iOS  Release 1.40 (OOCR)")).toBe("ios");
+    expect(releaseHeadingPlatform("Release 1.204")).toBe("android");
+    expect(releaseHeadingPlatform("Android Release 1.206")).toBe("android");
   });
 });

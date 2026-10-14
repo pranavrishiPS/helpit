@@ -73,3 +73,8 @@ export function upcomingReleases(
   // Stable sort keeps sheet order within a day.
   return found.sort((a, b) => a.date.localeCompare(b.date)).slice(0, limit);
 }
+
+/** "iOS Release X" is iOS; "Release X" and "Android Release X" are Android builds. */
+export function releaseHeadingPlatform(heading: string): "ios" | "android" {
+  return /^ios\s+release\b/i.test(heading.trim()) ? "ios" : "android";
+}
