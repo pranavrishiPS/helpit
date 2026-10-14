@@ -33,9 +33,9 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "planning",
-    label: "Planning",
-    href: "/planning",
-    description: "Releases, deadlines, and sprint scope",
+    label: "Release Calendar",
+    href: "/release-calendar",
+    description: "Release calendar mirrored from the Cryptogram 6 WP sheet",
   },
   {
     // Not "/planning-2027": a prefix match would also light up Planning.
@@ -74,7 +74,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-/** True when `pathname` is `href` or nested under it (segment-aware, so "/planning" never matches "/planning-x"). */
+/** True when `pathname` is `href` or nested under it (segment-aware, so "/release-calendar" never matches "/release-calendar-x"). */
 export function isPathUnder(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);

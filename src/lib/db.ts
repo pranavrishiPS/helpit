@@ -1,7 +1,6 @@
 import type { DashboardStore, Outing, Task } from "./types";
 import { isOutingPast } from "./utils";
 import { syncSprintApprovals } from "./sprint-approvals";
-import { normalizeRelease } from "./release-utils";
 import { normalizeRecurringTasks } from "./recurrence";
 import { applyLrp2027Seed } from "./lrp-2027-seed";
 import {
@@ -26,7 +25,6 @@ function createDefaultStore(): DashboardStore {
       company: "PlaySimple Games",
     },
     tasks: [],
-    releases: [],
     outings: [],
     slackItems: [],
     mailItems: [],
@@ -105,7 +103,7 @@ interface LegacyReminder {
   createdAt: string;
 }
 
-type LegacyStore = DashboardStore & { reminders?: LegacyReminder[] };
+type LegacyStore = DashboardStore & { reminders?: LegacyReminder[]; releases?: unknown };
 
 function reminderToTask(reminder: LegacyReminder): Task {
   return {
@@ -142,35 +140,16 @@ function migrateLegacyReminders(store: LegacyStore): DashboardStore {
   return { ...rest, tasks: [...rest.tasks, ...migrated] };
 }
 
-function migrateReleaseIds(store: DashboardStore): DashboardStore {
-  const idMap = new Map<string, string>();
-  let changed = false;
-  const releases = store.releases.map((release) => {
-    const normalized = normalizeRelease(release);
-    if (normalized !== release) changed = true;
-    if (normalized.id !== release.id) {
-      idMap.set(release.id, normalized.id);
-    }
-    return normalized;
-  });
-
-  if (!changed) return store;
-
-  if (idMap.size === 0) {
-    return { ...store, releases };
-  }
-
-  const sprintApprovals = (store.sprintApprovals ?? []).map((approval) => {
-    const mapped = approval.releaseId ? idMap.get(approval.releaseId) : undefined;
-    if (!mapped) return approval;
-    return {
-      ...approval,
-      id: `sprint-approval-${mapped}`,
-      releaseId: mapped,
-    };
-  });
-
-  return { ...store, releases, sprintApprovals };
+/**
+ * The hand-entered Planning releases were replaced by the Release Calendar sheet mirror
+ * (docs/specs/release-calendar-sheet.md §10). Old stores still carry the key: drop it in memory;
+ * the next write omits it (a read alone never rewrites the file for this).
+ */
+function dropLegacyReleases(store: DashboardStore & { releases?: unknown }): DashboardStore {
+  if (!("releases" in store)) return store;
+  const { releases, ...rest } = store;
+  void releases;
+  return rest;
 }
 
 /** "workshop" was renamed to the generic "other" status (with a free-text note). */
@@ -243,19 +222,18 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
     parsed = createDefaultStore() as LegacyStore;
   }
 
-  const migrated = migrateLegacyReminders(parsed);
-  const withReleaseIds = migrateReleaseIds(migrated);
+  const migrated = dropLegacyReleases(migrateLegacyReminders(parsed));
   const withApprovals = syncSprintApprovals({
-    ...withReleaseIds,
-    sprintApprovals: withReleaseIds.sprintApprovals ?? [],
-    projectResources: withReleaseIds.projectResources ?? [],
-    plotBacklog: withReleaseIds.plotBacklog ?? [],
-    features: withReleaseIds.features ?? [],
-    scrumMembers: withReleaseIds.scrumMembers ?? [],
-    scrumAttendance: withReleaseIds.scrumAttendance ?? [],
-    scrumHolidays: withReleaseIds.scrumHolidays ?? [],
+    ...migrated,
+    sprintApprovals: migrated.sprintApprovals ?? [],
+    projectResources: migrated.projectResources ?? [],
+    plotBacklog: migrated.plotBacklog ?? [],
+    features: migrated.features ?? [],
+    scrumMembers: migrated.scrumMembers ?? [],
+    scrumAttendance: migrated.scrumAttendance ?? [],
+    scrumHolidays: migrated.scrumHolidays ?? [],
     // Old stores lack the key. Persisted by the next write (a read alone never rewrites for this).
-    recurringTasks: normalizeRecurringTasks(withReleaseIds.recurringTasks),
+    recurringTasks: normalizeRecurringTasks(migrated.recurringTasks),
   });
   const withScrumStatusFixed = dropAttendanceOnHolidays(migrateLegacyScrumStatus(withApprovals));
   // 2027 Planning: one-time seed from the sheet export, only for keys that are missing.
@@ -273,7 +251,6 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
     migrated.scrumAttendance == null ||
     migrated.scrumHolidays == null ||
     withScrumStatusFixed !== withApprovals ||
-    JSON.stringify(parsed.releases) !== JSON.stringify(withReleaseIds.releases) ||
     JSON.stringify(parsed.sprintApprovals ?? []) !==
       JSON.stringify(withApprovals.sprintApprovals ?? []);
 

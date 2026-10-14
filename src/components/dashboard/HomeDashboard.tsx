@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useDashboard } from "@/lib/use-dashboard";
 import {
   StatCard,
@@ -27,15 +28,11 @@ import {
   getOutingPoolBreakdown,
   getTasksTabTasks,
   getMailTabTasks,
-  getReleasePlatform,
-  releasePlatformTitleClass,
-  releasePlatformDateClass,
-  releasePhaseColor,
-  formatReleaseDate,
 } from "@/lib/utils";
-import { RELEASE_PHASE_LABELS, RELEASE_STATUS_LABELS } from "@/lib/release-constants";
-import { sortUpcomingReleases } from "@/lib/release-sort";
+import { fetchReleaseCalendar, type ReleaseCalendarStatus } from "@/lib/api-client";
+import { upcomingReleases } from "@/lib/release-calendar-view";
 import { cn } from "@/lib/cn";
+import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -72,9 +69,6 @@ export function HomeDashboard() {
   const upcomingCount = getUpcomingTasks(appTasks).length;
   const nextOuting = getUpcomingOutings(store.outings)[0];
   const nextPool = nextOuting ? getOutingPoolBreakdown(nextOuting) : null;
-  const inFlightReleases = sortUpcomingReleases(
-    store.releases.filter((r) => r.status !== "live")
-  );
   const greeting = getGreeting();
 
   return (
@@ -228,57 +222,7 @@ export function HomeDashboard() {
           )}
         </Card>
 
-        <Card>
-          <CardHeader
-            module="planning"
-            icon={Rocket}
-            title="Releases in flight"
-            action={<CardLink href="/planning">Planning</CardLink>}
-          />
-          {inFlightReleases.length === 0 ? (
-            <EmptyState compact icon={Rocket} title="No releases in flight right now." />
-          ) : (
-            <ul className="divide-y divide-border">
-              {inFlightReleases.map((release) => {
-                const platform = getReleasePlatform(release);
-                return (
-                  <li key={release.id} className="py-2.5 first:pt-0 last:pb-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className={cn(
-                            "h-2 w-2 shrink-0 rounded-full",
-                            platform === "android" && "bg-android",
-                            platform === "ios" && "bg-ios",
-                            !platform && "bg-subtle"
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "truncate text-sm font-semibold",
-                            releasePlatformTitleClass(platform)
-                          )}
-                        >
-                          {release.name}
-                        </span>
-                      </span>
-                      <span className={cn("shrink-0", releasePlatformDateClass(platform))}>
-                        {formatReleaseDate(release.targetDate, true)}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 pl-4">
-                      <Badge className={releasePhaseColor(release.phase)}>
-                        {RELEASE_STATUS_LABELS[release.status]}
-                        {release.phase ? ` · ${RELEASE_PHASE_LABELS[release.phase]}` : ""}
-                      </Badge>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
+        <UpcomingReleasesCard />
 
         <Card>
           <CardHeader
@@ -321,6 +265,64 @@ export function HomeDashboard() {
         </Card>
       )}
     </div>
+  );
+}
+
+/** Next release headings from the Release Calendar snapshot (no sync from Home). */
+function UpcomingReleasesCard() {
+  const [status, setStatus] = useState<ReleaseCalendarStatus | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    fetchReleaseCalendar()
+      .then(setStatus)
+      .catch(() => setFailed(true));
+  }, []);
+
+  const weeks = status?.snapshot?.weeks ?? [];
+  const upcoming = status ? upcomingReleases(weeks, format(new Date(), "yyyy-MM-dd"), 5) : [];
+  const noSnapshot = !status?.snapshot?.syncedAt && weeks.length === 0;
+
+  return (
+    <Card className="min-w-0">
+      <CardHeader
+        module="planning"
+        icon={Rocket}
+        title="Upcoming releases"
+        action={<CardLink href="/release-calendar">Release Calendar</CardLink>}
+      />
+      {!status && !failed ? (
+        <p role="status" className="py-6 text-center text-sm text-muted">
+          Loading…
+        </p>
+      ) : failed ? (
+        <EmptyState compact icon={Rocket} title="Couldn’t load the release calendar." />
+      ) : status && !status.connected && noSnapshot ? (
+        <EmptyState compact icon={Rocket} title="Connect Google Sheets on Release Calendar." />
+      ) : upcoming.length === 0 ? (
+        <EmptyState compact icon={Rocket} title="No upcoming releases in the calendar." />
+      ) : (
+        <ul className="min-w-0 divide-y divide-border">
+          {upcoming.map((release, i) => (
+            <li key={`${release.date}-${i}`} className="min-w-0 py-2.5 first:pt-0 last:pb-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 break-words text-sm font-semibold text-foreground">
+                  {release.heading}
+                </span>
+                <span className="shrink-0 text-xs tabular-nums text-muted">
+                  {format(parseISO(release.date), "EEE, MMM d")}
+                </span>
+              </div>
+              {release.items.length > 0 && (
+                <p className="mt-0.5 truncate text-xs text-muted" title={release.items.join(", ")}>
+                  {release.items.join(", ")}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 

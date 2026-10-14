@@ -3,6 +3,7 @@ import {
   getAuthConfigError,
   isApiAuthEnabled,
   isProductionRuntime,
+  isSharePublicPath,
   isSiteAuthPublicPath,
   validateApiKey,
 } from "@/lib/auth";
@@ -31,6 +32,15 @@ export async function middleware(request: NextRequest) {
           status: 503,
           headers: { "content-type": "text/plain; charset=utf-8" },
         });
+  }
+
+  // Release Calendar share link: no session or API key; the token is checked by the page/handler.
+  if (isSharePublicPath(pathname)) {
+    const response = NextResponse.next();
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
   }
 
   let hasSession = false;

@@ -4,9 +4,8 @@ import type {
   DashboardStore,
   MailItem,
   ProjectResourceType,
-  ReleasePhase,
+  ReleaseCalendarSnapshot,
   RecurringTask,
-  ReleaseStatus,
   ScrumAttendanceEntry,
   ScrumHoliday,
   ScrumStatus,
@@ -161,51 +160,6 @@ export async function updateSprintApprovalMailSent(
     body: JSON.stringify({ id, mailSent }),
   });
   if (!res.ok) throw new Error("Failed to update sprint approval mail status");
-}
-
-export interface CreateReleaseInput {
-  platform: "android" | "ios";
-  buildNumber: string;
-  targetDate: string;
-  notes?: string;
-  functionCosts?: Array<{
-    role: string;
-    involved: boolean;
-    effortDays?: number;
-    actualEffortDays?: number;
-  }>;
-}
-
-export async function createRelease(input: CreateReleaseInput) {
-  const res = await apiFetch("/api/releases", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Failed to create release");
-  return data;
-}
-
-export async function updateRelease(
-  id: string,
-  input: {
-    status?: ReleaseStatus;
-    phase?: ReleasePhase;
-    notes?: string | null;
-    sprintNote?: string | null;
-    targetDate?: string | null;
-    actualDate?: string | null;
-    blockers?: string[];
-    functionCosts?: CreateReleaseInput["functionCosts"];
-  }
-) {
-  const res = await apiFetch("/api/releases", {
-    method: "PATCH",
-    body: JSON.stringify({ id, ...input }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Failed to update release");
-  return data;
 }
 
 export interface CreateProjectResourceInput {
@@ -637,4 +591,38 @@ export async function deleteSwagRow(id: string): Promise<void> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? "Failed to delete the row");
+}
+
+export interface ReleaseCalendarStatus {
+  snapshot: ReleaseCalendarSnapshot | null;
+  configured: boolean;
+  connected: boolean;
+  /** Share page path (no origin); null when RELEASE_CALENDAR_SHARE_TOKEN isn't set. */
+  sharePath: string | null;
+}
+
+export async function fetchReleaseCalendar(): Promise<ReleaseCalendarStatus> {
+  const res = await apiFetch("/api/release-calendar", { cache: "no-store" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Failed to load the release calendar");
+  return data;
+}
+
+export interface ReleaseCalendarSyncResponse {
+  ok: boolean;
+  error?: string;
+  synced: boolean;
+  skipped?: string;
+  notConnected: boolean;
+  snapshot: ReleaseCalendarSnapshot | null;
+}
+
+export async function syncReleaseCalendar(force = false): Promise<ReleaseCalendarSyncResponse> {
+  const res = await apiFetch("/api/release-calendar/sync", {
+    method: "POST",
+    body: JSON.stringify({ force }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Release calendar sync failed");
+  return data;
 }

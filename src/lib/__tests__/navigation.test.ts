@@ -12,11 +12,18 @@ describe("navigation", () => {
     ]);
   });
 
-  it("matches routes by segment, so /lrp-2027 never lights up Planning", () => {
-    expect(isPathUnder("/lrp-2027/capacity", "/planning")).toBe(false);
-    expect(isPathUnder("/planning", "/planning")).toBe(true);
+  it("labels the planning module Release Calendar at /release-calendar", () => {
+    const item = NAV_ITEMS.find((i) => i.id === "planning")!;
+    expect(item.label).toBe("Release Calendar");
+    expect(item.href).toBe("/release-calendar");
+  });
+
+  it("matches routes by segment, so /lrp-2027 never lights up Release Calendar", () => {
+    expect(isPathUnder("/lrp-2027/capacity", "/release-calendar")).toBe(false);
+    expect(isPathUnder("/release-calendar", "/release-calendar")).toBe(true);
+    expect(isPathUnder("/release-calendar-x", "/release-calendar")).toBe(false);
     expect(findActiveNav("/lrp-2027/swag-costing")?.child?.label).toBe("Swag Costing");
-    expect(findActiveNav("/planning")?.item.id).toBe("planning");
+    expect(findActiveNav("/release-calendar")?.item.id).toBe("planning");
     expect(findActiveNav("/")?.item.id).toBe("home");
   });
 });

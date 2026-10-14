@@ -40,7 +40,6 @@ beforeEach(() => {
   current = {
     profile: { name: "Alex", role: "Producer", company: "Test Co" },
     tasks: [],
-    releases: [],
     outings: [outing],
     slackItems: [],
     mailItems: [],

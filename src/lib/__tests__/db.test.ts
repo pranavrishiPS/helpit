@@ -40,7 +40,6 @@ function seedStore(overrides: Record<string, unknown> = {}) {
   const base = {
     profile: { name: "Pranav", role: "Game Producer", company: "PlaySimple Games" },
     tasks: [],
-    releases: [],
     outings: [],
     slackItems: [],
     mailItems: [],
@@ -73,7 +72,7 @@ describe("db", () => {
     // Only the 2027 Planning gap todos derived from the sheet export (no invented records).
     expect(store.tasks.every((t) => t.id.startsWith("lrp2027-gap-"))).toBe(true);
     expect(store.tasks).toHaveLength(7);
-    expect(store.releases).toEqual([]);
+    expect("releases" in store).toBe(false);
     expect(store.outings).toEqual([]);
     expect(store.slackItems).toEqual([]);
     expect(store.mailItems).toEqual([]);
@@ -181,7 +180,15 @@ describe("db", () => {
     expect(persisted.scrumAttendance).toHaveLength(1);
   });
 
-  it("normalizes legacy numeric release ids and remaps linked sprint approvals", async () => {
+  it("loads a legacy store with a releases array and leaves sprint approvals unchanged", async () => {
+    const approval = {
+      id: "sprint-approval-rel-1180",
+      releaseId: "rel-1180",
+      title: "Android 1.180",
+      approvals: { gm: false, dev: false, qa: false },
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
     seedStore({
       releases: [
         {
@@ -193,24 +200,13 @@ describe("db", () => {
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
       ],
-      sprintApprovals: [
-        {
-          id: "sprint-approval-rel-1180",
-          releaseId: "rel-1180",
-          title: "Android 1.180",
-          approvals: { gm: false, dev: false, qa: false },
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-        },
-      ],
+      sprintApprovals: [approval],
     });
 
     const store = await readStore();
 
-    expect(store.releases[0].id).toBe("rel-android-1180");
-    const approval = store.sprintApprovals.find((a) => a.releaseId === "rel-android-1180");
-    expect(approval).toBeDefined();
-    expect(approval?.id).toBe("sprint-approval-rel-android-1180");
+    expect("releases" in store).toBe(false);
+    expect(store.sprintApprovals.find((a) => a.id === approval.id)?.releaseId).toBe("rel-1180");
   });
 
   it("backs up and resets to an empty store when store.json is corrupt, logging the error", async () => {
@@ -253,7 +249,7 @@ describe("db", () => {
     expect(mockFiles.get("store.json")).toBe(before);
   });
 
-  it("updateStore persists the updater result without creating approvals from releases", async () => {
+  it("updateStore persists the updater result and drops a legacy releases key", async () => {
     seedStore({
       releases: [
         {
@@ -277,6 +273,7 @@ describe("db", () => {
 
     const persisted = JSON.parse(mockFiles.get("store.json")!);
     expect(persisted.profile.name).toBe("Alex");
+    expect("releases" in persisted).toBe(false);
   });
 
   describe("updateStore in Blob mode (optimistic concurrency)", () => {

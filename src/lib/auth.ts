@@ -19,6 +19,17 @@ const PUBLIC_API_PATHS = [
 /** Site sign-in routes: browser redirects that must work without a session or API key. */
 const SITE_AUTH_PUBLIC_PATHS = ["/login", "/api/auth/google/login", "/api/auth/google/callback"];
 
+/**
+ * Public read-only Release Calendar share link (docs/specs/release-calendar-sheet.md §9).
+ * Exactly these prefixes skip the site-auth session and the API key; the page/handler then
+ * checks the token itself and 404s on a wrong or unset token.
+ */
+const SHARE_PUBLIC_PREFIXES = ["/share/release-calendar/", "/api/share/release-calendar/"];
+
+export function isSharePublicPath(pathname: string): boolean {
+  return SHARE_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 export function isApiAuthEnabled(): boolean {
   return !!process.env.HELPIT_API_KEY?.trim();
 }
@@ -44,9 +55,9 @@ export function isSiteAuthPublicPath(pathname: string): boolean {
   return SITE_AUTH_PUBLIC_PATHS.includes(pathname);
 }
 
-/** Paths that skip the API-key check: OAuth start/callback routes and site sign-in. */
+/** Paths that skip the API-key check: OAuth start/callback routes, site sign-in and the share link. */
 export function isApiKeyExemptPath(pathname: string): boolean {
-  return isPublicApiPath(pathname) || isSiteAuthPublicPath(pathname);
+  return isPublicApiPath(pathname) || isSiteAuthPublicPath(pathname) || isSharePublicPath(pathname);
 }
 
 /** Constant-time string comparison (Edge-safe): compares SHA-256 digests byte by byte. */

@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   title: "Helpit — Your command center",
   description: "Daily office dashboard for game producers",
   appleWebApp: { capable: true, title: "Helpit", statusBarStyle: "default" },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport = {

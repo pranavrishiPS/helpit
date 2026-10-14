@@ -46,15 +46,6 @@ export interface RecurringTask {
   updatedAt: string;
 }
 
-export type ReleaseStatus =
-  | "idea"
-  | "spec_draft"
-  | "spec_ready"
-  | "in_dev"
-  | "qa"
-  | "ready"
-  | "live";
-
 export type ReleasePlatform = "android" | "ios";
 
 export type ReleaseFunctionRole =
@@ -66,8 +57,6 @@ export type ReleaseFunctionRole =
   | "devs"
   | "qa";
 
-export type ReleasePhase = "ux" | "art" | "animation" | "dev" | "qa";
-
 export interface ReleaseFunctionCost {
   role: ReleaseFunctionRole;
   involved: boolean;
@@ -75,26 +64,6 @@ export interface ReleaseFunctionCost {
   effortDays?: number;
   /** Actual effort in person-days (for est vs actual tracking) */
   actualEffortDays?: number;
-}
-
-export interface Release {
-  id: string;
-  name: string;
-  platform?: ReleasePlatform;
-  game?: string;
-  targetDate?: string;
-  actualDate?: string;
-  phase?: ReleasePhase;
-  functionCosts?: ReleaseFunctionCost[];
-  status: ReleaseStatus;
-  notes?: string;
-  /** Free-form planning note for the sprint (separate from sprint scope items in `notes`). */
-  sprintNote?: string;
-  blockers: string[];
-  /** @deprecated Active release is derived from nearest target date in the UI */
-  isActive?: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 /** MoM / scope discussion note for a feature. */
@@ -177,6 +146,41 @@ export interface SwagCostingRow {
   priority?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Release Calendar snapshot, mirrored read-only from the WP sheet (docs/specs/release-calendar-sheet.md §7). */
+export interface ReleaseCalendarEntryGroup {
+  /** Release line that starts the group, e.g. "Release 1.204". Unset for lines before any heading. */
+  heading?: string;
+  items: string[];
+}
+
+export interface ReleaseCalendarDay {
+  /** yyyy-MM-dd */
+  date: string;
+  /** Raw header text, e.g. "Mon, October 12". */
+  label: string;
+  groups: ReleaseCalendarEntryGroup[];
+}
+
+export interface ReleaseCalendarWeek {
+  /** Raw column A text of the header row; may be "". */
+  label: string;
+  weekNumber?: number;
+  note?: string;
+  days: ReleaseCalendarDay[];
+}
+
+export interface ReleaseCalendarSnapshot {
+  spreadsheetId: string;
+  sheetGid: number;
+  sheetTitle: string;
+  /** Last successful sync. */
+  syncedAt?: string;
+  lastAttemptAt?: string;
+  lastError?: string;
+  weeks: ReleaseCalendarWeek[];
+  warnings: string[];
 }
 
 /** Feature or work item to remember for a future release sprint. */
@@ -278,7 +282,7 @@ export type SprintApprovalParty = "gm" | "dev" | "qa";
 
 export interface SprintApproval {
   id: string;
-  /** Linked Planning release — approvals auto-sync from releases */
+  /** Legacy link to a removed Planning release. Ignored; kept so old approvals load unchanged. */
   releaseId?: string;
   /** Sprint costing mail subject, e.g. "Android 1.180" */
   title: string;
@@ -345,7 +349,6 @@ export interface UserProfile {
 export interface DashboardStore {
   profile: UserProfile;
   tasks: Task[];
-  releases: Release[];
   outings: Outing[];
   slackItems: SlackItem[];
   mailItems: MailItem[];

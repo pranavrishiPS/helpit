@@ -17,18 +17,20 @@ import {
   buttonClasses,
   type BadgeTone,
 } from "@/components/ui";
-import { Link2, Plug, RefreshCw, UserRound } from "lucide-react";
+import { Check, Link2, Plug, RefreshCw, UserRound } from "lucide-react";
 import type { ModuleId } from "@/lib/modules";
 import { useDashboard } from "@/lib/use-dashboard";
 import {
   disconnectGmail,
   disconnectSlack,
   fetchGmailStatus,
+  fetchReleaseCalendar,
   fetchSlackStatus,
   syncGmail,
   updateProfile,
 } from "@/lib/api-client";
 import { notifyStoreUpdated } from "@/lib/store-events";
+import { shareUrlFor, useCopyText } from "@/components/release-calendar/CopyShareLink";
 
 interface GmailStatus {
   configured: boolean;
@@ -51,6 +53,8 @@ function SettingsContent() {
   const { store, loading, error, clearError, reload } = useDashboard();
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
   const [slack, setSlack] = useState<SlackStatus | null>(null);
+  /** undefined = loading; null = sharing off (env var unset). */
+  const [sharePath, setSharePath] = useState<string | null | undefined>(undefined);
   const [disconnectingSlack, setDisconnectingSlack] = useState(false);
   const [disconnectingGmail, setDisconnectingGmail] = useState(false);
   const [syncingGmail, setSyncingGmail] = useState(false);
@@ -62,12 +66,14 @@ function SettingsContent() {
   const [profileDirty, setProfileDirty] = useState(false);
 
   async function loadIntegrations() {
-    const [gmailRes, slackRes] = await Promise.all([
+    const [gmailRes, slackRes, calendarRes] = await Promise.all([
       fetchGmailStatus().catch(() => null),
       fetchSlackStatus().catch(() => null),
+      fetchReleaseCalendar().catch(() => null),
     ]);
     if (gmailRes) setGmail(gmailRes);
     if (slackRes) setSlack(slackRes);
+    if (calendarRes) setSharePath(calendarRes.sharePath);
   }
 
   useEffect(() => {
@@ -350,8 +356,61 @@ function SettingsContent() {
             />
           </div>
         </Card>
+
+        <ReleaseCalendarShareCard sharePath={sharePath} />
       </div>
     </div>
+  );
+}
+
+function ReleaseCalendarShareCard({ sharePath }: { sharePath: string | null | undefined }) {
+  const { copied, copy } = useCopyText();
+  const inputId = "release-calendar-share-url";
+  if (sharePath === undefined) return null;
+  const url = sharePath ? shareUrlFor(sharePath) : "";
+
+  async function handleCopy() {
+    if (!(await copy(url))) {
+      // Clipboard blocked: select the URL so it can be copied by hand.
+      const input = document.getElementById(inputId) as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader module="planning" icon={Link2} title="Release Calendar share link" />
+      {sharePath ? (
+        <>
+          <div className="flex gap-2">
+            <Input
+              id={inputId}
+              size="sm"
+              readOnly
+              value={url}
+              aria-label="Release Calendar share link"
+              onFocus={(e) => e.currentTarget.select()}
+              className="min-w-0 flex-1 font-mono text-xs"
+            />
+            <Button variant="secondary" size="sm" onClick={handleCopy}>
+              {copied ? <Check /> : <Link2 />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+            <span className="sr-only" aria-live="polite">
+              {copied ? "Share link copied" : ""}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Anyone with this link can view the calendar. Change the env var to revoke.
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-muted">
+          Set <code className="rounded bg-surface-2 px-1 text-xs">RELEASE_CALENDAR_SHARE_TOKEN</code> to enable.
+        </p>
+      )}
+    </Card>
   );
 }
 

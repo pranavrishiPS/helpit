@@ -43,7 +43,6 @@ describe("importSlackMatches", () => {
           task("slack-sourced", { source: "slack", status: "done" }),
           task("with-slack-ts", { slackTs: "1700000000.000100" }),
         ],
-        releases: [],
         outings: [],
         slackItems: [],
         mailItems: [],

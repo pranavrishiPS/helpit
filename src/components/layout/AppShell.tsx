@@ -263,7 +263,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
   }, [navOpen]);
 
-  if (pathname === "/login") {
+  // Sign-in and the public share link render without the app shell (no nav, no store pollers).
+  if (pathname === "/login" || pathname.startsWith("/share/")) {
     return <>{children}</>;
   }
 

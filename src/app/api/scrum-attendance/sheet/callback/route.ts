@@ -4,6 +4,7 @@ import { exchangeCodeForTokens } from "@/lib/scrum-sheet";
 import { updateStore } from "@/lib/db";
 import { consumeOAuthState } from "@/lib/oauth-state";
 import { publicErrorMessage } from "@/lib/errors";
+import { consumeSheetReturnPath } from "@/lib/sheet-oauth-return";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -11,17 +12,18 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
   const state = searchParams.get("state");
   const base = getAppUrl();
+  const returnPath = await consumeSheetReturnPath();
 
   if (error) {
-    return NextResponse.redirect(`${base}/scrum?sheet=error`);
+    return NextResponse.redirect(`${base}${returnPath}?sheet=error`);
   }
 
   if (!(await consumeOAuthState(state))) {
-    return NextResponse.redirect(`${base}/scrum?sheet=invalid_state`);
+    return NextResponse.redirect(`${base}${returnPath}?sheet=invalid_state`);
   }
 
   if (!code) {
-    return NextResponse.redirect(`${base}/scrum?sheet=missing_code`);
+    return NextResponse.redirect(`${base}${returnPath}?sheet=missing_code`);
   }
 
   try {
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
         },
       },
     }));
-    return NextResponse.redirect(`${base}/scrum?sheet=connected`);
+    return NextResponse.redirect(`${base}${returnPath}?sheet=connected`);
   } catch (err) {
     const message = publicErrorMessage(err, "Google Sheet connection failed — check the server logs", "Scrum sheet OAuth callback");
     await updateStore((s) => ({
@@ -51,6 +53,6 @@ export async function GET(request: NextRequest) {
         },
       },
     }));
-    return NextResponse.redirect(`${base}/scrum?sheet=error`);
+    return NextResponse.redirect(`${base}${returnPath}?sheet=error`);
   }
 }

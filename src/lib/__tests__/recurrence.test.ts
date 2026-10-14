@@ -49,7 +49,6 @@ function store(overrides: Partial<DashboardStore> = {}): DashboardStore {
   return {
     profile: { name: "T", role: "R", company: "C" },
     tasks: [],
-    releases: [],
     outings: [],
     slackItems: [],
     mailItems: [],

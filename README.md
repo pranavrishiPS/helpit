@@ -23,7 +23,8 @@ Open [http://localhost:3000](http://localhost:3000). On first run, `data/store.j
 | **Tasks** | Full task list with filters |
 | **Slack** | Track follow-ups, mark done, MCP import |
 | **Mail** | Gmail inbox, sprint approvals, reminders |
-| **Planning** | Release tracker, function costing, deadlines |
+| **Release Calendar** | Read-only mirror of the Cryptogram 6 WP sheet's Calendar tab (syncs on open, 5-min throttle); optional public share link |
+| **2027 Planning** | Capacity plan and swag costing |
 | **Feature tracker** | Feature specs, status, and delivery |
 | **Resources** | Project docs, Figma links, references |
 | **Outings** | Budget, attendance, expenses |
@@ -47,10 +48,13 @@ Locally (dev/test/`next build`) everything is open by default. **In production (
 
 OAuth flows use CSRF `state` cookies. Callback routes stay public.
 
+- **Release Calendar share link (optional)** — set `RELEASE_CALENDAR_SHARE_TOKEN` to a random string of at least 32 characters (e.g. `openssl rand -hex 32`). It enables a read-only page at `/share/release-calendar/<token>` that skips sign-in for that path only; Settings shows the full link. Unset or shorter than 32 characters = sharing off (every share URL is a 404). To revoke or regenerate, change the env var and redeploy.
+
 ## Data
 
 - `data/store.json` — dashboard state (gitignored)
-- `data/slack.json`, `data/gmail.json` — OAuth tokens (gitignored)
+- `data/slack.json`, `data/gmail.json`, `data/scrum-sheet-oauth.json` — OAuth tokens (gitignored)
+- `data/release-calendar.json` — cached Release Calendar snapshot (gitignored)
 
 **Local and production data are separate.** Local dev and `next build` read/write `data/store.json`. Production reads/writes the private Vercel Blob store. The storage layer switches to Blob whenever `BLOB_READ_WRITE_TOKEN` is set (or `VERCEL=1`), so:
 
@@ -61,6 +65,7 @@ OAuth flows use CSRF `state` cookies. Callback routes stay public.
 ## Integrations
 
 - **Gmail** — Connect in Settings, sync from Mail
+- **Google Sheets** — Connect from Scrum attendance or Release Calendar (one connection). Release Calendar only reads the WP sheet (view access is enough); it never writes to it.
 - **Slack** — OAuth + MCP import (`/api/slack/import`); background auto-sync is currently disabled in code (manual sync from Settings)
 
 Copy `.env.example` → `.env.local` to configure.

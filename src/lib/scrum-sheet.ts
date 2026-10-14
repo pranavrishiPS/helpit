@@ -80,7 +80,8 @@ export async function exchangeCodeForTokens(code: string): Promise<ScrumSheetTok
   return stored;
 }
 
-async function getAuthorizedClient() {
+/** OAuth client from the Scrum sheet tokens, refreshed when close to expiry. Server-only. */
+export async function getAuthorizedClient() {
   const stored = await readScrumSheetTokens();
   if (!stored) {
     throw new UserFacingError("Google Sheet not connected");

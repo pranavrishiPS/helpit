@@ -29,7 +29,6 @@ function seedStore() {
     JSON.stringify({
       profile: { name: "Pranav", role: "Game Producer", company: "PlaySimple Games" },
       tasks: [],
-      releases: [],
       outings: [],
       slackItems: [],
       mailItems: [],

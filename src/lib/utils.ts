@@ -1,33 +1,11 @@
 import { format, isToday, isTomorrow, parseISO, isPast, startOfDay, isBefore } from "date-fns";
-import type { DashboardStore, Release, ReleasePlatform, Task, Outing, ProjectResourceType } from "./types";
-
-export function getReleasePlatform(release: Release): ReleasePlatform | null {
-  if (release.platform) return release.platform;
-  const lower = release.name.toLowerCase();
-  if (lower.startsWith("android")) return "android";
-  if (lower.startsWith("ios")) return "ios";
-  return null;
-}
+import type { DashboardStore, ReleasePlatform, Task, Outing, ProjectResourceType } from "./types";
 
 /** Parse major.minor build number from titles like "Android Build 1.178" or "iOS 1.76". */
 export function parseBuildVersion(title: string): [number, number] {
   const match = title.match(/(\d+)\.(\d+)/);
   if (!match) return [0, 0];
   return [Number(match[1]), Number(match[2])];
-}
-
-/** Split release notes into sprint scope items (one per line). */
-export function parseSprintItems(notes?: string): string[] {
-  if (!notes?.trim()) return [];
-  return notes
-    .split(/[\n,]+/)
-    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
-    .filter(Boolean);
-}
-
-export function formatSprintItems(items: string[]): string | undefined {
-  const filtered = items.map((s) => s.trim()).filter(Boolean);
-  return filtered.length > 0 ? filtered.join("\n") : undefined;
 }
 
 /** Sprint costing mail display title — iOS: "iOS Release X.XX", Android: "Android Build X.XX". */
@@ -60,30 +38,6 @@ export function releasePlatformTitleClass(platform: ReleasePlatform | null): str
   if (platform === "android") return "text-android";
   if (platform === "ios") return "text-ios";
   return "text-foreground";
-}
-
-export function releasePlatformCardClass(platform: ReleasePlatform | null): string {
-  if (platform === "android") return "border-l-4 border-l-android";
-  if (platform === "ios") return "border-l-4 border-l-ios";
-  return "";
-}
-
-export function releasePlatformDateClass(platform: ReleasePlatform | null): string {
-  const base =
-    "rounded-full border px-2.5 py-0.5 text-xs font-semibold tabular-nums";
-  if (platform === "android") {
-    return `${base} border-android/30 bg-android-soft text-android-ink`;
-  }
-  if (platform === "ios") {
-    return `${base} border-ios/30 bg-ios-soft text-ios-ink`;
-  }
-  return `${base} border-border bg-surface-2 text-foreground`;
-}
-
-export function formatReleaseDate(dateStr?: string, compact = false): string {
-  if (!dateStr) return "TBD";
-  const date = parseISO(dateStr);
-  return format(date, compact ? "do MMM, yy" : "do MMMM, yy");
 }
 
 export function formatDueDate(dateStr?: string): string {
@@ -130,25 +84,6 @@ export function statusColor(status: string): string {
   }
 }
 
-import type { ReleasePhase } from "./types";
-
-export function releasePhaseColor(phase?: ReleasePhase | string): string {
-  switch (phase) {
-    case "ux":
-      return "text-foreground bg-surface-3 border-border-strong";
-    case "art":
-      return "text-accent bg-accent-soft border-accent/25";
-    case "animation":
-      return "text-caution bg-caution-soft border-caution/25";
-    case "dev":
-      return "text-info bg-info-soft border-info/25";
-    case "qa":
-      return "text-success bg-success-soft border-success/25";
-    default:
-      return "text-muted bg-surface-2 border-border";
-  }
-}
-
 /** Personal reminders added from the Mail tab. */
 export function getMailTabTasks(tasks: Task[]): Task[] {
   return tasks.filter((t) => t.source === "mail");
@@ -192,7 +127,6 @@ export function summarizeDashboard(store: DashboardStore) {
     mailAction: store.mailItems.filter(
       (m) => m.status === "needs_reply" || m.status === "unread"
     ).length,
-    activeReleases: store.releases.filter((r) => r.status !== "live").length,
     upcomingCount: getUpcomingTasks(appTasks).length,
   };
 }

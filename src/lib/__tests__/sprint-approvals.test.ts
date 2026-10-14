@@ -10,18 +10,6 @@ import type { DashboardStore, MailItem, SprintApproval } from "@/lib/types";
 const baseStore = (): DashboardStore => ({
   profile: { name: "Pranav", role: "Producer", company: "PSG" },
   tasks: [],
-  releases: [
-    {
-      id: "rel-1180",
-      name: "Android 1.180",
-      platform: "android",
-      targetDate: "2026-07-13",
-      status: "in_dev",
-      blockers: [],
-      createdAt: "2026-07-08T12:00:00.000Z",
-      updatedAt: "2026-07-08T12:00:00.000Z",
-    },
-  ],
   outings: [],
   slackItems: [],
   mailItems: [],
@@ -141,13 +129,12 @@ describe("addApprovalsFromMail", () => {
     });
   });
 
-  it("is not tied to Planning: releases neither add nor prune rows", () => {
+  it("creates rows from mail threads only", () => {
     const store = baseStore();
     store.sprintApprovals = addApprovalsFromMail([], thread, NOW);
     const ids = (s: DashboardStore) => s.sprintApprovals.map((a) => a.id).sort();
     const expected = ["sprint-approval-mail-android-1.200", "sprint-approval-mail-ios-1.82"];
     expect(ids(syncSprintApprovals(store))).toEqual(expected);
-    expect(ids(syncSprintApprovals({ ...store, releases: [] }))).toEqual(expected);
   });
 });
 

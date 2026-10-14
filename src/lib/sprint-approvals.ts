@@ -1,7 +1,7 @@
 import type {
   DashboardStore,
   MailItem,
-  Release,
+  ReleasePlatform,
   SprintApproval,
   SprintApprovalParty,
 } from "./types";
@@ -24,7 +24,7 @@ export const SPRINT_APPROVAL_SENDERS: Record<SprintApprovalParty, string[]> = {
 };
 
 /** "android:1.192" / "ios:1.80" for build titles and mail subjects; lowercased text otherwise. */
-export function approvalKey(title: string, platform?: Release["platform"]): string {
+export function approvalKey(title: string, platform?: ReleasePlatform): string {
   const lower = title.toLowerCase();
   const version = title.match(/(\d+\.\d+)/)?.[1];
   if (!version) return lower.trim();

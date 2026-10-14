@@ -164,8 +164,6 @@ export const updateMailItemSchema = z.object({
 
 export const sprintApprovalPartySchema = z.enum(["gm", "dev", "qa"]);
 
-export const releasePlatformSchema = z.enum(["android", "ios"]);
-
 export const releaseFunctionRoleSchema = z.enum([
   "product",
   "ux",
@@ -181,19 +179,6 @@ export const releaseFunctionCostInputSchema = z.object({
   involved: z.boolean(),
   effortDays: z.number().min(0).max(999).optional(),
   actualEffortDays: z.number().min(0).max(999).optional(),
-});
-
-export const createReleaseSchema = z.object({
-  platform: releasePlatformSchema,
-  buildNumber: z
-    .string()
-    .min(1)
-    .max(20)
-    .regex(/^\d+\.\d+$/, "Use format like 1.180"),
-  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  notes: z.string().max(5000).optional(),
-  sprintNote: z.string().max(2000).optional(),
-  functionCosts: z.array(releaseFunctionCostInputSchema).max(7).optional(),
 });
 
 export const projectResourceTypeSchema = z.enum(["doc", "figma", "link", "sheets", "slides"]);
@@ -444,48 +429,6 @@ export const profileSchema = z.object({
   role: z.string().min(1).max(100),
   company: z.string().min(1).max(100),
 });
-
-export const releaseStatusSchema = z.enum([
-  "idea",
-  "spec_draft",
-  "spec_ready",
-  "in_dev",
-  "qa",
-  "ready",
-  "live",
-]);
-
-export const releasePhaseSchema = z.enum([
-  "ux",
-  "art",
-  "animation",
-  "dev",
-  "qa",
-]);
-
-export const updateReleaseSchema = z
-  .object({
-    id: z.string().min(1),
-    targetDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .nullable()
-      .optional(),
-    actualDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .nullable()
-      .optional(),
-    status: releaseStatusSchema.optional(),
-    phase: releasePhaseSchema.optional(),
-    notes: z.string().max(5000).nullable().optional(),
-    sprintNote: z.string().max(2000).nullable().optional(),
-    blockers: z.array(z.string().max(200)).max(20).optional(),
-    functionCosts: z.array(releaseFunctionCostInputSchema).max(7).optional(),
-  })
-  .refine((data) => Object.keys(data).length > 1, {
-    message: "At least one field to update is required",
-  });
 
 const slackSearchMatchSchema = z.object({
   ts: z.string().optional(),

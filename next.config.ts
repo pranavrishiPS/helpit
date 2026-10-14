@@ -6,6 +6,13 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["googleapis", "@slack/web-api"],
+  // Planning was renamed to Release Calendar (docs/specs/release-calendar-sheet.md §4).
+  async redirects() {
+    return [
+      { source: "/planning", destination: "/release-calendar", permanent: false },
+      { source: "/planning/:path*", destination: "/release-calendar", permanent: false },
+    ];
+  },
   webpack: (config, { dev }) => {
     if (dev) {
       // data/ holds the runtime JSON store and its lock dirs. Watching it makes every
