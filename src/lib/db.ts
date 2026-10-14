@@ -3,6 +3,7 @@ import { isOutingPast } from "./utils";
 import { syncSprintApprovals } from "./sprint-approvals";
 import { normalizeRelease } from "./release-utils";
 import { normalizeRecurringTasks } from "./recurrence";
+import { applyLrp2027Seed } from "./lrp-2027-seed";
 import {
   backupJson,
   jsonExists,
@@ -257,6 +258,11 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
     recurringTasks: normalizeRecurringTasks(withReleaseIds.recurringTasks),
   });
   const withScrumStatusFixed = dropAttendanceOnHolidays(migrateLegacyScrumStatus(withApprovals));
+  // 2027 Planning: one-time seed from the sheet export, only for keys that are missing.
+  // Runs on a successfully parsed store only; never replaces existing data. Like recurringTasks,
+  // a read alone never rewrites the file for it: the seed (deterministic ids) is persisted by
+  // the next updateStore, and from then on the keys exist so it never runs again.
+  const withLrpSeed = applyLrp2027Seed(withScrumStatusFixed);
 
   const shouldPersist =
     (parsed.reminders?.length ?? 0) > 0 ||
@@ -273,8 +279,8 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
 
   if (shouldPersist) {
     const migratedStore = {
-      ...withScrumStatusFixed,
-      outings: withScrumStatusFixed.outings.map(normalizeOuting),
+      ...withLrpSeed,
+      outings: withLrpSeed.outings.map(normalizeOuting),
     };
     // Blob mode returns the migrated store in memory only; migrations are idempotent
     // and get persisted by the next updateStore (conditional write).
@@ -283,8 +289,8 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
   }
 
   return {
-    ...withApprovals,
-    outings: withApprovals.outings.map(normalizeOuting),
+    ...withLrpSeed,
+    outings: withLrpSeed.outings.map(normalizeOuting),
   };
 }
 

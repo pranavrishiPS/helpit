@@ -1,4 +1,6 @@
 import type {
+  CapacityHeadcount,
+  CapacityPlan,
   DashboardStore,
   MailItem,
   ProjectResourceType,
@@ -9,9 +11,12 @@ import type {
   ScrumHoliday,
   ScrumStatus,
   SprintApprovalParty,
+  SwagCostingRow,
+  SwagTab,
   Task,
 } from "@/lib/types";
 import type { RecurringRuleFields, RecurringRulePatch } from "@/lib/recurrence";
+import type { SwagRowPatch, SwagSavePayload } from "@/lib/swag-draft";
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   // No API key here: the browser authenticates with the site-auth session cookie.
@@ -550,3 +555,86 @@ export async function fetchGmailStatus() {
   return res.json();
 }
 
+
+/* 2027 Planning (docs/specs/planning-2027.md) */
+
+export interface CapacityPlanPatch {
+  year?: number;
+  headcount?: Partial<CapacityHeadcount>;
+  month?: CapacityMonthPatch;
+  months?: CapacityMonthPatch[];
+}
+
+export interface CapacityMonthPatch {
+  index: number;
+  workingDays?: number;
+  holidays?: number;
+  leaves?: number;
+}
+
+export async function updateCapacityPlan(patch: CapacityPlanPatch): Promise<CapacityPlan> {
+  const res = await apiFetch("/api/lrp-2027", {
+    method: "PATCH",
+    body: JSON.stringify({ action: "capacity", ...patch }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Failed to save the capacity plan");
+  return data;
+}
+
+export type { SwagRowPatch };
+
+/** Swag Costing draft Save: one atomic request. Returns all rows as stored. */
+export async function saveSwagDraft(payload: SwagSavePayload): Promise<SwagCostingRow[]> {
+  const res = await apiFetch("/api/lrp-2027", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Failed to save Swag Costing");
+  return data.rows;
+}
+
+export async function createSwagRow(
+  input: SwagRowPatch & { tab: SwagTab; featureName: string }
+): Promise<SwagCostingRow> {
+  const res = await apiFetch("/api/lrp-2027", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Failed to add the row");
+  return data;
+}
+
+export async function updateSwagRow(id: string, patch: SwagRowPatch): Promise<SwagCostingRow> {
+  const res = await apiFetch("/api/lrp-2027", {
+    method: "PATCH",
+    body: JSON.stringify({ action: "row", id, ...patch }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Failed to save the row");
+  return data;
+}
+
+export async function moveSwagRowToTab(
+  id: string,
+  tab: SwagTab,
+  index?: number
+): Promise<SwagCostingRow[]> {
+  const res = await apiFetch("/api/lrp-2027", {
+    method: "PATCH",
+    body: JSON.stringify({ action: "move", id, tab, ...(index === undefined ? {} : { index }) }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Failed to move the row");
+  return data.rows;
+}
+
+export async function deleteSwagRow(id: string): Promise<void> {
+  const res = await apiFetch(`/api/lrp-2027?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? "Failed to delete the row");
+}

@@ -7,6 +7,7 @@ import {
   ListTodo,
   MessageSquare,
   Settings,
+  Table2,
   Users,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -26,6 +27,7 @@ export const MODULE_ICONS: Record<ModuleId, ModuleIcon> = {
   slack: MessageSquare,
   mail: GmailIcon,
   planning: CalendarRange,
+  lrp2027: Table2,
   features: Layers,
   resources: Link2,
   outings: Users,
@@ -50,6 +52,7 @@ export const MODULE_STYLES: Record<ModuleId, { solid: string; soft: string; text
   slack: NEUTRAL_MODULE_STYLE,
   mail: NEUTRAL_MODULE_STYLE,
   planning: NEUTRAL_MODULE_STYLE,
+  lrp2027: NEUTRAL_MODULE_STYLE,
   features: NEUTRAL_MODULE_STYLE,
   resources: NEUTRAL_MODULE_STYLE,
   outings: NEUTRAL_MODULE_STYLE,

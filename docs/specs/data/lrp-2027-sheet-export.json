@@ -1,0 +1,55 @@
+{
+  "source": "Google Sheet 'Cryptogram LRP 2027' (id 1W3Y-MhDt-U7Lt0yZhMEodUKMC__kPxhRhu05wwZYors), exported 2026-10-13. Values copied verbatim; empty string = blank cell in sheet.",
+  "capacityPlan": {
+    "tab": "Capacity Plan",
+    "note": "Blue text on yellow = inputs you can edit (year, holidays, leaves, headcount). Everything else is formula.",
+    "year": 2027,
+    "header": ["Months", "Working Calendar days", "Holidays", "Tentative Leaves", "Potential Days", "Product Mandays", "Design Mandays", "UX", "UI/Art", "Anim+UI Integration", "Dev Mandays", "QA Mandays"],
+    "headcount": { "Product": 4, "Design": 1, "UX": 1, "UI/Art": 1, "Anim+UI Integration": 1, "Dev": 2, "QA": 2 },
+    "formulas": "Potential Days = Working Calendar days - Holidays - Tentative Leaves; each function's mandays = Potential Days x headcount",
+    "months": [
+      ["Jan", 21, 3, 2.41], ["Feb", 20, 0, 2.41], ["Mar", 23, 0, 2.41], ["Apr", 22, 1, 2.41],
+      ["May", 21, 1, 2.41], ["Jun", 22, 0, 2.41], ["Jul", 22, 0, 2.41], ["Aug", 22, 0, 2.41],
+      ["Sept", 22, 0, 2.41], ["Oct", 21, 1, 2.41], ["Nov", 22, 0, 2.41], ["Dec", 23, 0, 2.41]
+    ],
+    "monthsColumns": ["Month", "Working Calendar days", "Holidays", "Tentative Leaves"],
+    "sheetTotals": { "workingDays": 261, "holidays": 6, "leaves": 28.92, "potentialDays": 226.08, "product": 904.32, "design": 226.08, "ux": 226.08, "uiArt": 226.08, "anim": 226.08, "dev": 452.16, "qa": 452.16 }
+  },
+  "swagcosting": {
+    "tab": "Swagcosting",
+    "header": ["Owner", "Feature Name", "1-pagers", "EO", "Spec Costing", "Spec Costing Days", "UX Costing", "UX Costing Days", "Art Costing", "Art Costing Days", "TA Costing", "TA Costing Days", "Dev Costing", "Dev Costing Days", "QA Costing", "QA Costing Days", "Total costing", "ROI (LTV/costing)", "Priority"],
+    "formulaNotes": "In the sheet, Total costing = sum of the six *Days columns and ROI = EO / Total costing (e.g. 0.46% / 12 = 0.04%). Only 2 rows have these filled in the sheet.",
+    "rows": [
+      ["Pranav","Streak Week Strip","A rolling 7-day strip in the streak overlay that starts on the day the current streak began, with the day-7 gift visible from day 1. Today's dot lights up as soon as the streak is kept. A full row opens the gift. This makes weekly progress visible and gives players a short-term goal.","0.46%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","12","0.04%"],
+      ["Pranav","Lucky Hour","During a Story Content Drop, players can watch one rewarded ad to get 2× popcorn for 20 minutes, which speeds up story level unlocks. The first Lucky Hour each day is free when the player clears the Daily Challenge, which ties the daily habit loop to CD progression. Levers: W2E impressions, CD completion, DC participation.","1.53%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","","","","","","M(5-10)"],
+      ["Vrushali","Two-Act Quotes - Mid-Puzzle Chapter Break","Longer quotes are split into two acts with a chapter break between them. The break opens a natural interstitial slot (not shown to No Ads users) and makes long puzzles easier to take on. Levers: IT impressions per session, completion rate on long quotes.","5.68%","M(5-10)","10","XS(0-2)","2","XS(0-2)","2","S(2-5)","5","M(5-10)","10","S(2-5)"],
+      ["Aryan","Butterfly","A collectible event where the collectible, a butterfly, jumps to a new spot every other move. Players choose between using hints to secure it and taking risks to collect more in one level, which adds a light strategy layer and more in-level hint demand.","1.43%","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","S(2-5)","5","M(5-10)","10","S(2-5)"],
+      ["Aryan","Daily Quest variation","Add more goal and task types to the Daily Quest pool so quests rotate and stay fresh across the week. Aims to keep Daily Quest completion steady by avoiding repetitive tasks.","0.63%","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)"],
+      ["Aryan","Adaptive Difficulty Opts","Adds lifetime clears as another lever in adaptive difficulty, so difficulty can be tuned separately for early cohorts and later cohorts based on the player's overall experience.","1.22%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)"],
+      ["Aryan","Brilliance boost","Completing X clears unlocks 2× Brilliance for 30 minutes, with X adapted to each player. This gives players a short-session target, with the aim of raising average clears per session.","1.68%","XS(0-2)","2","XS(0-2)","2","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","XS(0-2)"],
+      ["Ayush","Leagues ","A tiered league system based on Brilliance Points with six tiers (Novice, Apprentice, Adept, Master, Grandmaster and Legend). Divisions III–I inside each tier up to Grandmaster give short-term milestones, and Legend is reserved for the live top 500. Includes animated profile borders, badges and titles; pairing within ±1 division; end-of-season reward chests; weekly tournaments for higher tiers; and early demotion protection.","2.35%","M(5-10)","10","S(2-5)","5","M(5-10)","10","M(5-10)","10","M(5-10)","10","S(2-5)"],
+      ["Gunjan","Daily Reward on D0","https://docs.google.com/document/d/1M0AUs0udZuWrvZQ-ynvwgZ3LlyXTp4GScq2FRlJkDg8/edit?usp=sharing","0.74%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","12","0.06%"],
+      ["Gunjan","Login with google","https://docs.google.com/document/d/1nuJBrZ61vTbprcmLDOKRPKIUV1tEXDO-K9UT1U8hgnU/edit?usp=sharing","1.57%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Gunjan","Avatars IAP","https://docs.google.com/document/d/1ti1mbdvlc9bZUmTIVsgLUYFJhi7_x3riagX6WNfNmrI/edit?usp=sharing","0.19%","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","S(2-5)","5","XS(0-2)","2"],
+      ["Sanyogita","W2E CTA Treatment","https://docs.google.com/document/d/1UnKXa64p0NRl1EvsP6FxfZAqmZfrABvDtMJ0YBuhNdM/edit?usp=sharing","1.73%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Sanyogita","Unlimited Lives- IAP","https://docs.google.com/document/d/1CD9tMzsWPDISgUPyZLK8Qk6kjJ4-PVFdtEwyAjg3iWA/edit?usp=sharing","0.53%","S(2-5)","5","XS(0-2)","2","S(2-5)","5","XS(0-2)","2","S(2-5)","5","XS(0-2)","2"],
+      ["Sanyogita","Reward Shield","https://docs.google.com/document/d/1Rw-KWWJ3rkK2nMfmxAzUddUZsNywY2_-myKwCLsIYto/edit?usp=sharing","0.57%","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","S(2-5)","5","XS(0-2)","2"],
+      ["Sanyogita","First IT ad after X minutes not Y levels ","https://docs.google.com/document/d/1yUSFSShM5Jud2EGHekB7k1M8d-domkCtRsJrIxFHFAI/edit?usp=sharing","0.21%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Sanyogita","Daily Reward resets after 12 hours in one day ","https://docs.google.com/document/d/1dAoWRxeXk4It0R2wdgkWNk5YXzed-1E5nEftBGVzw3k/edit?usp=sharing","1.63%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","S(2-5)","5","XS(0-2)","2"],
+      ["Nalini","Bonus puzzles","https://docs.google.com/presentation/d/1Es6i2HAlrEOq-lXLr8X1cIBsv8xWlrwfeIg7LnGqhV0/edit?slide=id.h16aa69c1d92ddba8_0_1494#slide=id.h16aa69c1d92ddba8_0_1494","2.14%","M(5-10)","10","S(2-5)","5","S(2-5)","5","S(2-5)","5","M(5-10)","10","S(2-5)","5"],
+      ["Nalini","Beginner's Dash","https://docs.google.com/presentation/d/1Es6i2HAlrEOq-lXLr8X1cIBsv8xWlrwfeIg7LnGqhV0/edit?slide=id.h16aa69c1d92ddba8_0_1521#slide=id.h16aa69c1d92ddba8_0_1521","2.07%","S(2-5)","5","S(2-5)","5","S(2-5)","5","S(2-5)","5","L(10-15)","15","XS(0-2)","2"],
+      ["Yogit","A season pass (\"Codebreaker Pass\")","https://drive.google.com/file/d/1NGkTHIffxzoopIz7jtZbSI_4y8NfbUqK/view?usp=sharing","3.37%","L(10-15)","15","S(2-5)","5","M(5-10)","10","S(2-5)","5","L(10-15)","15","S(2-5)","5"],
+      ["Uttam","Starter pack at the right moment (Monopoly Go)","https://docs.google.com/document/d/1TEJfnkSSYXh3QqJXhX0U-5tfJKbf9zYgRsXxQZ0kdFw/edit?tab=t.0#heading=h.qb8kgvrvvukp","0.17%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Uttam","Timed hint expire + push (Monopoly Go)","","0.66%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Mangesh","First IT request at level 9","","0.23%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Mangesh","Triple Dot Animation Changes","","4.00%","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","S(2-5)","5","L(10-15)","15","XS(0-2)","2"],
+      ["Mangesh","Mid Puzzle IT post D7","","7.58%","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Mangesh","IT on D1 (instead waiting for user to clear 10 puzzles on d1 also)","","0.38%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Mangesh","Popular Quotes till level 10","","0.70%","S(2-5)","5","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Mangesh","2nd Daily Puzzle for people who play only daily puzzles","","1.28%","M(5-10)","10","S(2-5)","5","M(5-10)","10","S(2-5)","5","M(5-10)","10","XS(0-2)","2"],
+      ["Mangesh","IT easing for first few days","","2.90%","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2","XS(0-2)","2"],
+      ["Backlog","pvp_mode","","7.10%","M(5-10)","10","S(2-5)","5","S(2-5)","5","S(2-5)","5","L(10-15)","15","M(5-10)","10"],
+      ["Backlog","seasonal_stickers","","2.50%","M(5-10)","10","S(2-5)","5","L(10-15)","15","S(2-5)","5","M(5-10)","10","M(5-10)","10"]
+    ]
+  }
+}

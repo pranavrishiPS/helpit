@@ -507,6 +507,160 @@ export const slackImportSchema = z.object({
   teamName: z.string().max(100).optional(),
 });
 
+/* 2027 Planning (docs/specs/planning-2027.md) */
+
+const lrpNonNegativeSchema = z.number().finite().min(0, "Must be 0 or more.");
+
+const capacityHeadcountPatchSchema = z
+  .object({
+    product: lrpNonNegativeSchema,
+    design: lrpNonNegativeSchema,
+    ux: lrpNonNegativeSchema,
+    uiArt: lrpNonNegativeSchema,
+    animUi: lrpNonNegativeSchema,
+    dev: lrpNonNegativeSchema,
+    qa: lrpNonNegativeSchema,
+  })
+  .partial()
+  .strict();
+
+const capacityMonthPatchSchema = z
+  .object({
+    index: z.number().int().min(0).max(11),
+    workingDays: lrpNonNegativeSchema.optional(),
+    holidays: lrpNonNegativeSchema.optional(),
+    leaves: lrpNonNegativeSchema.optional(),
+  })
+  .strict();
+
+export const updateCapacityPlanSchema = z
+  .object({
+    action: z.literal("capacity"),
+    year: z.number().int().min(2000).max(2100).optional(),
+    headcount: capacityHeadcountPatchSchema.optional(),
+    month: capacityMonthPatchSchema.optional(),
+    /** Draft Save (v2): every changed month in one patch. */
+    months: z.array(capacityMonthPatchSchema).max(12).optional(),
+  })
+  .strict()
+  .refine(
+    (d) =>
+      d.year !== undefined || d.headcount !== undefined || d.month !== undefined || d.months !== undefined,
+    { message: "At least one field to update is required" }
+  );
+
+export const swagTabSchema = z.enum(["lrp", "adhoc"]);
+
+const swagCostPatchSchema = z
+  .object({
+    size: z.string().trim().max(40).nullable().optional(),
+    days: lrpNonNegativeSchema.nullable().optional(),
+  })
+  .strict();
+
+const swagCostsPatchSchema = z
+  .object({
+    spec: swagCostPatchSchema,
+    ux: swagCostPatchSchema,
+    art: swagCostPatchSchema,
+    ta: swagCostPatchSchema,
+    dev: swagCostPatchSchema,
+    qa: swagCostPatchSchema,
+  })
+  .partial()
+  .strict();
+
+const swagFeatureNameSchema = z
+  .string()
+  .max(300)
+  .refine((v) => v.trim().length > 0, "Feature name can't be empty.");
+
+const swagRowFieldsSchema = {
+  owner: z.string().max(100).nullable().optional(),
+  onePager: z.string().max(5000).nullable().optional(),
+  eoPercent: lrpNonNegativeSchema.nullable().optional(),
+  priority: z.string().max(100).nullable().optional(),
+  costs: swagCostsPatchSchema.optional(),
+};
+
+export const createSwagRowSchema = z
+  .object({ tab: swagTabSchema, featureName: swagFeatureNameSchema, ...swagRowFieldsSchema })
+  .strict();
+
+export const updateSwagRowSchema = z
+  .object({
+    action: z.literal("row"),
+    id: z.string().min(1),
+    featureName: swagFeatureNameSchema.optional(),
+    ...swagRowFieldsSchema,
+  })
+  .strict();
+
+export const moveSwagRowSchema = z
+  .object({
+    action: z.literal("move"),
+    id: z.string().min(1),
+    tab: swagTabSchema,
+    /** Position in the target tab (Undo); omitted = end of tab. */
+    index: z.number().int().min(0).optional(),
+  })
+  .strict();
+
+export const patchLrp2027Schema = z.discriminatedUnion("action", [
+  updateCapacityPlanSchema,
+  updateSwagRowSchema,
+  moveSwagRowSchema,
+]);
+
+const swagCostSchema = z
+  .object({
+    size: z.string().trim().min(1).max(40).optional(),
+    days: lrpNonNegativeSchema.optional(),
+  })
+  .strict();
+
+/** A full row for the bulk save (blank fields are omitted, never 0 or ""). */
+const swagRowUpsertSchema = z
+  .object({
+    id: z.string().min(1).max(100),
+    tab: swagTabSchema,
+    order: z.number().int().min(0),
+    featureName: swagFeatureNameSchema,
+    owner: z.string().min(1).max(100).optional(),
+    onePager: z.string().min(1).max(5000).optional(),
+    eoPercent: lrpNonNegativeSchema.optional(),
+    priority: z.string().min(1).max(100).optional(),
+    costs: z
+      .object({
+        spec: swagCostSchema,
+        ux: swagCostSchema,
+        art: swagCostSchema,
+        ta: swagCostSchema,
+        dev: swagCostSchema,
+        qa: swagCostSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+/** Swag Costing draft Save: all changes in one atomic request. */
+export const bulkSaveSwagSchema = z
+  .object({
+    upserts: z.array(swagRowUpsertSchema).max(1000),
+    deletes: z.array(z.string().min(1).max(100)).max(1000),
+  })
+  .strict()
+  .refine((d) => new Set(d.upserts.map((r) => r.id)).size === d.upserts.length, {
+    message: "Duplicate row ids",
+  })
+  .refine((d) => !d.upserts.some((r) => d.deletes.includes(r.id)), {
+    message: "A row can't be saved and deleted at once",
+  });
+
+export const deleteSwagRowSchema = z.object({
+  id: z.string().min(1),
+});
+
 export function parseBody<T>(schema: z.ZodSchema<T>, body: unknown):
   | { success: true; data: T }
   | { success: false; error: string } {

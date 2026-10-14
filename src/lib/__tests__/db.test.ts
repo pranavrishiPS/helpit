@@ -51,6 +51,8 @@ function seedStore(overrides: Record<string, unknown> = {}) {
     scrumMembers: [],
     scrumAttendance: [],
     scrumHolidays: [],
+    // Already past the one-time 2027 Planning seed, so its gap todos don't appear here.
+    swagCosting: [],
     lastUpdated: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -68,7 +70,9 @@ describe("db", () => {
     const store = await readStore();
 
     expect(store.profile.name).toBe("Pranav");
-    expect(store.tasks).toEqual([]);
+    // Only the 2027 Planning gap todos derived from the sheet export (no invented records).
+    expect(store.tasks.every((t) => t.id.startsWith("lrp2027-gap-"))).toBe(true);
+    expect(store.tasks).toHaveLength(7);
     expect(store.releases).toEqual([]);
     expect(store.outings).toEqual([]);
     expect(store.slackItems).toEqual([]);
@@ -382,7 +386,7 @@ describe("db", () => {
     it("readStore returns an in-memory empty store without writing when no blob exists", async () => {
       const store = await readStore();
 
-      expect(store.tasks).toEqual([]);
+      expect(store.tasks.every((t) => t.id.startsWith("lrp2027-gap-"))).toBe(true);
       expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
       expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
       expect(mockFiles.has("store.json")).toBe(false);
@@ -407,6 +411,63 @@ describe("db", () => {
 
       expect(result.lastUpdated).toBe("2026-01-01T00:00:00.000Z");
       expect(jsonPersist.writeJsonTextIfMatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("2027 Planning seed", () => {
+    function seedOldStore(overrides: Record<string, unknown> = {}) {
+      seedStore(overrides);
+      const raw = JSON.parse(mockFiles.get("store.json")!);
+      delete raw.swagCosting;
+      mockFiles.set("store.json", JSON.stringify(raw));
+    }
+
+    it("seeds an old store once: persisted by the next write, never duplicated", async () => {
+      seedOldStore({ tasks: [] });
+
+      const read = await readStore();
+      expect(read.capacityPlan?.year).toBe(2027);
+      expect(read.swagCosting).toHaveLength(30);
+      expect(read.tasks).toHaveLength(7);
+      // A read alone does not rewrite the file.
+      expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
+
+      await updateStore((s) => ({ ...s, profile: { ...s.profile, name: "Alex" } }));
+      const persisted = JSON.parse(mockFiles.get("store.json")!);
+      expect(persisted.swagCosting).toHaveLength(30);
+      expect(persisted.tasks).toHaveLength(7);
+
+      // Completing and deleting todos sticks; reads and writes never re-add them.
+      await updateStore((s) => ({ ...s, tasks: s.tasks.slice(1) }));
+      const again = await readStore();
+      expect(again.tasks).toHaveLength(6);
+      await updateStore((s) => ({ ...s, profile: { ...s.profile, name: "Pranav" } }));
+      expect(JSON.parse(mockFiles.get("store.json")!).tasks).toHaveLength(6);
+    });
+
+    it("never overwrites existing planning data", async () => {
+      const capacityPlan = {
+        year: 2031,
+        headcount: { product: 1, design: 0, ux: 0, uiArt: 0, animUi: 0, dev: 0, qa: 0 },
+        months: [],
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      };
+      seedStore({ capacityPlan, swagCosting: [] });
+
+      const store = await readStore();
+      expect(store.capacityPlan).toEqual(capacityPlan);
+      expect(store.swagCosting).toEqual([]);
+      expect(store.tasks).toEqual([]);
+    });
+
+    it("a read error never seeds or resets the store", async () => {
+      seedOldStore();
+      const before = mockFiles.get("store.json");
+      vi.mocked(jsonPersist.readJsonText).mockRejectedValueOnce(new Error("EIO"));
+
+      await expect(readStore()).rejects.toThrow(/EIO/);
+      expect(mockFiles.get("store.json")).toBe(before);
+      expect(jsonPersist.writeJsonText).not.toHaveBeenCalled();
     });
   });
 });

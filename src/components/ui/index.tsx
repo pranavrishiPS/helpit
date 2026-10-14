@@ -560,7 +560,8 @@ export function Select({
   className,
   children,
   ...rest
-}: Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> & FieldSize) {
+}: Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> &
+  FieldSize & { ref?: React.Ref<HTMLSelectElement> }) {
   return (
     <select {...rest} className={cn(fieldClasses({ size, kind: "select" }), className)}>
       {children}
@@ -571,7 +572,7 @@ export function Select({
 export function Textarea({
   className,
   ...rest
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: React.Ref<HTMLTextAreaElement> }) {
   return <textarea {...rest} className={cn(fieldClasses({ kind: "textarea" }), className)} />;
 }
 
@@ -606,14 +607,85 @@ export function Tabs<T extends string>({
   onChange,
   items,
   className,
+  variant = "pill",
   "aria-label": ariaLabel,
 }: {
   value: T;
   onChange: (value: T) => void;
-  items: { id: T; label: React.ReactNode; count?: number }[];
+  /** `marker` (sheet variant): incomplete count, shown as a caution dot + number when > 0. */
+  items: { id: T; label: React.ReactNode; count?: number; marker?: number; controls?: string }[];
   className?: string;
+  /** `sheet` = Google-Sheets-style tabs joined to the grid below (docs/specs/planning-2027.md §10.5). */
+  variant?: "pill" | "sheet";
   "aria-label"?: string;
 }) {
+  if (variant === "sheet") {
+    return (
+      <div
+        role="tablist"
+        aria-label={ariaLabel}
+        className={cn("no-scrollbar flex max-w-full gap-0.5 overflow-x-auto border-b border-border", className)}
+        onKeyDown={(e) => {
+          if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+          const index = items.findIndex((item) => item.id === value);
+          const next = items[(index + (e.key === "ArrowRight" ? 1 : items.length - 1)) % items.length];
+          if (!next) return;
+          e.preventDefault();
+          const list = e.currentTarget;
+          onChange(next.id);
+          requestAnimationFrame(() =>
+            list.querySelector<HTMLButtonElement>(`[data-tab-id="${next.id}"]`)?.focus()
+          );
+        }}
+      >
+        {items.map((item) => {
+          const active = item.id === value;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              data-tab-id={item.id}
+              aria-selected={active}
+              aria-controls={item.controls}
+              tabIndex={active ? 0 : -1}
+              onClick={() => onChange(item.id)}
+              className={cn(
+                "-mb-px inline-flex h-9 shrink-0 items-center rounded-t-control border border-b-0 px-4 text-xs font-semibold",
+                TRANSITION,
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal",
+                active
+                  ? "border-border bg-card text-foreground shadow-[inset_0_2px_0_var(--signal)]"
+                  : "border-transparent bg-surface-2 text-muted hover:bg-surface-3 hover:text-foreground"
+              )}
+            >
+              {item.label}
+              {item.count !== undefined && (
+                <span
+                  className={cn(
+                    "ml-1.5 rounded-full px-1.5 text-[11px] tabular-nums",
+                    active ? "bg-accent-soft text-accent" : "bg-surface-3 text-foreground"
+                  )}
+                >
+                  {item.count}
+                </span>
+              )}
+              {item.marker !== undefined && item.marker > 0 && (
+                <span
+                  aria-label={`${item.marker} incomplete`}
+                  className="ml-1 inline-flex items-center gap-1 text-[11px] tabular-nums text-caution"
+                >
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-caution-mark" />
+                  <span aria-hidden="true">{item.marker}</span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("no-scrollbar max-w-full overflow-x-auto", className)}>
       <div

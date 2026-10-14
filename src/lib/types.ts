@@ -128,6 +128,57 @@ export interface Feature {
   updatedAt: string;
 }
 
+/** 2027 Planning — Capacity Plan (docs/specs/planning-2027.md §6). Computed values are never stored. */
+export interface CapacityHeadcount {
+  product: number;
+  design: number;
+  ux: number;
+  uiArt: number;
+  animUi: number;
+  dev: number;
+  qa: number;
+}
+
+export interface CapacityMonth {
+  /** Label as in the sheet (e.g. "Sept"). */
+  label: string;
+  workingDays: number;
+  holidays: number;
+  leaves: number;
+}
+
+export interface CapacityPlan {
+  year: number;
+  headcount: CapacityHeadcount;
+  months: CapacityMonth[];
+  updatedAt: string;
+}
+
+export type SwagFunction = "spec" | "ux" | "art" | "ta" | "dev" | "qa";
+export type SwagTab = "lrp" | "adhoc";
+
+/** One function's costing: T-shirt size (sheet values like "XS(0-2)", free text accepted) + days. Blank = missing. */
+export interface SwagCost {
+  size?: string;
+  days?: number;
+}
+
+/** 2027 Planning — one Swag Costing row. Total and ROI are computed, never stored. */
+export interface SwagCostingRow {
+  id: string;
+  tab: SwagTab;
+  order: number;
+  owner?: string;
+  featureName: string;
+  onePager?: string;
+  /** EO as a percent number: "0.46%" is stored as 0.46. */
+  eoPercent?: number;
+  costs: Record<SwagFunction, SwagCost>;
+  priority?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Feature or work item to remember for a future release sprint. */
 export interface PlotBacklogItem {
   id: string;
@@ -307,6 +358,9 @@ export interface DashboardStore {
   scrumHolidays: ScrumHoliday[];
   /** Optional so older stores load; `readStore` always returns an array. */
   recurringTasks?: RecurringTask[];
+  /** 2027 Planning. Seeded once from the LRP sheet export when missing. */
+  capacityPlan?: CapacityPlan;
+  swagCosting?: SwagCostingRow[];
   integrations?: {
     gmail?: GmailIntegration;
     slack?: SlackIntegration;
@@ -322,14 +376,23 @@ export type ModuleId =
   | "slack"
   | "mail"
   | "planning"
+  | "lrp2027"
   | "features"
   | "resources"
   | "outings"
   | "settings";
+
+export interface NavChildItem {
+  id: string;
+  label: string;
+  href: string;
+}
 
 export interface NavItem {
   id: ModuleId;
   label: string;
   href: string;
   description: string;
+  /** Grouped nav: the parent row toggles the group instead of linking. */
+  children?: NavChildItem[];
 }

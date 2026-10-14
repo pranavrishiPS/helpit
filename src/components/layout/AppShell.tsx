@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
-import { NAV_ITEMS } from "@/lib/navigation";
+import { ChevronRight, LogOut, Menu, Monitor, Moon, Sun, X } from "lucide-react";
+import { NAV_ITEMS, findActiveNav, isPathUnder } from "@/lib/navigation";
 import { MODULE_ICONS } from "@/lib/modules";
+import type { NavItem } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { Button, ModuleChip, SegmentedControl, type SegmentedItem } from "@/components/ui";
 import type { ThemePreference } from "@/lib/theme";
@@ -27,17 +28,148 @@ function BrandBlock() {
   );
 }
 
+const NAV_GROUPS_STORAGE_KEY = "helpit-nav-groups";
+
+function readNavGroupState(id: string): boolean | undefined {
+  try {
+    const raw = window.localStorage.getItem(NAV_GROUPS_STORAGE_KEY);
+    const value = raw ? (JSON.parse(raw) as Record<string, unknown>)[id] : undefined;
+    return typeof value === "boolean" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeNavGroupState(id: string, open: boolean): void {
+  try {
+    const raw = window.localStorage.getItem(NAV_GROUPS_STORAGE_KEY);
+    const state = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    window.localStorage.setItem(NAV_GROUPS_STORAGE_KEY, JSON.stringify({ ...state, [id]: open }));
+  } catch {
+    // Blocked storage: the group still works, it just isn't remembered.
+  }
+}
+
+/** Collapsible nav group (docs/specs/planning-2027.md §4, §10.1). Auto-expands on its routes. */
+function SidebarNavGroup({
+  item,
+  pathname,
+  onNavigate,
+  large,
+}: {
+  item: NavItem & { children: NonNullable<NavItem["children"]> };
+  pathname: string;
+  onNavigate?: () => void;
+  large?: boolean;
+}) {
+  const Icon = MODULE_ICONS[item.id];
+  const childActive = isPathUnder(pathname, item.href);
+  const [open, setOpen] = useState(childActive);
+  const listId = `nav-group-${item.id}${large ? "-drawer" : ""}`;
+
+  // Remembered state after mount (avoids a hydration mismatch); the current route wins.
+  useEffect(() => {
+    if (isPathUnder(pathname, item.href)) setOpen(true);
+    else {
+      const stored = readNavGroupState(item.id);
+      if (stored !== undefined) setOpen(stored);
+    }
+  }, [pathname, item.href, item.id]);
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    writeNavGroupState(item.id, next);
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-controls={listId}
+        className={cn(
+          "group relative flex w-full items-center gap-3 rounded-control px-2 text-left text-sm font-medium transition-colors duration-150",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
+          large ? "h-11" : "h-10",
+          childActive ? "text-white" : "text-sidebar-foreground/85 hover:bg-white/[0.05] hover:text-white"
+        )}
+      >
+        <span
+          className={cn(
+            "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors duration-150",
+            childActive ? "text-sidebar-foreground" : "text-sidebar-muted group-hover:text-white"
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="truncate">{item.label}</span>
+        <ChevronRight
+          aria-hidden="true"
+          className={cn(
+            "ml-auto h-3.5 w-3.5 shrink-0 text-sidebar-muted transition-transform",
+            open && "rotate-90"
+          )}
+        />
+      </button>
+      <ul
+        id={listId}
+        hidden={!open}
+        className="relative mt-0.5 space-y-0.5 pl-10 before:absolute before:inset-y-1 before:left-[22px] before:w-px before:bg-white/10"
+      >
+        {item.children.map((child) => {
+          const active = isPathUnder(pathname, child.href);
+          return (
+            <li key={child.id}>
+              <Link
+                href={child.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "relative flex items-center truncate rounded-control px-2 text-[13px] font-medium transition-colors duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
+                  large ? "h-10" : "h-9",
+                  active
+                    ? "bg-white/[0.07] text-white"
+                    : "text-sidebar-foreground/85 hover:bg-white/[0.05] hover:text-white"
+                )}
+              >
+                {active && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-signal"
+                  />
+                )}
+                <span className="truncate">{child.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function SidebarNav({ onNavigate, large }: { onNavigate?: () => void; large?: boolean }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
       {NAV_ITEMS.map((item) => {
+        if (item.children) {
+          return (
+            <SidebarNavGroup
+              key={item.id}
+              item={{ ...item, children: item.children }}
+              pathname={pathname}
+              onNavigate={onNavigate}
+              large={large}
+            />
+          );
+        }
         const Icon = MODULE_ICONS[item.id];
-        const active =
-          item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href);
+        const active = isPathUnder(pathname, item.href);
 
         return (
           <Link
@@ -140,9 +272,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     window.location.href = "/login";
   }
 
-  const currentPage = NAV_ITEMS.find((item) =>
-    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
-  );
+  const currentNav = findActiveNav(pathname);
+  const currentPage = currentNav?.item;
+  const currentLabel = currentNav?.child?.label ?? currentPage?.label;
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
@@ -197,7 +329,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
           <ModuleChip module={currentPage?.id ?? "home"} size="sm" />
           <p className="min-w-0 truncate font-display text-[15px] font-semibold text-foreground">
-            {currentPage?.label ?? "Helpit"}
+            {currentLabel ?? "Helpit"}
           </p>
         </header>
 
