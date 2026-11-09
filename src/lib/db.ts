@@ -35,6 +35,7 @@ function createDefaultStore(): DashboardStore {
     scrumMembers: [],
     scrumAttendance: [],
     scrumHolidays: [],
+    scrumMemberLastDays: {},
     recurringTasks: [],
     integrations: {
       gmail: { connected: false },
@@ -232,6 +233,8 @@ async function readStoreUnlocked(preRead?: string | null): Promise<DashboardStor
     scrumMembers: migrated.scrumMembers ?? [],
     scrumAttendance: migrated.scrumAttendance ?? [],
     scrumHolidays: migrated.scrumHolidays ?? [],
+    // Old stores lack the key; persisted by the next write (a read alone never rewrites for this).
+    scrumMemberLastDays: migrated.scrumMemberLastDays ?? {},
     // Old stores lack the key. Persisted by the next write (a read alone never rewrites for this).
     recurringTasks: normalizeRecurringTasks(migrated.recurringTasks),
   });

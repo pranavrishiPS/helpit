@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { updateStore } from "@/lib/db";
 import type { ScrumAttendanceEntry } from "@/lib/types";
-import { isStatusAllowedOnDate } from "@/lib/scrum-attendance";
+import { isStatusAllowedOnDate, lastDayFor } from "@/lib/scrum-attendance";
 import {
   deleteScrumAttendanceEntrySchema,
   parseBody,
@@ -25,10 +25,12 @@ export async function POST(request: NextRequest) {
 
   let isHoliday = false;
   let unknownMembers: string[] = [];
+  let pastLastDay: { member: string; lastDay: string }[] = [];
   const updated = await updateStore((s) => {
     // reset: the updater re-runs on optimistic retries
     isHoliday = false;
     unknownMembers = [];
+    pastLastDay = [];
     if ((s.scrumHolidays ?? []).some((h) => h.date === date)) {
       isHoliday = true;
       return s;
@@ -39,6 +41,13 @@ export async function POST(request: NextRequest) {
       .filter(({ member }) => !roster.has(member.trim().toLowerCase()))
       .map(({ member }) => member.trim());
     if (unknownMembers.length > 0) return s;
+    // Members who have left can't be logged after their last working day.
+    pastLastDay = entries.flatMap(({ member: rawMember }) => {
+      const member = roster.get(rawMember.trim().toLowerCase())!;
+      const lastDay = lastDayFor(s.scrumMemberLastDays, member);
+      return lastDay && date > lastDay ? [{ member, lastDay }] : [];
+    });
+    if (pastLastDay.length > 0) return s;
     const existing = s.scrumAttendance ?? [];
     const byMember = new Map(
       existing.filter((e) => e.date === date).map((e) => [e.member, e])
@@ -74,6 +83,14 @@ export async function POST(request: NextRequest) {
       {
         error: `Not on the scrum roster: ${unknownMembers.join(", ")}. Add them to the roster first.`,
       },
+      { status: 400 }
+    );
+  }
+
+  if (pastLastDay.length > 0) {
+    const list = pastLastDay.map(({ member, lastDay }) => `${member} (last day ${lastDay})`);
+    return NextResponse.json(
+      { error: `Past their last working day: ${list.join(", ")}. Attendance can't be logged after it.` },
       { status: 400 }
     );
   }

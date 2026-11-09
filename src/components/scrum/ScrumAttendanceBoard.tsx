@@ -23,7 +23,10 @@ import {
   entriesByDateForMember,
   entriesForDate,
   entriesForMonth,
+  activeMembersOn,
   holidayForDate,
+  insightMembersForMonth,
+  lastDayFor,
   listAttendanceMonths,
   listScrumDates,
   statusesForDate,
@@ -36,6 +39,7 @@ import {
 import {
   addScrumHoliday,
   addScrumMember,
+  setScrumMemberLastDay,
   removeScrumHoliday,
   upsertScrumAttendance,
 } from "@/lib/api-client";
@@ -98,11 +102,14 @@ export function ScrumAttendanceBoard({
   members,
   entries,
   holidays,
+  memberLastDays,
   onChanged,
 }: {
   members: string[];
   entries: ScrumAttendanceEntry[];
   holidays: ScrumHoliday[];
+  /** member -> last working day (YYYY-MM-DD). */
+  memberLastDays: Record<string, string>;
   onChanged: () => void;
 }) {
   const [selectedDate, setSelectedDate] = useState(todayIso());
@@ -120,8 +127,17 @@ export function ScrumAttendanceBoard({
   const [holidayDate, setHolidayDate] = useState(todayIso());
   const [holidayLabel, setHolidayLabel] = useState("");
   const [savingHoliday, setSavingHoliday] = useState(false);
+  const [showLastDays, setShowLastDays] = useState(false);
+  // Unsaved last-day input per member; absent means "show the saved value".
+  const [lastDayDrafts, setLastDayDrafts] = useState<Record<string, string>>({});
+  const [savingLastDay, setSavingLastDay] = useState<string | null>(null);
 
   const todaysHoliday = holidayForDate(holidays, selectedDate);
+  // People who've left drop off from the day after their last working day; past dates still list them.
+  const dayMembers = useMemo(
+    () => activeMembersOn(members, memberLastDays, selectedDate),
+    [members, memberLastDays, selectedDate]
+  );
 
   const dayEntries = useMemo(
     () => entriesForDate(entries, selectedDate),
@@ -138,13 +154,16 @@ export function ScrumAttendanceBoard({
   const insights = useMemo(
     // Members with no attended scrums (null rate) sort after everyone with a rate.
     () =>
-      computeScrumInsights(members, monthEntries).sort((a, b) => {
+      computeScrumInsights(
+        insightMembersForMonth(members, memberLastDays, monthKey),
+        monthEntries
+      ).sort((a, b) => {
         if (a.onTimeRate === null || b.onTimeRate === null) {
           return (a.onTimeRate === null ? 1 : 0) - (b.onTimeRate === null ? 1 : 0);
         }
         return b.onTimeRate - a.onTimeRate;
       }),
-    [members, monthEntries]
+    [members, memberLastDays, monthKey, monthEntries]
   );
 
   useEffect(() => {
@@ -206,7 +225,8 @@ export function ScrumAttendanceBoard({
   async function handleSave() {
     // Entries for members removed from the roster stay in the draft (they're on this date's
     // saved data) but the server only accepts roster members, so leave them out of the save.
-    const roster = new Set(members.map((m) => m.toLowerCase()));
+    // Same for members past their last working day on this date.
+    const roster = new Set(dayMembers.map((m) => m.toLowerCase()));
     const toSave = Object.entries(draft)
       .filter(([member]) => roster.has(member.toLowerCase()))
       .map(([member, status]) => ({
@@ -244,6 +264,25 @@ export function ScrumAttendanceBoard({
       setError(err instanceof Error ? err.message : "Failed to add member");
     } finally {
       setAddingMember(false);
+    }
+  }
+
+  async function handleSetLastDay(member: string, lastDay: string | null) {
+    setSavingLastDay(member);
+    setError(null);
+    try {
+      await setScrumMemberLastDay(member, lastDay);
+      setLastDayDrafts((prev) => {
+        const next = { ...prev };
+        delete next[member];
+        return next;
+      });
+      onChanged();
+      notifyStoreUpdated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update last working day");
+    } finally {
+      setSavingLastDay(null);
     }
   }
 
@@ -406,9 +445,13 @@ export function ScrumAttendanceBoard({
             title="No teammates yet"
             description="Add teammates below to start logging daily scrum attendance."
           />
+        ) : dayMembers.length === 0 ? (
+          <p className="py-2 text-sm text-muted">
+            Everyone on the roster had left by this date.
+          </p>
         ) : (
           <ul className="divide-y divide-border">
-            {members.map((member) => (
+            {dayMembers.map((member) => (
               <li key={member} className="flex flex-wrap items-center gap-2 py-2.5">
                 <span className="w-32 shrink-0 truncate text-sm font-semibold text-foreground sm:w-40">
                   {member}
@@ -450,6 +493,69 @@ export function ScrumAttendanceBoard({
             Add
           </Button>
         </form>
+
+        {members.length > 0 && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => setShowLastDays((v) => !v)}
+              aria-expanded={showLastDays}
+              className="rounded-md text-xs font-medium text-muted transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+            >
+              {showLastDays ? "Hide last working days" : "+ Set a teammate's last working day"}
+            </button>
+            {showLastDays && (
+              <ul className="mt-2 divide-y divide-border rounded-xl bg-surface-2/70 px-2.5">
+                {members.map((member) => {
+                  const saved = lastDayFor(memberLastDays, member);
+                  const value = lastDayDrafts[member] ?? saved ?? "";
+                  const canSave =
+                    !!value && value !== saved && isValid(parseISO(value)) && savingLastDay !== member;
+                  return (
+                    <li key={member} className="flex flex-wrap items-center gap-2 py-2">
+                      <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                        {member}
+                        {saved && (
+                          <span className="ml-2 text-xs text-muted">
+                            Last day {format(parseISO(saved), "d MMM")}
+                          </span>
+                        )}
+                      </span>
+                      <Input
+                        size="sm"
+                        type="date"
+                        aria-label={`Last working day for ${member}`}
+                        value={value}
+                        onChange={(e) =>
+                          setLastDayDrafts((prev) => ({ ...prev, [member]: e.target.value }))
+                        }
+                        className="w-auto"
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!canSave}
+                        onClick={() => handleSetLastDay(member, value)}
+                      >
+                        Set
+                      </Button>
+                      {saved && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={savingLastDay === member}
+                          onClick={() => handleSetLastDay(member, null)}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
       </Card>
 
       <Card>

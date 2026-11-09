@@ -436,6 +436,20 @@ export async function disconnectScrumSheet(): Promise<void> {
   if (!res.ok) throw new Error("Failed to disconnect Google Sheet");
 }
 
+/** Sets a roster member's last working day (YYYY-MM-DD); null clears it. */
+export async function setScrumMemberLastDay(
+  name: string,
+  lastDay: string | null
+): Promise<Record<string, string>> {
+  const res = await apiFetch("/api/scrum-attendance/members", {
+    method: "PATCH",
+    body: JSON.stringify({ name, lastDay }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Failed to update last working day");
+  return data;
+}
+
 export async function removeScrumMember(name: string): Promise<void> {
   const res = await apiFetch(
     `/api/scrum-attendance/members?name=${encodeURIComponent(name)}`,

@@ -10,6 +10,7 @@ import {
   parseSheetRows,
   parseStatusLabel,
   removeDisallowedCells,
+  removeCellsAfterLastDay,
   removeHolidayCells,
 } from "@/lib/scrum-sheet-sync";
 import type { ScrumAttendanceEntry } from "@/lib/types";
@@ -378,5 +379,57 @@ describe("planScrumSync", () => {
     expect(plan.updates).toContainEqual({ range: "C1", values: [["31-Jul-26"]] });
     expect(plan.updates).toContainEqual({ range: "A3", values: [["Vrushali"]] });
     expect(plan.updates).toContainEqual({ range: "C3", values: [["Leave"]] });
+  });
+});
+
+describe("last working day in sheet sync", () => {
+  const rows = [
+    ["Member", "30-Oct-26", "2-Nov-26"],
+    ["Pranav", "On time", "Late"],
+    ["Vrushali", "Leave", "On time"],
+  ];
+  const lastDays = { Vrushali: "2026-10-30" };
+
+  it("drops sheet cells dated after a member's last day", () => {
+    const sheet = removeCellsAfterLastDay(parseSheetRows(rows), lastDays);
+    expect(sheet.cells).toEqual([
+      { member: "Pranav", date: "2026-10-30", status: "on_time" },
+      { member: "Pranav", date: "2026-11-02", status: "late" },
+      { member: "Vrushali", date: "2026-10-30", status: "leave" },
+    ]);
+    expect(sheet.members).toEqual(["Pranav", "Vrushali"]);
+  });
+
+  it("keeps the leaver on the roster, imports nothing after their last day, and writes nothing there", () => {
+    const plan = planScrumSync({
+      members: ["Pranav", "Vrushali"],
+      attendance: [],
+      holidayDates: new Set(),
+      rows,
+      lastDays,
+    });
+    expect(plan.merged.members).toEqual(["Pranav", "Vrushali"]);
+    expect(
+      plan.merged.entries.some((e) => e.member === "Vrushali" && e.date === "2026-11-02")
+    ).toBe(false);
+    expect(plan.merged.entries.find((e) => e.member === "Vrushali")?.date).toBe("2026-10-30");
+    // Without the guard, sync would blank C3 (no app entry); it must leave it alone.
+    expect(plan.updates).toEqual([]);
+  });
+
+  it("does not write a holiday label into a leaver's cell after their last day", () => {
+    const updates = planSheetWrite(
+      [
+        ["Member", "2-Nov-26"],
+        ["Vrushali", ""],
+      ],
+      ["Vrushali"],
+      ["2026-11-02"],
+      [],
+      new Set(["2026-11-02"]),
+      undefined,
+      lastDays
+    );
+    expect(updates).toEqual([]);
   });
 });

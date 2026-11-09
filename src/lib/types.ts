@@ -363,6 +363,8 @@ export interface DashboardStore {
   scrumMembers: string[];
   scrumAttendance: ScrumAttendanceEntry[];
   scrumHolidays: ScrumHoliday[];
+  /** member name -> last working day (YYYY-MM-DD). Optional so older stores load; `readStore` always returns an object. */
+  scrumMemberLastDays?: Record<string, string>;
   /** Optional so older stores load; `readStore` always returns an array. */
   recurringTasks?: RecurringTask[];
   /** 2027 Planning. Seeded once from the LRP sheet export when missing. */

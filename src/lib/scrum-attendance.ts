@@ -118,3 +118,61 @@ export function holidayForDate(
 ): ScrumHoliday | undefined {
   return holidays.find((h) => h.date === date);
 }
+
+/** member name -> last working day (YYYY-MM-DD). Keys use the roster spelling. */
+export type ScrumMemberLastDays = Record<string, string>;
+
+/** A member's last working day, matched case-insensitively; undefined when none is set. */
+export function lastDayFor(
+  lastDays: ScrumMemberLastDays | undefined,
+  member: string
+): string | undefined {
+  if (!lastDays) return undefined;
+  if (lastDays[member]) return lastDays[member];
+  const target = member.trim().toLowerCase();
+  const key = Object.keys(lastDays).find((k) => k.trim().toLowerCase() === target);
+  return key ? lastDays[key] : undefined;
+}
+
+/** True when the member is still on the team on `date` (no last day, or date <= last day). */
+export function isMemberActiveOn(
+  lastDays: ScrumMemberLastDays | undefined,
+  member: string,
+  date: string
+): boolean {
+  const lastDay = lastDayFor(lastDays, member);
+  return !lastDay || date <= lastDay;
+}
+
+/** Roster members to show in the daily logging list for `date`. */
+export function activeMembersOn(
+  members: string[],
+  lastDays: ScrumMemberLastDays | undefined,
+  date: string
+): string[] {
+  return members.filter((m) => isMemberActiveOn(lastDays, m, date));
+}
+
+/**
+ * Roster members to include in a month's insights (format "yyyy-MM"): drops anyone whose
+ * last day is before the month's first day. Members with entries in the month still show,
+ * since computeScrumInsights adds everyone who has an entry.
+ */
+export function insightMembersForMonth(
+  members: string[],
+  lastDays: ScrumMemberLastDays | undefined,
+  monthKey: string
+): string[] {
+  return activeMembersOn(members, lastDays, `${monthKey}-01`);
+}
+
+/** Copy of lastDays with every key matching `member` (case-insensitive) removed. */
+export function withoutLastDay(
+  lastDays: ScrumMemberLastDays | undefined,
+  member: string
+): ScrumMemberLastDays {
+  const target = member.trim().toLowerCase();
+  return Object.fromEntries(
+    Object.entries(lastDays ?? {}).filter(([k]) => k.trim().toLowerCase() !== target)
+  );
+}

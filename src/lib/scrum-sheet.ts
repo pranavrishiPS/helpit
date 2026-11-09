@@ -209,6 +209,7 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
       attendance: s.scrumAttendance ?? [],
       holidayDates: new Set((s.scrumHolidays ?? []).map((h) => h.date)),
       rows,
+      lastDays: s.scrumMemberLastDays,
       limits: { maxRows: SHEET_MAX_ROWS, maxCols: SHEET_MAX_COLS },
     });
     return {

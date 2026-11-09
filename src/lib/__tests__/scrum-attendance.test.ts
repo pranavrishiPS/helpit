@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   SCRUM_STATUSES,
+  activeMembersOn,
+  insightMembersForMonth,
+  isMemberActiveOn,
+  lastDayFor,
+  withoutLastDay,
   computeScrumInsights,
   statusesForDate,
   entriesByDateForMember,
@@ -204,5 +209,51 @@ describe("holidayForDate", () => {
   it("returns undefined when the date has no holiday", () => {
     const holidays = [{ date: "2026-09-14" }];
     expect(holidayForDate(holidays, "2026-09-15")).toBeUndefined();
+  });
+});
+
+describe("last working day helpers", () => {
+  const lastDays = { Vrushali: "2026-10-30", Uttam: "2026-11-05" };
+
+  it("looks up a member's last day case-insensitively", () => {
+    expect(lastDayFor(lastDays, "Vrushali")).toBe("2026-10-30");
+    expect(lastDayFor(lastDays, "vrushali")).toBe("2026-10-30");
+    expect(lastDayFor(lastDays, "Pranav")).toBeUndefined();
+    expect(lastDayFor(undefined, "Pranav")).toBeUndefined();
+  });
+
+  it("treats the last day itself as active and the day after as gone", () => {
+    expect(isMemberActiveOn(lastDays, "Vrushali", "2026-10-30")).toBe(true);
+    expect(isMemberActiveOn(lastDays, "Vrushali", "2026-10-31")).toBe(false);
+    expect(isMemberActiveOn(lastDays, "Pranav", "2030-01-01")).toBe(true);
+  });
+
+  it("filters the daily list by date, keeping leavers on past dates", () => {
+    const members = ["Pranav", "Vrushali", "Uttam"];
+    expect(activeMembersOn(members, lastDays, "2026-10-29")).toEqual(members);
+    expect(activeMembersOn(members, lastDays, "2026-11-02")).toEqual(["Pranav", "Uttam"]);
+    expect(activeMembersOn(members, lastDays, "2026-11-06")).toEqual(["Pranav"]);
+  });
+
+  it("drops roster-only leavers from months after their last day", () => {
+    const members = ["Pranav", "Vrushali", "Uttam"];
+    expect(insightMembersForMonth(members, lastDays, "2026-10")).toEqual(members);
+    expect(insightMembersForMonth(members, lastDays, "2026-11")).toEqual(["Pranav", "Uttam"]);
+    expect(insightMembersForMonth(members, lastDays, "2026-12")).toEqual(["Pranav"]);
+  });
+
+  it("still shows a leaver in a month where they have entries", () => {
+    const monthEntries = [entry({ member: "Vrushali", date: "2026-11-02" })];
+    const insights = computeScrumInsights(
+      insightMembersForMonth(["Pranav", "Vrushali"], lastDays, "2026-11"),
+      monthEntries
+    );
+    expect(insights.map((i) => i.member).sort()).toEqual(["Pranav", "Vrushali"]);
+  });
+
+  it("removes every casing of a member's key", () => {
+    expect(withoutLastDay({ Vrushali: "2026-10-30", vrushali: "2026-10-01", Uttam: "2026-11-05" }, "VRUSHALI"))
+      .toEqual({ Uttam: "2026-11-05" });
+    expect(withoutLastDay(undefined, "x")).toEqual({});
   });
 });

@@ -399,6 +399,12 @@ export const removeScrumMemberSchema = z.object({
   name: z.string().min(1),
 });
 
+export const setScrumMemberLastDaySchema = z.object({
+  name: z.string().min(1).max(100),
+  /** null clears the last working day. */
+  lastDay: scrumDateSchema.nullable(),
+});
+
 export const addScrumHolidaySchema = z.object({
   date: scrumDateSchema,
   label: z.string().max(200).optional(),

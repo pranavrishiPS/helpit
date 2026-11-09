@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 import { UserFacingError } from "./errors";
-import { isStatusAllowedOnDate } from "./scrum-attendance";
+import {
+  isMemberActiveOn,
+  isStatusAllowedOnDate,
+  type ScrumMemberLastDays,
+} from "./scrum-attendance";
 import type { ScrumAttendanceEntry, ScrumStatus } from "./types";
 
 /** Display label used in the connected Google Sheet's cells. */
@@ -196,6 +200,14 @@ export function removeDisallowedCells(sheet: ParsedSheet): ParsedSheet {
   return { ...sheet, cells: sheet.cells.filter((c) => isStatusAllowedOnDate(c.status, c.date)) };
 }
 
+/** Drops sheet cells dated after the member's last working day — nothing is imported for those. */
+export function removeCellsAfterLastDay(
+  sheet: ParsedSheet,
+  lastDays: ScrumMemberLastDays | undefined
+): ParsedSheet {
+  return { ...sheet, cells: sheet.cells.filter((c) => isMemberActiveOn(lastDays, c.member, c.date)) };
+}
+
 /** Builds the 2D grid to write back to the sheet from the merged app state. */
 export function buildSheetRows(
   members: string[],
@@ -310,6 +322,7 @@ export interface SheetLimits {
  * touched, at their real positions. The original grid is never rewritten, so rows above
  * the header (notes), non-date columns ("Total", "Notes"), unrecognized cell text ("WFH")
  * and formulas stay as they are; new dates are appended as columns and new members as rows.
+ * Cells dated after a member's last working day are never written.
  * Returns no updates when the sheet already matches.
  */
 export function planSheetWrite(
@@ -318,7 +331,8 @@ export function planSheetWrite(
   dates: string[],
   entries: ScrumAttendanceEntry[],
   holidayDates: Set<string> = new Set(),
-  limits?: SheetLimits
+  limits?: SheetLimits,
+  lastDays?: ScrumMemberLastDays
 ): SheetRangeUpdate[] {
   const parsed = parseSheetRows(rows as string[][]);
   const hasContent = rows.some((r) => (r ?? []).some((c) => String(c ?? "").trim()));
@@ -387,6 +401,7 @@ export function planSheetWrite(
 
   for (const { member, row } of targets) {
     for (const { col, date } of dateColumns) {
+      if (!isMemberActiveOn(lastDays, member, date)) continue; // left the team: leave the cell as is
       const current = cellText(rows, row, col);
       if (!isOwnedCellText(current)) continue; // preserve raw text we don't understand
       const entry = byMemberDate.get(cellKey(member, date));
@@ -455,13 +470,15 @@ export function planScrumSync(input: {
   holidayDates: Set<string>;
   rows: (string | null | undefined)[][];
   limits?: SheetLimits;
+  /** member -> last working day; cells after it are neither imported nor written. */
+  lastDays?: ScrumMemberLastDays;
 }): ScrumSyncPlan {
-  const { members, attendance, holidayDates, rows, limits } = input;
+  const { members, attendance, holidayDates, rows, limits, lastDays } = input;
   const sheet = parseSheetRows(rows as string[][]);
   const merged = mergeScrumWithSheet(
     members,
     attendance.filter((e) => !holidayDates.has(e.date)),
-    removeDisallowedCells(removeHolidayCells(sheet, holidayDates))
+    removeCellsAfterLastDay(removeDisallowedCells(removeHolidayCells(sheet, holidayDates)), lastDays)
   );
   const updates = planSheetWrite(
     rows,
@@ -469,7 +486,8 @@ export function planScrumSync(input: {
     [...new Set([...sheet.dates, ...merged.entries.map((e) => e.date)])],
     merged.entries,
     holidayDates,
-    limits
+    limits,
+    lastDays
   );
   return { merged, updates };
 }

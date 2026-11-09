@@ -31,6 +31,7 @@ export default function ScrumAttendancePage() {
         members={store.scrumMembers ?? []}
         entries={store.scrumAttendance ?? []}
         holidays={store.scrumHolidays ?? []}
+        memberLastDays={store.scrumMemberLastDays ?? {}}
         onChanged={reload}
       />
     </div>
