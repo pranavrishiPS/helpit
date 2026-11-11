@@ -3,6 +3,7 @@ import { UserFacingError } from "./errors";
 import {
   isMemberActiveOn,
   isStatusAllowedOnDate,
+  lastDayFor,
   type ScrumMemberLastDays,
 } from "./scrum-attendance";
 import type { ScrumAttendanceEntry, ScrumStatus } from "./types";
@@ -392,7 +393,8 @@ export function planSheetWrite(
     const existing = memberRows.get(member);
     if (existing) {
       for (const row of existing) targets.push({ member, row });
-    } else {
+    } else if (!lastDayFor(lastDays, member)) {
+      // Members with a last working day are never (re)added: their row may have been deleted on purpose.
       set(nextRow, 0, member);
       targets.push({ member, row: nextRow });
       nextRow += 1;

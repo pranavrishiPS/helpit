@@ -417,6 +417,31 @@ describe("last working day in sheet sync", () => {
     expect(plan.updates).toEqual([]);
   });
 
+  it("does not re-add a leaver whose row was deleted from the sheet", () => {
+    const plan = planScrumSync({
+      members: ["Pranav", "Vrushali"],
+      attendance: [
+        {
+          id: "v1",
+          date: "2026-10-30",
+          member: "Vrushali",
+          status: "leave",
+          createdAt: "2026-10-30T00:00:00.000Z",
+          updatedAt: "2026-10-30T00:00:00.000Z",
+        },
+      ],
+      holidayDates: new Set(),
+      rows: [
+        ["Member", "30-Oct-26", "2-Nov-26"],
+        ["Pranav", "On time", "Late"],
+      ],
+      lastDays,
+    });
+    expect(plan.merged.members).toEqual(["Pranav", "Vrushali"]);
+    expect(plan.merged.entries.some((e) => e.member === "Vrushali")).toBe(true);
+    expect(plan.updates).toEqual([]);
+  });
+
   it("does not write a holiday label into a leaver's cell after their last day", () => {
     const updates = planSheetWrite(
       [
