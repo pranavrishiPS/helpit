@@ -23,6 +23,21 @@ const SHEET_MAX_ROWS = 1000;
 const SHEET_MAX_COLS = 702; // column ZZ
 const SHEET_RANGE = `A1:ZZ${SHEET_MAX_ROWS}`;
 
+/** Tab that holds scrum attendance (matched ignoring case). Sync never touches other tabs. */
+export const SCRUM_TAB = "Scrum";
+
+/** The scrum tab's title; a sheet with a single tab uses that tab. undefined = none found. */
+export function pickScrumTab(titles: string[]): string | undefined {
+  const match = titles.find((t) => t.trim().toLowerCase() === SCRUM_TAB.toLowerCase());
+  if (match) return match;
+  return titles.length === 1 ? titles[0] : undefined;
+}
+
+/** A1-notation sheet name, quoted so names with spaces or quotes work. */
+export function quoteSheetName(name: string): string {
+  return `'${name.replace(/'/g, "''")}'`;
+}
+
 export function isScrumSheetConfigured(): boolean {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
@@ -181,9 +196,20 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
   const client = await getAuthorizedClient();
   const sheets = google.sheets({ version: "v4", auth: client });
 
+  // Only the "Scrum" tab is read or written; other tabs are never touched.
+  const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: "sheets.properties.title" });
+  const titles = (meta.data.sheets ?? []).map((sh) => sh.properties?.title ?? "").filter(Boolean);
+  const tab = pickScrumTab(titles);
+  if (!tab) {
+    throw new UserFacingError(
+      `Couldn't find a tab named "${SCRUM_TAB}" in the sheet — nothing was changed. Rename the attendance tab to "${SCRUM_TAB}" and sync again.`
+    );
+  }
+  const inTab = (range: string) => `${quoteSheetName(tab)}!${range}`;
+
   const read = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: SHEET_RANGE,
+    range: inTab(SHEET_RANGE),
     valueRenderOption: "FORMATTED_VALUE",
   });
 
@@ -234,7 +260,10 @@ export async function syncScrumSheet(): Promise<{ membersSynced: number; entries
   if (updates.length > 0) {
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId,
-      requestBody: { valueInputOption: "RAW", data: updates },
+      requestBody: {
+        valueInputOption: "RAW",
+        data: updates.map((u) => ({ ...u, range: inTab(u.range) })),
+      },
     });
   }
 
